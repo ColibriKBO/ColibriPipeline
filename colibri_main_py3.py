@@ -139,21 +139,6 @@ def dipDetection(fluxProfile, kernel, num):
     minLoc = np.argmin(conv)   #index of minimum value of convolution
     minVal = min(conv)    #minimum of convolution
     
-    # plt.plot(norm_trunc_profile)
-    # plt.title('normalized light curve')
-    # plt.show()
-    # plt.close()
-    
-    # plt.plot(light_curve)
-    # plt.title('light curve')
-    # plt.show()
-    # plt.close()
-    
-    # plt.plot(conv)
-    # plt.title('covolved light curve')
-    # plt.show()
-    # plt.close()
-    
     if norm_trunc_profile[minLoc] < geoDip:
         
         #frame number of dip
@@ -1047,6 +1032,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
             filehandle.write('#    Telescope: %s\n' %(telescope))
             filehandle.write('#    Field: %s\n' %(field_name))
             filehandle.write('#    Dip Type: %s\n' %(save_types[np.where(save_frames == f)][0]))
+            filehandle.write('#    Median Flux: %.2f\n' %(np.median(star_all_flux)))
+            filehandle.write('#    Stddev Flux: %.3f\n' %(np.std(star_all_flux)))
             filehandle.write('#\n#\n#\n')
             filehandle.write('#filename     time      flux\n')
            

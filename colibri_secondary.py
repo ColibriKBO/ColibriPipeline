@@ -45,12 +45,16 @@ def plotKernel(lightcurve, fluxTimes, kernel, start_i, eventFrame, starNum, dire
           
     #get time and date of the segment start for file naming
     eventDate = pathlib.Path(starData['filename'][0]).parent.name
-    std = np.std(lightcurve)
+    
     
     #get list of residuals from the kernel and the data
     residuals = lightcurve - extended_kernel
     
+    #strip whitepace at beginning of fit line string
+    slope = fit_line.c[0]
+    intercept = fit_line.c[1] 
     fit_line = str(fit_line).strip()
+    std = np.std(lightcurve)
     
     #fix time to account for minute rollover
     seconds = []    #list of times since first frame
@@ -66,16 +70,26 @@ def plotKernel(lightcurve, fluxTimes, kernel, start_i, eventFrame, starNum, dire
                 t = t + 60.
             
         seconds.append(t - t0)
+    
     fluxTimes = seconds
+    
+    flux_min = min(lightcurve) - 0.2
+    flux_max = max(lightcurve) + 0.1
+    flux_height = flux_max - flux_min
+    
+    residuals_min = min(residuals) - 0.1
+    residuals_max = max(residuals) + 0.1
+    residuals_height = residuals_max - residuals_min
 
     '''make plot'''
-    fig, (ax1, ax3) = plt.subplots(2, figsize = (10, 10), gridspec_kw={'height_ratios': [3, 1]})
+    fig, (ax1, ax3) = plt.subplots(2, figsize = (10, 10), gridspec_kw={'height_ratios': [flux_height, residuals_height]})
     
-    #best matching kernel params
+    #Linear fit equation
     textstr1 = '\n'.join((
     'Linear fit to data:',
     '%s' % str(fit_line)))
     
+    #best matching kernel params
     textstr2 = '\n'.join((
     'Kernel params:',
     ' ',
@@ -84,51 +98,64 @@ def plotKernel(lightcurve, fluxTimes, kernel, start_i, eventFrame, starNum, dire
     'b [m] = %.0f' % (params[4], ),
     'Shift [frames] = %.2f' % (params[5], )))
     
-    ax1.plot(fluxTimes, lightcurve)
-    #ax.plot(extended_kernel, label = 'Best fitting kernel')
- 
+    #box to display data
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    
+    #plot lightcurve as a function of time
+    ax1.plot(fluxTimes, lightcurve)
 
-    # place a text box in upper left in axes coords
+    #place linear fit equation in box
     ax1.text(1.02, 0.95, textstr1, transform=ax1.transAxes, fontsize=15,
     verticalalignment='top', bbox=props)
     
-    ax1.text(1.02, 0.75, textstr2, transform=ax1.transAxes, fontsize=15,
+    #place kernel params in box
+    ax1.text(1.02, 0.70, textstr2, transform=ax1.transAxes, fontsize=15,
     verticalalignment='top', bbox=props)
     
+    #lines for the mean (1.0), and standard deviation
     ax1.hlines(1.0, min(fluxTimes), max(fluxTimes), color = 'black')
     ax1.hlines(1.0 + std, min(fluxTimes), max(fluxTimes), linestyle = '--', color = 'black', label = 'stddev: %.3f' % std)
     ax1.hlines(1.0 - std, min(fluxTimes), max(fluxTimes), linestyle = '--', color = 'black')
     
     ax1.tick_params(direction = 'inout', length = 10, right = True, labelsize = 12)
     
+    ax1.set_ylim(flux_min, flux_max)
+    
+    #plot best matched kernel as a function of frame number
     ax2 = ax1.twiny()
     ax2.plot(frame_nums, extended_kernel, label = 'Best fit kernel', color = 'tab:orange')
+    
+    #plot event location
     ax2.vlines(eventFrame, min(lightcurve), max(lightcurve), color = 'red', label = 'Event middle')
     
     ax2.tick_params(direction = 'inout', length = 10, labelsize = 12)
 
+    #titles and labels for main plot
     ax1.set_title('Normalized light curve matched with kernel ' + str(int(params[0])), fontsize = 18)
     ax1.set_xlabel('Time (s)', fontsize = 15)
     ax2.set_xlabel('Frame number', fontsize = 15)
     ax1.set_ylabel('Flux normalized by linear fit', fontsize = 15)
     
+    #plot residuals on secondary panel
     ax3.scatter(frame_nums, residuals, s = 8)
     ax3.set_ylabel('Residuals', fontsize = 15)
     ax3.hlines(0, min(frame_nums), max(frame_nums), color = 'gray', linestyle = '--')
     ax3.set_xlabel('Frame Number', fontsize = 15)
     ax3.tick_params(direction = 'inout', length = 10, labelsize = 12)
     
+    ax3.set_ylim(residuals_min, residuals_max)
+    
+    #add times to upper y axis
     ax4 = ax3.twiny()
     ax4.scatter(fluxTimes, residuals, s = 0)
     ax4.tick_params(direction = 'inout', length = 10, labelsize = 12)
-
     ax4.set_xticklabels([])
     
+    #place legend 
     fig.legend(loc = 'right', fontsize = 15)
     
-    #plt.show()
-    plt.savefig(directory.joinpath('star' + starNum + '_' + eventDate + '_matched.png'), bbox_inches = 'tight')
+    plt.show()
+    #plt.savefig(directory.joinpath('star' + starNum + '_' + eventDate + '_matched.png'), bbox_inches = 'tight')
     plt.close()
     
     return
@@ -299,10 +326,16 @@ def readFile(filepath):
             elif i == 9:
                 event_type = line.split(':')[1].split('\n')[0].strip(" ")
                 
+            elif i == 10:
+                star_med = line.split(':')[1].split('\n')[0].strip(" ")
+                
+            elif i == 11:
+                star_std = line.split(':')[1].split('\n')[0].strip(' ')
+                
         #reset event frame to match index of the file
         event_frame = event_frame - first_frame
 
-    return starData, event_frame, star_x, star_y, event_time, event_type
+    return starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std
     
 '''-----------code starts here -----------------------'''
 
@@ -310,7 +343,7 @@ runPar = False          #True if you want to run directories in parallel
 telescope = 'Red'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 obs_date = datetime.date(2021, 8, 4)    #date observations 
-process_date = datetime.date(2022, 3, 29)
+process_date = datetime.date(2022, 4, 6)
 base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri')  #path to main directory
 
 
