@@ -99,8 +99,9 @@ def dipDetection(fluxProfile, kernel, num):
     """ Checks for geometric dip, and detects dimming using Ricker Wavelet (Mexican Hat) kernel
     input: light curve of star (array of fluxes in each image), Ricker wavelet kernel, 
     current star number
-    returns: -1 for no detection or -2 if data unusable,
-    if event detected returns frame number and star's light curve"""
+    returns: Frame number of detected event (-1 for no detection or -2 if data unusable),
+    light curve as an array (empty list if no event detected), 
+    keyword indicating event type (empty string if no event detected)"""
 
     '''' Prunes profiles'''
     light_curve = np.trim_zeros(fluxProfile)
@@ -108,47 +109,57 @@ def dipDetection(fluxProfile, kernel, num):
     if len(light_curve) == 0:
         print('empty profile: ', num)
         return -2, [], ''  # reject empty profiles
-      
-    FramesperMin = 2400      #ideal number of frames in a directory (1 minute)
-    minSNR = 5             #median/stddev limit
-
-    '''perform checks on data before proceeding'''
-    if len(light_curve) < 10:
-        print('Light curve too short: star', num)
-        return -2, [], ''  # reject stars that go out of frame to rapidly
+   
     
+    '''perform checks on data before proceeding'''
+    
+    FramesperMin = 2400      #ideal number of frames in a directory (1 minute)
+    minSNR = 5               #median/stddev limit to look for detections
+    minLightcurveLen = FramesperMin/4    #minimum length of lightcurve
+    
+    # reject stars that go out of frame to rapidly
+    if len(light_curve) < minLightcurveLen:
+        print('Light curve too short: star', num)
+        return -2, [], ''  
+    
+    #TODO: what should the limits actually be?
+    # reject tracking failures
     if abs(np.mean(light_curve[:FramesperMin]) - np.mean(light_curve[-FramesperMin:])) > np.std(light_curve[:FramesperMin]):
         print('Tracking failure: star ', num)
-        return -2, [], ''  # reject tracking failures
+        return -2, [], '' 
     
+    # reject stars with SNR too low
     if np.median(light_curve)/np.std(light_curve) < minSNR:
         print('Signal to Noise too low: star', num)
-        return -2, [], ''  # reject stars that are very dim, as SNR is too poor
+        return -2, [], ''  
 
     #uncomment to save light curve of each star (doesn't look for dips)
     #return num, light_curve
 
+
+    '''convolve light curve with ricker wavelet kernel'''
+    #will throw error if try to normalize (sum of kernel too close to 0)
+    conv = convolve_fft(light_curve, kernel, normalize_kernel=False)    #convolution of light curve with Ricker wavelet
+    minLoc = np.argmin(conv)    #index of minimum value of convolution
+    minVal = min(conv)          #minimum of convolution
+    
     
     '''geometric dip detection (greater than 40%)'''
     geoDip = 0.6    #threshold for geometric dip
     norm_trunc_profile = light_curve/np.median(light_curve)  #normalize light curve
-    
-    '''convolve light curve with ricker wavelet kernel'''
-    #will throw error if try to normalize (sum of kernel too close to 0)
-    conv = convolve_fft(light_curve, kernel, normalize_kernel=False)
-    minLoc = np.argmin(conv)   #index of minimum value of convolution
-    minVal = min(conv)    #minimum of convolution
-    
+ 
+    #if normalized profile at min value of convolution is less than the geometric dip threshold
     if norm_trunc_profile[minLoc] < geoDip:
         
-        #frame number of dip
+        #get frame number of dip
         critFrame = np.where(fluxProfile == light_curve[minLoc])[0]
         print (datetime.datetime.now(), "Detected >40% dip: frame", str(critFrame) + ", star", num)
         
         return critFrame[0], light_curve, 'geometric'
 
+
     '''if no geometric dip, look for smaller diffraction dip'''
-    KernelLength = len(kernel.array)
+    KernelLength = len(kernel.array)    #number of elements in kernel array
     
     #check if dip is at least one kernel length from edge
     if KernelLength <= minLoc < len(light_curve) - KernelLength:
@@ -165,6 +176,7 @@ def dipDetection(fluxProfile, kernel, num):
     #if minimum < background - 3.75*sigma
     if minVal < np.mean(bkgZone) - dipdetection * np.std(bkgZone):  
 
+        #get frame number of dip
         critFrame = np.where(fluxProfile == light_curve[minLoc])[0]
         print('found significant dip in star: ', num, ' at frame: ', critFrame[0])
         
@@ -175,9 +187,9 @@ def dipDetection(fluxProfile, kernel, num):
     
     
 def getBias(filepath, numOfBiases, gain):
-    """ get median bias image from a set of biases (length =  numOfBiases) from filepath
+    """ get median bias image from a set of biases 
     input: filepath to bias image directory, 
-    number of bias  images to take median from, gain
+    number of bias  images to take median of, image gain ('high' or 'low')
     return: median bias image"""
     
     print('Calculating median bias...')
@@ -235,9 +247,8 @@ def getBias(filepath, numOfBiases, gain):
 
 def getDateTime(folder):
     """function to get date and time of folder, then make into python datetime object
-    input: filepath 
+    input: filepath to the folder
     returns: datetime object"""
-    
 
     #time is in format ['hour', 'minute', 'second', 'msec'] 
     folderTime = folder.name.split('_')[-1].strip('/').split('.')  #get time folder was created from folder name
@@ -246,33 +257,38 @@ def getDateTime(folder):
     
     #date is in format ['year', 'month', 'day']
     folderTime = datetime.time(int(folderTime[0]), int(folderTime[1]), int(folderTime[2]))       #convert to time object
+    
+    #combine date and time
     folderDatetime = datetime.datetime.combine(folderDate, folderTime)                     #combine into datetime object
     
     return folderDatetime
 
 
 def getSizeFITS(imagePaths):
-    """ gets dimensions of fits 'video' """
-    """FITS images are in directories of 1 minute of data with ~2400 images
-    input: list of filenames in directory
-    returns: width, height of fits image, number of images in directory, 
-    list of header times for each image"""
+    """Get number of images in a data directory and image dimensions (.fits only)
+    input: list of all image filepaths in data directory
+    returns: width, height of fits image, number of images in directory"""
     
-    '''get names of first and last image in directory'''
-    first_imagePath = imagePaths[0]
-    frames = len(imagePaths)     #number of images in directory
+    '''get number of images in directory'''
+    
+    frames = len(imagePaths)         #number of images in directory
+
 
     '''get width/height of images from first image'''
-    first_image = fits.open(first_imagePath)
-    header = first_image[0].header
-    width = header['NAXIS1']
-    height = header['NAXIS1']
+    
+    first_imagePath = imagePaths[0]             #first image in directory
+    first_image = fits.open(first_imagePath)    #load first image
+    header = first_image[0].header              #image header
+    width = header['NAXIS1']                    #X axis dimension
+    height = header['NAXIS1']                   #Y axis dimension
 
     return width, height, frames
 
 
 def getSizeRCD(imagePaths):
     """ MJM - Get the size of the images and number of frames """
+    '''input: list of paths to .rcd images
+    returns: width of images, height of images, number of frames'''
 
     frames = len(imagePaths)
 
@@ -833,7 +849,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
         
         startIndex += i     #adjust number to start stack if there weren't enough stars
         
-        print('stacking images %i to %i\n' %(startIndex, numtoStack))
+        #print('stacking images %i to %i\n' %(startIndex, numtoStack))
         
         #create median combined image for star finding
         stacked = stackImages(minuteDir, savefolder, startIndex, numtoStack, bias, gain)
@@ -856,7 +872,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
             print ("\n")
             return -1
 
-    print('star finding file index: ', i)
+    #print('star finding file index: ', i)
     
     #save to .npy file
     #star position file format: x  |  y  | half light radius
@@ -869,7 +885,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     
     num_stars = len(initial_positions)      #number of stars in image
     
-    print(datetime.datetime.now(), 'Done star finding. Number of stars found: ', num_stars) 
+    #print(datetime.datetime.now(), 'Done star finding. Number of stars found: ', num_stars) 
     
     
     ''' Drift calculations '''
@@ -978,7 +994,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
 
-    print (datetime.datetime.now(), 'Photometry done.')
+    #print (datetime.datetime.now(), 'Photometry done.')
    
 
     ''' Dip detection '''
@@ -1012,12 +1028,13 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
         time = headerTimes[f][0].split('T')[1].split('.')[0].replace(':','')   #time of event
         star_coords = initial_positions[np.where(event_frames == f)[0][0]]     #coords of occulted star
    
-        print(datetime.datetime.now(), ' saving event in frame', f)
+       # print(datetime.datetime.now(), ' saving event in frame', f)
         
         star_all_flux = save_curves[np.where(save_frames == f)][0]  #total light curve for current occulted star
         
         #text file to save results in
         #saved file format: 'det_date_time_star#_telescope.txt'
+
         savefile = base_path.joinpath('ColibriArchive', telescope, str(day_stamp), 'det_' + date + '_' + time + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
         #columns: fits filename and path | header time (seconds) |  star flux
         
@@ -1055,7 +1072,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
                 #if the portion of the light curve to save is at the end of the minute, end at the last image
                 if f + save_chunk >= num_images:
         
-                    files_to_save = [imagePath for i, imagePath in enumerate(imagePaths) if i >= f - save_chunk and i < num_images - f + save_chunk]    #list of filenames to save
+                    files_to_save = [imagePath for i, imagePath in enumerate(imagePaths) if i >= f - save_chunk]    #list of filenames to save (RAB 042222)
                     star_save_flux = star_all_flux[np.where(np.in1d(imagePaths, files_to_save))[0]]                                                     #part of light curve to save
        
                     #loop through each frame to save
@@ -1086,7 +1103,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = False          #True if you want to run directories in parallel
-telescope = 'Red'       #identifier for telescope
+telescope = 'Green'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 obs_date = datetime.date(2021, 8, 4)    #date observations 
 base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri')  #path to main directory
