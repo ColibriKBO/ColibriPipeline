@@ -19,7 +19,6 @@ import pandas as pd
 import pathlib
 import matplotlib.pyplot as plt
 import datetime
-import lightcurve_looker
 import VizieR_query
 from astropy import wcs
 import getRAdec
@@ -57,9 +56,14 @@ def match_RADec(RA, DEC, gdata, SR):
         data.loc[0,'Gaia_dec'] = df.loc[0]['DE_ICRS']
         data.loc[0, 'Gaia_B-R'] = df.loc[0]['BP-RP']
     else:
-        print('no match found')
-        print('hmmmm')
-             
+       # print('No match found - Star ', star_num)
+        data.loc[0, 'Colibri_RA'] = RA
+        data.loc[0, 'Colibri_dec'] = DEC
+        data.loc[0,'GMAG'] = float('NaN')
+        data.loc[0,'Gaia_RA'] = float('NaN')
+        data.loc[0,'Gaia_dec'] = float('NaN')
+        data.loc[0, 'Gaia_B-R'] = float('NaN')
+        
        #end of Mike's section -------------------------------------------
 
     
@@ -68,7 +72,7 @@ def match_RADec(RA, DEC, gdata, SR):
 def getKernelParams(kernel_i):
     '''get parameters for best fitting kernel from the output .txt file'''
     
-    param_filename = base_path.joinpath('params_kernels_031522.txt')
+    param_filename = base_path.parent.joinpath('kernels', 'params_kernels_040622.txt')
     kernel_params = pd.read_csv(param_filename, delim_whitespace = True)
     
     return kernel_params.iloc[kernel_i]
@@ -115,6 +119,15 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
         if t != t0:         #check if minute has rolled over
             if t - t0 < seconds[-1]:
                 t = t + 60.
+                
+        #check if there are large time gaps in between frames
+            gap_threshold = 0.3     
+        
+            if t - t0 - seconds[-1] > gap_threshold:
+          #      print('Time jump: ', starNum)
+           #     print('gap: ', t - t0 - seconds[-1])
+                
+                return -1
             
         seconds.append(t - t0)
     
@@ -142,7 +155,6 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     #best matching kernel params
     textstr2 = '\n'.join((
     'Kernel params:',
-    ' ',
     'Object R [m] = %.0f' % (params[2], ),
     'Star d [mas] = %.2f' % (params[3], ),
     'b [m] = %.0f' % (params[4], ),
@@ -150,10 +162,18 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     'ChiSquare: %.2f' %(minChi)))
     
     textstr3 = '\n'.join((
-        'Star Coords:',
+        'Image Object (X, Y):',
+        '(%.3f, %.3f)' %(eventData[2], eventData[3]),
+        'Gaia Star (RA, Dec):',
         '(%.3f, %.3f)' %(star_df['Gaia_RA'], star_df['Gaia_dec']),
         'G-band mag: %.3f' % (star_df['GMAG']),
         'B-R Colour: %.3f' % (star_df['Gaia_B-R'])))
+    
+    textstr4 = '\n'.join((
+        'Date: ',
+        '%s' %(str(obs_date)),
+        'Event Time: ',
+        '%s' %(eventData[4][:12])))
     
     #box to display data
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -170,7 +190,11 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     verticalalignment='top', bbox=props)
     
     #place star properties in box
-    ax1.text(1.03, -0.30, textstr3, transform=ax1.transAxes, fontsize=15,
+    ax1.text(1.03, -0.25, textstr3, transform=ax1.transAxes, fontsize=15,
+             verticalalignment='top', bbox=props)
+    
+    #place time and date info in box
+    ax1.text(1.03, -0.70, textstr4, transform=ax1.transAxes, fontsize=15,
              verticalalignment='top', bbox=props)
     
     #lines for the mean (1.0), and standard deviation
@@ -220,7 +244,7 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     plt.savefig(directory.joinpath('star' + starNum + '_' + eventDate + '_matched.png'), bbox_inches = 'tight')
     plt.close()
     
-    return
+    return 0
     
 
 
@@ -345,17 +369,20 @@ def kernelDetection(eventData, kernels, num, directory, star_df):
         params = getKernelParams(active_kernel)
         
         #plotKernel(fluxProfile, fluxTimes, kernels[active_kernel], MatchStart, dipFrame, num, directory, params, bkgd_fitLine)
-        plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, num, directory, params, bkgd_fitLine, StatMin, star_df)
+        plot = plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, num, directory, params, bkgd_fitLine, StatMin, star_df)
 
+        #reject events with a large jump in time between exposures
+        if plot < 0:
+            return -1
         
         return active_kernel, StatMin, MatchStart, params  # returns location in original time series where dip occurs
         
     else:
         print('Event in star %s did not pass threshold' % num)
         
-        params = getKernelParams(active_kernel)
+        #params = getKernelParams(active_kernel)
         
-        plotKernel(fluxProfile, fluxTimes, kernels[active_kernel], MatchStart, dipFrame, num, directory, params, bkgd_fitLine)
+        #plotKernel(fluxProfile, fluxTimes, kernels[active_kernel], MatchStart, dipFrame, num, directory, params, bkgd_fitLine)
         
         return -1  # reject events that do not pass kernel matching
     
@@ -446,13 +473,12 @@ def getTransform(date):
     
 '''-----------code starts here -----------------------'''
 
-runPar = False          #True if you want to run directories in parallel
-telescope = 'Red'       #identifier for telescope
+telescope = 'Green'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 soln_order = 3      #tweak order for astrometry.net solution
 obs_date = datetime.date(2021, 8, 4)    #date observations 
-process_date = datetime.date(2022, 4, 6)
-base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri')  #path to main directory
+process_date = datetime.date(2022, 4, 26)
+base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
 
 
 if __name__ == '__main__':
@@ -465,7 +491,7 @@ if __name__ == '__main__':
     kernel_frames = int(round(expected_length / exposure_time))   # width of kernel
     ricker_kernel = RickerWavelet1DKernel(kernel_frames)          # generate kernel
 
-    kernel_set = np.loadtxt(base_path.joinpath('kernelsMar2022.txt'))
+    kernel_set = np.loadtxt(base_path.parent.joinpath('kernels', 'kernels_040622.txt'))
     
     #check if kernel has a detectable dip - moved out of dipdetection function RAB 031722
     noise = 0.8   #minimum kernel depth threshold RAB Mar 15 2022- detector noise levels (??) TODO: change - will depend on high/low
@@ -481,10 +507,11 @@ if __name__ == '__main__':
     '''get filepaths to results directory'''
     
     #directory containing detection .txt files
-    archive_dir = base_path.joinpath('ColibriArchive', telescope, str(process_date))
+    archive_dir = base_path.joinpath('ColibriArchive', str(process_date))
     
     #list of filepaths to .txt detection files
-    detect_files = [f for f in archive_dir.iterdir() if 'det' in f.name]
+    day_files = [f for f in archive_dir.iterdir() if str(obs_date) in f.name]
+    detect_files = [f for f in day_files if 'det' in f.name]
     
     ''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
     median_combos = [f for f in archive_dir.iterdir() if 'medstacked' in f.name]
@@ -503,6 +530,7 @@ if __name__ == '__main__':
         #number id of occulted star
         star_num = filepath.name.split('star')[1].split('_')[0]
 
+        print(filepath)
         #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
         eventData = readFile(filepath)
 
@@ -517,11 +545,11 @@ if __name__ == '__main__':
         star_dec = star_wcs[1]
         
         #query Gaia for nearby stars
-        gaia_SR = 0.01         #search radius for query in degrees
+        gaia_SR = 0.1         #search radius for query in degrees
         gaia = VizieR_query.makeQuery([star_RA, star_dec], gaia_SR)        #get dataframe of Gaia results {RA, dec, Gmag}
 
         #match Gaia star with the detection
-        SR = 0.006
+        SR = 0.005
         star_df = match_RADec(star_RA, star_dec, gaia, SR)
         
        # lightcurve_looker.plot_event(archive_dir, starData, event_frame, star_num, [star_x, star_y], event_type)
