@@ -488,7 +488,7 @@ def makeBiasSet(filepath, numOfBiases, gain):
     ''' create folders for results '''
     
     day_stamp = datetime.date.today()
-    save_path = base_path.joinpath('ColibriArchive', telescope, str(day_stamp))
+    save_path = base_path.joinpath('ColibriArchive', str(day_stamp))
     bias_savepath = save_path.joinpath('masterBiases')
     
     if not save_path.exists():
@@ -782,7 +782,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     ''' create folder for results '''
     
     day_stamp = datetime.date.today()
-    savefolder = base_path.joinpath('ColibriArchive', telescope, str(day_stamp))
+    savefolder = base_path.joinpath('ColibriArchive', str(day_stamp))
     if not savefolder.exists():
         savefolder.mkdir()      
 
@@ -831,7 +831,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     print (datetime.datetime.now(), field_name, 'starfinding...',)
     
     #name of .npy file to save star positions in 
-    star_pos_file = base_path.joinpath('ColibriArchive', telescope, str(day_stamp), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
+    star_pos_file = base_path.joinpath('ColibriArchive', str(day_stamp), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
 
     # Remove position file if it exists - MJM (modified RAB Feb 2022)
     if star_pos_file.exists():
@@ -1035,7 +1035,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
         #text file to save results in
         #saved file format: 'det_date_time_star#_telescope.txt'
 
-        savefile = base_path.joinpath('ColibriArchive', telescope, str(day_stamp), 'det_' + date + '_' + time + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
+        savefile = base_path.joinpath('ColibriArchive', str(day_stamp), 'det_' + date + '_' + time + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
         #columns: fits filename and path | header time (seconds) |  star flux
         
         #open file to save results
@@ -1106,7 +1106,7 @@ runPar = False          #True if you want to run directories in parallel
 telescope = 'Green'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 obs_date = datetime.date(2021, 8, 4)    #date observations 
-base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri')  #path to main directory
+base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
 
 if __name__ == '__main__':
     
@@ -1114,7 +1114,7 @@ if __name__ == '__main__':
     '''get filepaths'''
  
     #directory for night-long dataset
-    night_dir = base_path.joinpath('ColibriData', telescope+'Data', str(obs_date).replace('-', ''))      #path to data
+    night_dir = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''))      #path to data
  
     #subdirectories of minute-long datasets (~2400 images per directory)
     minute_dirs = [f for f in night_dir.iterdir() if f.is_dir()]  
