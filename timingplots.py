@@ -63,8 +63,8 @@ for minutePath in minuteDirs:
             f.write('Empty directory\n')
         continue
 
-    frameList = []       #list of image frame numbers
-    timeList = []        #list of image timestamps
+    frameList = []       #list to hold image frame numbers
+    timeList = []        #list to hold image timestamps
     
     #minute current directory was created
     dirMinute = minutePath.name.split('_')[1].split('.')[1]
@@ -134,7 +134,6 @@ for minutePath in minuteDirs:
         timeList.append(str(timestamp).strip('b').strip('\'').strip('Z'))
 
     '''check if all times are in order'''
-
     
     zero = Time(timeList[0], precision = 9).unix    #starting time
     
