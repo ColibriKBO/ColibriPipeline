@@ -143,7 +143,7 @@ def RAdec_diffPlot(matched):
     plt.xticks(fontsize = 15)
     plt.gca().set_aspect('equal', adjustable='box')
 
-    plt.savefig(save_path.joinpath('RA-dec_diff_' + gain + '_' + str(detect_thresh) + 'sig_' +  telescope + '_' + field_name + '_' + str(obs_date) + '_' + str(obs_time) + '.png'))
+    plt.savefig(save_path.joinpath('RA-dec_diff_' + gain + '_' + str(detect_thresh) + 'sig_' +  telescope + '_' + field_name + '_' + str(obs_date) + '_' + str(obs_time).replace(':','.') + '.png'))
     plt.show()
     plt.close()
 '''---------------------------------SCRIPT STARTS HERE--------------------------------------------'''
@@ -152,15 +152,15 @@ def RAdec_diffPlot(matched):
 print('setting up')
 #time and date of observations/processing
 obs_date = datetime.date(2021, 8, 4)           #date of observation
-obs_time = datetime.time(0, 50, 45)             #time of observation (to the second)
+obs_time = datetime.time(4, 49, 6)             #time of observation (to the second)
 process_date = datetime.date(2021, 4, 26)      #date of initial pipeline
 image_index = '2'                         #index of image to use
 polynom_order = '3rd'                           #order of astrometry.net plate solution polynomial
-ap_r = 4                                        #radius of aperture for photometry
+ap_r = 3                                        #radius of aperture for photometry
 gain = 'high'                                    #which gain to take from rcd files ('low' or 'high')
-telescope = 'Green'                               #telescope identifier
+telescope = 'Red'                               #telescope identifier
 field_name = 'field1'                        #name of field observed
-detect_thresh = 4.                              #detection threshold
+detect_thresh = 2.                              #detection threshold
 
 #paths to required files
 base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)                              #path to main directory
@@ -172,7 +172,7 @@ minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]   #
 #minute_dir = '75mm-test2'
 
 #path to output files
-save_path = base_path.joinpath('ColibriArchive', 'Sensitivity', str(obs_date), minute_dir)       #path to save outputs in
+save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
 lightcurve_path = save_path.joinpath(gain + '_' + str(detect_thresh) +  'sig_lightcurves')          #path that light curves are saved to
 
 #make directory to hold results in if doesn't already exist
