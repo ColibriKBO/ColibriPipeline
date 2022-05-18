@@ -106,7 +106,7 @@ def match_XY(mags, snr, SR):
 
 def getAirmass(time, RA, dec):
     '''get airmass of the field at the given time
-    input: time [], field coordinates [RA, Dec]
+    input: time [isot format string], field coordinates [RA, Dec]
     returns: airmass'''
     
     #latitude and longitude of Elginfield
@@ -114,11 +114,9 @@ def getAirmass(time, RA, dec):
     siteLong = -81.3160233333
     
     #get J2000 day
-  #  JD = Time(timestamp, format='isot', scale='utc').jd
     
     #get local sidereal time
     LST = Time(time, format='isot', scale='utc').sidereal_time('mean', longitude = siteLong)
-   # LST = 100.46 + 0.985647*JD + siteLong + 15*time
 
     #get hour angle of field
     HA = LST.deg - RA
@@ -129,7 +127,7 @@ def getAirmass(time, RA, dec):
     HA = np.radians(HA)
     
     #get altitude (elevation) of field
-    alt = np.degrees(np.arcsin(np.sin(dec)*np.sin(siteLat) + np.cos(siteLat)*np.cos(HA)))
+    alt = np.degrees(np.arcsin(np.sin(dec)*np.sin(siteLat) + np.cos(dec)*np.cos(siteLat)*np.cos(HA)))
     
     #get zenith angle
     ZA = 90 - alt
