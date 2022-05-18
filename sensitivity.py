@@ -15,6 +15,7 @@ import astropy
 import astropy.stats
 from astropy.io import fits
 from astropy import wcs
+from astropy.time import Time 
 import getRAdec
 import pathlib
 import snplots
@@ -23,7 +24,7 @@ import lightcurve_looker
 import read_npy
 import VizieR_query
 import astrometrynet_funcs
-
+import colibri_secondary
 
 def match_RADec(data, gdata, SR):
     '''matches list of found stars with Gaia catalog by RA/dec to get magnitudes
@@ -102,7 +103,41 @@ def match_XY(mags, snr, SR):
     
     print('Number of SNR matches: ', match_counter)
     return mags
+
+def getAirmass(time, RA, dec):
+    '''get airmass of the field at the given time
+    input: time [], field coordinates [RA, Dec]
+    returns: airmass'''
     
+    #latitude and longitude of Elginfield
+    siteLat = 43.1933116667
+    siteLong = -81.3160233333
+    
+    #get J2000 day
+  #  JD = Time(timestamp, format='isot', scale='utc').jd
+    
+    #get local sidereal time
+    LST = Time(time, format='isot', scale='utc').sidereal_time('mean', longitude = siteLong)
+   # LST = 100.46 + 0.985647*JD + siteLong + 15*time
+
+    #get hour angle of field
+    HA = LST.deg - RA
+    
+    #convert angles to radians for sin/cos funcs
+    dec = np.radians(dec)
+    siteLat = np.radians(siteLat)
+    HA = np.radians(HA)
+    
+    #get altitude (elevation) of field
+    alt = np.degrees(np.arcsin(np.sin(dec)*np.sin(siteLat) + np.cos(siteLat)*np.cos(HA)))
+    
+    #get zenith angle
+    ZA = 90 - alt
+    
+    #get airmass
+    airmass = 1./np.cos(np.radians(ZA))
+    
+    return airmass
 
 def RAdec_diffPlot(matched):
     '''makes plot of X difference vs Y differences, calculates mean and stddev
@@ -169,7 +204,6 @@ data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''))   
 #get exact name of desired minute directory
 subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory
 minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]   #minute we're interested in
-#minute_dir = '75mm-test2'
 
 #path to output files
 save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
@@ -181,11 +215,11 @@ save_path.mkdir(parents=True, exist_ok=True)
 
 '''-------------make light curves of data----------------------'''
 print('making light curve .txt files')
-lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
+#lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
 
 #save .png plots of lightcurves
 print('saving plots of light curves')
-lightcurve_looker.plot_wholecurves(lightcurve_path)
+#lightcurve_looker.plot_wholecurves(lightcurve_path)
 
 '''--------upload image to astrometry.net for plate solution------'''
 median_image = save_path.joinpath('high_medstacked.fits')     #path to median combined file for astrometry solution
@@ -228,8 +262,27 @@ read_npy.to_ds9(star_pos_file, star_pos_ds9)
 print('getting Gaia data')
 
 field_centre = [round(coords_df['ra'].median(), 5), round(coords_df['dec'].median(), 5)]  #take field centre to be med star coords
+print('Field centre: ', field_centre[0], field_centre[1])
 gaia_SR = 1.5         #search radius for query in degrees
 gaia = VizieR_query.makeQuery(field_centre, gaia_SR)        #get dataframe of Gaia results {RA, dec, Gmag}
+
+
+'''----------calculate airmass of field-----------------------'''
+#get timestamp for beginning of minute
+starTxtFile = sorted(lightcurve_path.glob('*.txt'))[0]
+
+#get header info from file
+with starTxtFile.open() as f:
+        
+    #loop through each line of the file
+    for i, line in enumerate(f):
+            
+        #get event time
+        if i == 6:
+            timestamp = line.split(' ')[-1].split('\n')[0]
+
+airmass = getAirmass(timestamp, *field_centre)
+
 
 '''----------------------get star SNRs------------------------'''
 print('calculating SNRS')
@@ -245,7 +298,7 @@ SR = 0.005   #half side length of search box in degrees (18 arcsec)
 rd_mag = match_RADec(coords_df, gaia, SR)       #dataframe of Colibri detections with Gaia magnitudes {X, Y, ra, dec, gmag}
 
 # 2: match (X,Y) from light curves with (X,Y) from position file to get (RA, dec)
-final = match_XY(rd_mag, stars, 0.015)      #dataframe of Colibri detections with SNR and Gaia magnitudes {X, Y, ra, dec, GMAG, med, std, SNR}
+final = match_XY(rd_mag, stars, SR)      #dataframe of Colibri detections with SNR and Gaia magnitudes {X, Y, ra, dec, GMAG, med, std, SNR}
 
 #filter out bad regions of image
 #for Blue: filter out stars that are in striped regions (right and left sides)
@@ -258,20 +311,24 @@ final.to_csv(save_path.joinpath('starTable_' + minute_dir + '_' + gain + '_' + p
 
 '''---------------------make plot of mag vs snr-----------------'''
 print('making mag vs snr plot')
-plt.scatter(final['GMAG'], final['SNR'], s = 10)
+plt.scatter(final['GMAG'], final['SNR'], s = 5, label = 'Airmass: ' + str(round(airmass,2)))
 
+plt.ylim(0, 16)
 plt.title('ap r = ' + str(ap_r) + ', ' + field_name + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
+#plt.title('Sensitivity limits for "%s" telescope at airmass %.1f' %(telescope, airmass))
 plt.xlabel('Gaia g-band magnitude')
-plt.ylabel('SNR (med/std)')
+#plt.ylabel('Star signal-to-noise ratio')
+plt.ylabel('Signal-to-Noise Ratio (star median/stddev)')
 plt.grid()
 
-plt.savefig(save_path.joinpath('magvSNR_' + gain  + '_' + minute_dir + '_' + str(detect_thresh) +'.png'))
+plt.savefig(save_path.joinpath('magvSNR_' + gain  + '_' + minute_dir + '_' + str(detect_thresh) +'.png'))#, dpi = 3000)
+plt.legend()
 plt.show()
 plt.close()
 
 '''----------------------make plot of mag vs mean value-----------'''
 print('making mag vs mean plot')
-plt.scatter(final['GMAG'], -2.5*np.log(final['med']), s = 10)
+plt.scatter(final['GMAG'], -2.5*np.log(final['med']), s = 10, label = 'Airmass: ' + str(round(airmass,2)))
 
 plt.title('ap r = ' + str(ap_r) + ', ' + field_name + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
 plt.xlabel('Gaia g-band magnitude')
@@ -279,6 +336,7 @@ plt.ylabel('-2.5*log(median)')
 
 plt.grid()
 plt.savefig(save_path.joinpath('magvmed_' + gain + '_' + minute_dir + '_' + str(detect_thresh) + '.png'))
+plt.legend()
 plt.show()
 plt.close()
 
