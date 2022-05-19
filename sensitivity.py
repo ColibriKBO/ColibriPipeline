@@ -107,7 +107,7 @@ def match_XY(mags, snr, SR):
 def getAirmass(time, RA, dec):
     '''get airmass of the field at the given time
     input: time [isot format string], field coordinates [RA, Dec]
-    returns: airmass'''
+    returns: airmass, altitude [degrees], and azimuth [degrees]'''
     
     #latitude and longitude of Elginfield
     siteLat = 43.1933116667
@@ -127,7 +127,17 @@ def getAirmass(time, RA, dec):
     HA = np.radians(HA)
     
     #get altitude (elevation) of field
-    alt = np.degrees(np.arcsin(np.sin(dec)*np.sin(siteLat) + np.cos(dec)*np.cos(siteLat)*np.cos(HA)))
+    alt = np.arcsin(np.sin(dec)*np.sin(siteLat) + np.cos(dec)*np.cos(siteLat)*np.cos(HA))
+    
+    #get azimuth of field
+    A = np.degrees(np.arccos((np.sin(dec) - np.sin(alt)*np.sin(siteLat))/(np.cos(alt)*np.cos(siteLat))))
+    
+    if np.sin(HA) < 0:
+        az = A
+    else:
+        az = 360. - A
+    
+    alt = np.degrees(alt)
     
     #get zenith angle
     ZA = 90 - alt
@@ -135,7 +145,7 @@ def getAirmass(time, RA, dec):
     #get airmass
     airmass = 1./np.cos(np.radians(ZA))
     
-    return airmass
+    return airmass, alt, az
 
 def RAdec_diffPlot(matched):
     '''makes plot of X difference vs Y differences, calculates mean and stddev
@@ -188,12 +198,12 @@ obs_date = datetime.date(2021, 8, 4)           #date of observation
 obs_time = datetime.time(4, 49, 6)             #time of observation (to the second)
 process_date = datetime.date(2021, 4, 26)      #date of initial pipeline
 image_index = '2'                         #index of image to use
-polynom_order = '3rd'                           #order of astrometry.net plate solution polynomial
+polynom_order = '4th'                           #order of astrometry.net plate solution polynomial
 ap_r = 3                                        #radius of aperture for photometry
 gain = 'high'                                    #which gain to take from rcd files ('low' or 'high')
 telescope = 'Red'                               #telescope identifier
 field_name = 'field1'                        #name of field observed
-detect_thresh = 2.                              #detection threshold
+detect_thresh = 4.                              #detection threshold
 
 #paths to required files
 base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)                              #path to main directory
@@ -213,15 +223,15 @@ save_path.mkdir(parents=True, exist_ok=True)
 
 '''-------------make light curves of data----------------------'''
 print('making light curve .txt files')
-#lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
+lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
 
 #save .png plots of lightcurves
 print('saving plots of light curves')
-#lightcurve_looker.plot_wholecurves(lightcurve_path)
+lightcurve_looker.plot_wholecurves(lightcurve_path)
 
 '''--------upload image to astrometry.net for plate solution------'''
 median_image = save_path.joinpath('high_medstacked.fits')     #path to median combined file for astrometry solution
-transform_file = save_path.joinpath(minute_dir + '_wcs.fits') #path to save WCS header file in
+transform_file = save_path.joinpath(minute_dir + '_' + polynom_order + '_wcs.fits') #path to save WCS header file in
 
 #check if the tranformation has already been calculated and saved
 if transform_file.exists():
@@ -244,7 +254,7 @@ print('RA to dec transformation')
 #transform_file = sorted(save_path.glob('*' + image_index + '_new-image_' + polynom_order + '.fits'))[0]     #output from astrometry.net
 star_pos_file = sorted(save_path.glob('*' + gain + '*' + str(detect_thresh) + 'sig' + '*.npy'))[0]          #star position file from lightcurve_maker
 star_pos_ds9 = save_path.joinpath(star_pos_file.name.replace('.npy', '_ds9.txt'))                           #star positions in ds9 format (for marking regions)
-RADec_file = save_path.joinpath('XY_RD_' + gain + '_' + str(detect_thresh) + 'sig_' + minute_dir + '.txt')  #file to save XY-RD in
+RADec_file = save_path.joinpath('XY_RD_' + gain + '_' + str(detect_thresh) + 'sig_' + polynom_order + '_' + minute_dir + '.txt')  #file to save XY-RD in
 
 
 #get dataframe of {x, y, RA, dec}
@@ -259,13 +269,13 @@ read_npy.to_ds9(star_pos_file, star_pos_ds9)
 '''---------read in Gaia coord file to get magnitudes----------'''
 print('getting Gaia data')
 
-field_centre = [round(coords_df['ra'].median(), 5), round(coords_df['dec'].median(), 5)]  #take field centre to be med star coords
+field_centre = [round(coords_df['ra'].median(), 4), round(coords_df['dec'].median(), 4)]  #take field centre to be med star coords
 print('Field centre: ', field_centre[0], field_centre[1])
 gaia_SR = 1.5         #search radius for query in degrees
 gaia = VizieR_query.makeQuery(field_centre, gaia_SR)        #get dataframe of Gaia results {RA, dec, Gmag}
 
 
-'''----------calculate airmass of field-----------------------'''
+'''----------calculate altitude, azimuth, airmass of field-----------------------'''
 #get timestamp for beginning of minute
 starTxtFile = sorted(lightcurve_path.glob('*.txt'))[0]
 
@@ -279,7 +289,7 @@ with starTxtFile.open() as f:
         if i == 6:
             timestamp = line.split(' ')[-1].split('\n')[0]
 
-airmass = getAirmass(timestamp, *field_centre)
+airmass, altitude, azimuth = getAirmass(timestamp, *field_centre)
 
 
 '''----------------------get star SNRs------------------------'''
@@ -291,7 +301,7 @@ stars = pd.DataFrame(snplots.snr_single(lightcurve_path), columns = ['X', 'Y', '
 '''----------------matching tables----------------------------'''
 print('matching tables')
 # 1: match (RA, dec) from light curves with (RA, dec) from Gaia to get magnitudes
-SR = 0.005   #half side length of search box in degrees (18 arcsec)
+SR = 0.006   #half side length of search box in degrees (18 arcsec)
 
 rd_mag = match_RADec(coords_df, gaia, SR)       #dataframe of Colibri detections with Gaia magnitudes {X, Y, ra, dec, gmag}
 
@@ -309,9 +319,9 @@ final.to_csv(save_path.joinpath('starTable_' + minute_dir + '_' + gain + '_' + p
 
 '''---------------------make plot of mag vs snr-----------------'''
 print('making mag vs snr plot')
-plt.scatter(final['GMAG'], final['SNR'], s = 5, label = 'Airmass: ' + str(round(airmass,2)))
+plt.scatter(final['GMAG'], final['SNR'], s = 5, label = 'Airmass: %.2f\nAlt, Az: (%.2f, %.2f)' % (airmass, altitude, azimuth))
 
-plt.ylim(0, 16)
+#plt.ylim(0, 16)
 plt.title('ap r = ' + str(ap_r) + ', ' + field_name + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
 #plt.title('Sensitivity limits for "%s" telescope at airmass %.1f' %(telescope, airmass))
 plt.xlabel('Gaia g-band magnitude')
@@ -319,22 +329,23 @@ plt.xlabel('Gaia g-band magnitude')
 plt.ylabel('Signal-to-Noise Ratio (star median/stddev)')
 plt.grid()
 
-plt.savefig(save_path.joinpath('magvSNR_' + gain  + '_' + minute_dir + '_' + str(detect_thresh) +'.png'))#, dpi = 3000)
 plt.legend()
+plt.savefig(save_path.joinpath('magvSNR_' + gain  + '_' + minute_dir + '_' + str(detect_thresh) +'.png'), bbox_inches = 'tight')#, dpi = 3000)
+
 plt.show()
 plt.close()
 
 '''----------------------make plot of mag vs mean value-----------'''
 print('making mag vs mean plot')
-plt.scatter(final['GMAG'], -2.5*np.log(final['med']), s = 10, label = 'Airmass: ' + str(round(airmass,2)))
+plt.scatter(final['GMAG'], -2.5*np.log(final['med']), s = 10, label = 'Airmass: %.2f\nAlt, Az: (%.2f, %.2f)' % (airmass, altitude, azimuth))
 
 plt.title('ap r = ' + str(ap_r) + ', ' + field_name + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
 plt.xlabel('Gaia g-band magnitude')
 plt.ylabel('-2.5*log(median)')
 
 plt.grid()
-plt.savefig(save_path.joinpath('magvmed_' + gain + '_' + minute_dir + '_' + str(detect_thresh) + '.png'))
 plt.legend()
+plt.savefig(save_path.joinpath('magvmed_' + gain + '_' + minute_dir + '_' + str(detect_thresh) + '.png'), bbox_inches = 'tight')
 plt.show()
 plt.close()
 
