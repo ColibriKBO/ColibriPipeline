@@ -18,3 +18,19 @@ Primary pipeline for processing Colibri Data. Identifies candidate events.
 
 ### colibri_secondary.py
 Secondary pipeline for processing Colibri Data. Matches candidate events with occultation kernels, and gets star info from Gaia (RA/dec, mag)
+
+### getRADec.py
+Transforms X,Y coordinates in an image to RA, dec using a WCS transformation from astrometry.net
+
+### lightcurve_looker.py
+Creates plots of star light curves.
+
+### lightcurve_maker.py
+Modified from colibri_main.py. Finds stars in an image set, does photometry on stars and returns their light curves over the minute.
+
+### sensitivity.py
+For estimating the sensitivity of our instruments.
+Gets the median flux / stddev for all stars in a minute. Matches the stars to the Gaia catalog and compares SNR vs Gaia magnitude. 
+
+### timingplots.py
+Checks files for timestamp issues and corrupted files.
