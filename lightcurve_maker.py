@@ -662,22 +662,24 @@ def chooseBias(obs_folder, MasterBiasList):
  
 def getLightcurves(folder, savefolder, ap_r, gain, telescope, detect_thresh):
     """ formerly 'main'
-    Detect possible occultation events in selected file and archive results 
+    Detect stars in data set and save light curves as .txt files 
     
     input: name of current folder (path object), folder to save results in (path object),
-    aperture nadius [px], gain (low or high), telescope name (string), 
+    aperture nadius [px], gain (string: 'low' or 'high'), telescope name (string), 
     star detection threshold (float)
     
     output: printout of processing tasks, .npy file with star positions (if doesn't exist), 
-    .txt file for each occultation event with names of images to be saved, the time 
-    of that image, flux of occulted star in image
+    .txt file for each star with names of images in the sequence, the time 
+    of that image, flux of star in image
     """
+    ''' set up directory names '''
+    dayfolder = folder.parent  		#directory for the night
+    minutefolder = folder.name 		#name string containing date and time of current minute
     
-    dayfolder = folder.parent
-    minutefolder = folder.name
-    
+    #set True to process .rcd files, otherwise process .fits files
     RCDfiles = True
     
+    ''' convert .rcd files to .fits files if desired '''
     #if RCDfiles == False:
     #    if os.path.isfile(folder + 'converted.txt') == False:
      #       print('converting to .fits')
