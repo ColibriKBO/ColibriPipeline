@@ -18,13 +18,16 @@ def getSolution(image_file, save_file, order):
     ast = AstrometryNet()
     #key for astrometry.net account
     ast.api_key = 'vbeenheneoixdbpb'    #key for Rachel Brown's account (040822)
+ #   ast.show_allowed_settings()
+    wcs_header = ast.solve_from_image(image_file, crpix_center = True, tweak_order = order, force_image_upload=True)
+  #  wcs_header = ast.solve_from_image(image_file, tweak_order = order, force_image_upload=True)
 
-    wcs_header = ast.solve_from_image(image_file, tweak_order = order, force_image_upload=True)
-
+    
     if not save_file.exists():
             wcs_header.tofile(save_file)
             
     return wcs_header
+
 
 #file = pathlib.Path('..', 'ColibriArchive', 'Red', '2022-04-06', 'high20210804_04.49.06.823_medstacked.fits')
 #savefile = file.parent.joinpath('testsave.fits')
