@@ -16,7 +16,7 @@ import lightcurve_maker     #RAB 06212022
 
 telescope='Green'
 gain='high'
-ImageIndex=1
+#ImageIndex=1
 
 RCDfiles = True             #option to process .rcd files - RAB 06212022
 
@@ -32,7 +32,8 @@ biasFileList = sorted(bias_path.glob('*.rcd'))         #RAB 06212022
 #FirstBias=fits.getdata(biasFileList[ImageIndex])*(-1)*(-1) #convert uint to int by multiplying by (-1)
 #SecondBias=fits.getdata(biasFileList[ImageIndex+1])*(-1)*(-1)
 
-def get_ReadNoise(FirstBias,SecondBias,gain):
+'''main function'''
+def get_ReadNoise(FirstBias,SecondBias,gain): 
     
     if gain=='high': #gain string to int
         gain=0.82
@@ -47,8 +48,11 @@ def get_ReadNoise(FirstBias,SecondBias,gain):
     return ReadNoise
 
 ReadNoise=[] #create an array of all read noises
+pairs=0     #number of pairs that will be iterrated
 
-for i in range(len(biasFileList)-1): #iterrate through all pairs of subsequent bias images
+
+for i in range(0,len(biasFileList),2): #iterrate through all pairs of subsequent bias images without dublicates
+
     
     #added if/else statement to give option for .rcd files - RAB 06212022
     if RCDfiles == False:
@@ -62,6 +66,11 @@ for i in range(len(biasFileList)-1): #iterrate through all pairs of subsequent b
 
     
     ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+    pairs+=1
+    
     
 AverageRN=np.average(ReadNoise) #average read noise
-print(AverageRN)
+StdRn=np.std(ReadNoise)         #standard deviation of read noise
+
+print(pairs," pairs iterrated")
+print("READ NOISE (",gain,"gain ) :",'{:.4}'.format(AverageRN)+'+/-'+'{:.2}'.format(StdRn))
