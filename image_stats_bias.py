@@ -11,8 +11,7 @@ filename | time | median | mean | mode | sensor temp | base temp | FPGA temp
 import numpy as np
 import numba as nb
 import scipy.stats 
-import binascii, os, sys, glob
-from astropy.io import fits
+import binascii
 import datetime
 import pathlib
 
@@ -129,32 +128,32 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
     """ reads in frames from .rcd files starting at frame_num
     input: parent directory (minute), list of filenames to read in, starting frame number, how many frames to read in, 
     bias image (2D array of fluxes)
-    returns: array of image data arrays, array of header times of these images"""
+    returns: array of image data array, array of header time, tuple of sensor temperatures"""
     
     imagesData = []    #array to hold image data
     imagesTimes = []   #array to hold image times
     
-    hnumpix = 2048
-    vnumpix = 2048
+    hnumpix = 2048      #height of image [px]
+    vnumpix = 2048      #width of image [px]
     
-    imgain = gain
+    imgain = gain       #gain level to use
     
     '''list of filenames to read between starting and ending points'''
     files_to_read = [filename for i, filename in enumerate(filenames) if i >= start_frame and i < start_frame + num_frames]
     
     for filename in files_to_read:
 
-
+        #read in pixel data and header
         data, header = readRCD(filename)
         headerTime = header['timestamp']
         sensorTemp = float(int(binascii.hexlify(header['sensortemp']), 16))/10.
         baseTemp = float(int(binascii.hexlify(header['basetemp']), 16))/10.
         FPGAtemp = float(int(binascii.hexlify(header['FPGAtemp']), 16))/10.
 
-
+        #get image with correct gain from data
         images = nb_read_data(data)
-        image = split_images(images, hnumpix, vnumpix, imgain)
-        image = np.subtract(image,bias)
+        image = split_images(images, hnumpix, vnumpix, imgain)      
+        #image = np.subtract(image,bias)
 
         #change time if time is wrong (29 hours)
         hour = str(headerTime).split('T')[1].split(':')[0]
@@ -205,7 +204,6 @@ if __name__ == '__main__':
    
     '''--------------observation & solution info----------------'''
     obs_date = datetime.date(2021, 8, 4)           #date of observation
-
     telescope = 'Red'                             #telescope identifier
     gain = 'high'           #keyword for gain - 'high' or 'low'
     
