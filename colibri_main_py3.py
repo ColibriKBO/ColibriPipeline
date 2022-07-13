@@ -22,6 +22,7 @@ import datetime
 import os
 import gc
 import time as timer
+import sys
 
 
 def averageDrift(positions, times):
@@ -1108,14 +1109,21 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 '''set parameters for running code'''
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
-runPar = False          #True if you want to run directories in parallel
-telescope = 'Red'       #identifier for telescope
+runPar = True          #True if you want to run directories in parallel
+telescope = 'Blue'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
-obs_date = datetime.date(2021, 8, 4)    #date observations 
-base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
+
+'''get arguments'''
+if len(sys.argv) > 1:
+    base_path = pathlib.Path(sys.argv[1])
+    obsYYYYMMDD = sys.argv[2]
+    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+else:
+    base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
+    obs_date = datetime.date(2021, 8, 4)    #date observations 
+
 
 if __name__ == '__main__':
-    
     
     '''get filepaths'''
  
