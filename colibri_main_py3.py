@@ -1113,7 +1113,7 @@ runPar = True          #True if you want to run directories in parallel
 telescope = 'Blue'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 
-'''get arguments'''
+'''get arguments - Added by MJM'''
 if len(sys.argv) > 1:
     base_path = pathlib.Path(sys.argv[1])
     obsYYYYMMDD = sys.argv[2]

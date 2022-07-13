@@ -483,7 +483,7 @@ soln_order = 3      #tweak order for astrometry.net solution
 # process_date = datetime.date(2022, 4, 26)
 # base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
 
-'''get arguments'''
+'''get arguments - Added by MJM'''
 if len(sys.argv) > 1:
     base_path = pathlib.Path(sys.argv[1])
     obsYYYYMMDD = sys.argv[2]
