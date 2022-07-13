@@ -488,15 +488,15 @@ if len(sys.argv) > 1:
     base_path = pathlib.Path(sys.argv[1])
     obsYYYYMMDD = sys.argv[2]
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
-    procyear = int(datetime.datetime.today().strftime('%Y'))
-    procmonth = int(datetime.datetime.today().strftime('%m'))
-    procday = int(datetime.datetime.today().strftime('%d'))
-    process_date = datetime.date(procyear, procmonth, procday)
 else:
     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
     obs_date = datetime.date(2021, 8, 4)    #date observations 
-    process_date = datetime.date(2022, 4, 26)
+
+procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
+procyear = int(datetime.datetime.today().strftime('%Y'))
+procmonth = int(datetime.datetime.today().strftime('%m'))
+procday = int(datetime.datetime.today().strftime('%d'))
+process_date = datetime.date(procyear, procmonth, procday)
 
 '''begin program'''
 if __name__ == '__main__':
