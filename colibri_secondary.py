@@ -9,12 +9,6 @@ Update: March 10, 2022 by Rachel Brown
 
 import numpy as np
 from astropy.io import fits
-from astropy.convolution import convolve_fft, RickerWavelet1DKernel
-from astropy.time import Time
-from joblib import delayed, Parallel
-from copy import deepcopy
-import multiprocessing
-import time
 import pandas as pd
 import pathlib
 import matplotlib.pyplot as plt
@@ -102,8 +96,6 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     residuals = lightcurve - extended_kernel
     
     #strip whitepace at beginning of fit line string
-    slope = fit_line.c[0]
-    intercept = fit_line.c[1] 
     fit_line = str(fit_line).strip()
     std = np.std(lightcurve)
     
@@ -154,19 +146,19 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     
     #best matching kernel params
     textstr2 = '\n'.join((
-    'Kernel params:',
+    'Model params:',
     'Object R [m] = %.0f' % (params[2], ),
-    'Star d [mas] = %.2f' % (params[3], ),
-    'b [m] = %.0f' % (params[4], ),
+    'Star D [mas] = %.2f' % (params[3], ),
+    'Impact param [m] = %.0f' % (params[4], ),
     'Shift [frames] = %.2f' % (params[5], ),
-    'ChiSquare: %.2f' %(minChi)))
+    'Chi Square: %.2f' %(minChi)))
     
     textstr3 = '\n'.join((
-        'Image Object (X, Y):',
+        'Star Coords (X, Y):',
         '(%.3f, %.3f)' %(eventData[2], eventData[3]),
-        'Gaia Star (RA, Dec):',
+        'Gaia star (RA, Dec):',
         '(%.3f, %.3f)' %(star_df['Gaia_RA'], star_df['Gaia_dec']),
-        'G-band mag: %.3f' % (star_df['GMAG']),
+        'g-band mag: %.3f' % (star_df['GMAG']),
         'B-R Colour: %.3f' % (star_df['Gaia_B-R'])))
     
     textstr4 = '\n'.join((
@@ -176,6 +168,8 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
         '%s' %(eventData[4][:12])))
     
     #box to display data
+    props1 = dict(boxstyle='round', facecolor='darkorange', alpha=0.5)
+    props2 = dict(boxstyle='round', facecolor='cornflowerblue', alpha=0.5)
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     
     #plot lightcurve as a function of time
@@ -183,11 +177,11 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
 
     #place linear fit equation in box
     ax1.text(1.03, 0.65, textstr1, transform=ax1.transAxes, fontsize=15,
-    verticalalignment='top', bbox=props)
+    verticalalignment='top', bbox=props2)
     
     #place kernel params in box
     ax1.text(1.03, 0.25, textstr2, transform=ax1.transAxes, fontsize=15,
-    verticalalignment='top', bbox=props)
+    verticalalignment='top', bbox=props1)
     
     #place star properties in box
     ax1.text(1.03, -0.25, textstr3, transform=ax1.transAxes, fontsize=15,
@@ -216,14 +210,15 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     ax2.tick_params(direction = 'inout', length = 10, labelsize = 12)
 
     #titles and labels for main plot
+   # ax1.set_title('Occultation event candidate matched with TNO occultation model', fontsize = 18)
     ax1.set_title('Star ' + starNum + ' normalized light curve matched with kernel ' + str(int(params[0])), fontsize = 18)
     ax1.set_xlabel('Time (s)', fontsize = 15)
     ax2.set_xlabel('Frame number', fontsize = 15)
-    ax1.set_ylabel('Flux normalized by linear fit', fontsize = 15)
+    ax1.set_ylabel('Flux normalized by linear fit (counts)', fontsize = 15)
     
     #plot residuals on secondary panel
     ax3.scatter(frame_nums, residuals, s = 8)
-    ax3.set_ylabel('Residuals', fontsize = 15)
+    ax3.set_ylabel('Residuals from fit', fontsize = 15)
     ax3.hlines(0, min(frame_nums), max(frame_nums), color = 'gray', linestyle = '--')
     ax3.set_xlabel('Frame Number', fontsize = 15)
     ax3.tick_params(direction = 'inout', length = 10, labelsize = 12)
@@ -241,7 +236,7 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     #fig.legend()
     
     #plt.show()
-    plt.savefig(directory.joinpath('star' + starNum + '_' + eventDate + '_matched.png'), bbox_inches = 'tight')
+    plt.savefig(directory.joinpath('star' + starNum + '_' + eventDate + '_matched.png'), bbox_inches = 'tight')#, dpi=1000)
     plt.close()
     
     return 0
@@ -273,31 +268,35 @@ def diffMatch(template, data, sigmaP):
     return minChi, minX
 
 
-def kernelDetection(eventData, kernels, num, directory, star_df):
-    """ Detects dimming using Mexican Hat kernel for dip detection and set of Fresnel kernels for kernel matching """
+def kernelMatch(eventData, kernels, starNum, directory, starData_df):
+    """ Matches dip event with simulated occultation pattern, checks for significance
+    input: tuple of event data (including flux, time, and frame number), set of kernels [array], 
+    star number, directory to save results to, dataframe with star's coordinates and Gaia data
+    returns: index of best matched kernel, minimum Chi2 value, location of kernel match starting frame,
+    parameters of best matched kernel, or -1 if no kernels matched with significance"""
 
-    fluxProfile = list(eventData[0]['flux'])
-    fluxTimes = list(eventData[0]['time'])
-    dipFrame = eventData[1]
-    
-    med = np.median(fluxProfile)         
+    '''get detected event data and calculate normalized sigma'''
+    fluxProfile = list(eventData[0]['flux'])        #list of star fluxes
+    fluxTimes = list(eventData[0]['time'])          #list of frame times
+    dipFrame = eventData[1]                         #frame where dip was detected
+     
 
-    #normalized sigma corresponding to RHS of Eq. 2 in Pass et al. 2018
+    #normalized sigma corresponding to LHS of Eq. 2 in Pass et al. 2018
     #sigmaNorm = np.std(trunc_profile[(FramesperMin-NumBkgndElements):FramesperMin]) / np.median(trunc_profile[(FramesperMin-NumBkgndElements):FramesperMin])
     #really not sure how this matches what is in Emily's paper.....
     sigmaNorm = np.std(fluxProfile) / np.median(fluxProfile)
     
 
-    """ Dip detection"""
-    Gain = 16.5     #For high gain images: RAB - 031722
-    #Gain = 2.8     #For low gain images: RAB - 031722
+    '''---- get Poisson noise for every value in light curve ----'''
+    #TODO: use gain keyword instead of setting manually RAB - 070622
+    Gain = 0.82    #For high gain images: RAB - 062922
+    #Gain = 18.98     #For low gain images: RAB - 062922
       
-        #normalized fractional uncertainty
+    #array of normalized Poisson uncertainties
     sigmaP = ((np.sqrt(np.abs(fluxProfile) / np.median(fluxProfile) / Gain)) * Gain)   #Eq 7 in Pass 2018 (Poisson)
     sigmaP = np.where(sigmaP == 0, 0.01, sigmaP)
     
 
-    
     '''get curve with dip removed (called 'background') for normalization'''
     '''RAB 032321'''
     half_dip_width = 10     #approximate length of a dip event [frames]
@@ -332,23 +331,21 @@ def kernelDetection(eventData, kernels, num, directory, star_df):
     #divide original flux profile by fitted line
     fluxProfile =  fluxProfile/bkgd_fitLine(fluxTimes)
     
-    """ Kernel matching"""
+    '''------- Kernel matching --------'''
 
     StatMin = np.inf    #statistical minimum used for finding best matching kernel
         
     #loop through each kernel in set, check to see if it's a better fit
     for ind in range(0, len(kernels)):
             
-
-            
         #get a statistical minimum and location of the starting point for the kernel match
         new_StatMin, loc = diffMatch(kernels[ind], fluxProfile, sigmaP)
             
         #checks if current kernel is a better match
         if new_StatMin < StatMin:
-            active_kernel = ind
-            MatchStart = loc    #index of best starting position for kernel matching
-            StatMin = new_StatMin
+            active_kernel = ind         #best matching kernel so far
+            MatchStart = loc            #index of best starting position for kernel matching
+            StatMin = new_StatMin       #best matching statistical minimum
                 
     #list of Poisson uncertainty values for the event
     eventSigmaP = sigmaP[MatchStart:MatchStart + len(kernels[active_kernel])]   
@@ -357,28 +354,33 @@ def kernelDetection(eventData, kernels, num, directory, star_df):
     #unnecessary if we're sure kernels span 20-40% dip RAB Mar 15 2022
     for P in eventSigmaP:
         thresh += (abs(sigmaNorm)) / (abs(P))  # kernel match threshold - LHS of Eq. 2 in Pass 2018
-            
+    
+    
+    '''------------check event for significance ---------------------'''
+    
     #check if dip is significant to call a candidate event
-    if StatMin < thresh:      #Eq. 2 in Pass 2018
+    if thresh > StatMin:      #Eq. 2 in Pass 2018
             
       #  critFrame = np.where(fluxProfile == fluxProfile[dipFrame])[0]    #time of event
      #   critFrame = dipFrame    
      #   if len(critFrame) > 1:
      #       raise ValueError
         
+        #get parameters (TNO size, stellar size, impact param, shift adjustment) for best match
         params = getKernelParams(active_kernel)
         
-        #plotKernel(fluxProfile, fluxTimes, kernels[active_kernel], MatchStart, dipFrame, num, directory, params, bkgd_fitLine)
-        plot = plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, num, directory, params, bkgd_fitLine, StatMin, star_df)
+        #make plot with all the event information
+        plot = plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, starNum, directory, params, bkgd_fitLine, StatMin, starData_df)
 
         #reject events with a large jump in time between exposures
         if plot < 0:
             return -1
         
+        #return results
         return active_kernel, StatMin, MatchStart, params  # returns location in original time series where dip occurs
         
     else:
-        print('Event in star %s did not pass threshold' % num)
+        print('Event in star %s did not pass threshold' % starNum)
         
         #params = getKernelParams(active_kernel)
         
@@ -473,38 +475,37 @@ def getTransform(date):
     
 '''-----------code starts here -----------------------'''
 
-telescope = 'Green'       #identifier for telescope
+''' set up parameters for running the code '''
+telescope = 'Red'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 soln_order = 3      #tweak order for astrometry.net solution
 obs_date = datetime.date(2021, 8, 4)    #date observations 
 process_date = datetime.date(2022, 4, 26)
 base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
 
-
+'''begin program'''
 if __name__ == '__main__':
     
-    ''' prepare RickerWavelet/Mexican hat kernel to convolve with light curves'''
-    
-    exposure_time = 0.025    # exposure length in seconds
-    expected_length = 0.15   # TODO: come back to this - related to the characteristic scale length, length of signal to boost in convolution, may need tweaking/optimizing
-
-    kernel_frames = int(round(expected_length / exposure_time))   # width of kernel
-    ricker_kernel = RickerWavelet1DKernel(kernel_frames)          # generate kernel
-
+    ''' prepare occultation kernels set to match to light curves'''
+ 
+    #load in pre-made kernel set
     kernel_set = np.loadtxt(base_path.parent.joinpath('kernels', 'kernels_040622.txt'))
     
-    #check if kernel has a detectable dip - moved out of dipdetection function RAB 031722
+    #check if each kernel has a detectable dip - moved out of dipdetection function RAB 031722
     noise = 0.8   #minimum kernel depth threshold RAB Mar 15 2022- detector noise levels (??) TODO: change - will depend on high/low
+    
     for i in range(len(kernel_set)):
         
         #check if deepest dip in a kernel is greater than expected background noise 
         if min(kernel_set[i]) > noise:
+            
             #remove kernel with dips less than expected background noise
             print('Removing kernel ', i)
             del(kernel_set[i])
+            
             continue
 
-    '''get filepaths to results directory'''
+    '''get filepaths to required directories/files'''
     
     #directory containing detection .txt files
     archive_dir = base_path.joinpath('ColibriArchive', str(process_date))
@@ -512,28 +513,34 @@ if __name__ == '__main__':
     #list of filepaths to .txt detection files
     day_files = [f for f in archive_dir.iterdir() if str(obs_date) in f.name]
     detect_files = [f for f in day_files if 'det' in f.name]
-    
-    ''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
+
+    #list of median combined images
     median_combos = [f for f in archive_dir.iterdir() if 'medstacked' in f.name]
-    transform_files = [f for f in archive_dir.iterdir() if 'new-image' in f.name]
+#    transform_files = [f for f in archive_dir.iterdir() if 'new-image' in f.name]
     
     #dictionary to hold WCS transformations for each transform file
     transformations = {}
-        
-    '''loop through each file'''
     
     diff_results = []   #list to hold results for diffraction events
     geo_results = []    #list to hold results for geometric events
     
+        
+    '''loop through each detection file'''
+    
     for filepath in detect_files:
+        
+        '''get event information from .txt file'''
         
         #number id of occulted star
         star_num = filepath.name.split('star')[1].split('_')[0]
 
         print(filepath)
+        
         #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
         eventData = readFile(filepath)
 
+
+        '''get transformation from image coordinates [X, Y] to ecliptic coords [RA, dec]'''
         #get corresponding WCS transformation
         date = pathlib.Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
 
@@ -544,28 +551,38 @@ if __name__ == '__main__':
         star_RA = star_wcs[0]
         star_dec = star_wcs[1]
         
+        
+        '''Get Gaia catalog of stars in surrounding region'''
+        
         #query Gaia for nearby stars
         gaia_SR = 0.1         #search radius for query in degrees
         gaia = VizieR_query.makeQuery([star_RA, star_dec], gaia_SR)        #get dataframe of Gaia results {RA, dec, Gmag}
 
+
+        '''Get info about detected star from Gaia'''
+        
         #match Gaia star with the detection
         SR = 0.005
         star_df = match_RADec(star_RA, star_dec, gaia, SR)
         
-       # lightcurve_looker.plot_event(archive_dir, starData, event_frame, star_num, [star_x, star_y], event_type)
+        
+        '''Find best matched occultation kernel'''
+        
         event_type = eventData[5]
+        
         if event_type == 'diffraction':
             diff_results.append((star_num, eventData[2], eventData[3], eventData[4], 
-                                 kernelDetection(eventData, kernel_set, star_num, archive_dir, star_df), 
+                                 kernelMatch(eventData, kernel_set, star_num, archive_dir, star_df), 
                                  star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
        
         if event_type == 'geometric':
             geo_results.append((star_num, eventData[2], eventData[3], eventData[4], 
-                                kernelDetection(eventData, kernel_set, star_num, archive_dir, star_df), 
+                                kernelMatch(eventData, kernel_set, star_num, archive_dir, star_df), 
                                 star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
 
-    #save list of best matched kernels in a .txt file
-        
+
+    '''save results'''
+    
     diff_save_file = archive_dir.joinpath(str(obs_date) + '_' + telescope + '_diffraction_kernelMatches.txt')
     geo_save_file = archive_dir.joinpath(str(obs_date) + '_' + telescope + '_geometric_kernelMatches.txt')
 

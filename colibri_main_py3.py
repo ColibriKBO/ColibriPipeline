@@ -320,23 +320,27 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
     bias image (2D array of fluxes)
     returns: array of image data arrays, array of header times of these images"""
 
-    imagesData = []    #array to hold image data
-    imagesTimes = []   #array to hold image times
+    imagesData = []    #list to hold image data
+    imagesTimes = []   #list to hold image times
+    
     
     '''list of filenames to read between starting and ending points'''
     files_to_read = [imagePath for i, imagePath in enumerate(imagePaths) if i >= startFrameNum and i < startFrameNum + numFrames]
 
-    '''get data from each file in list of files to read, subtract bias frame (add 100 first, don't go neg)'''
+
+    '''get data from each file in list of files to read, subtract bias frame '''
     for imagePath in files_to_read:
 
-        image = fits.open(imagePath)
+        image = fits.open(imagePath)        #open image
         
-        header = image[0].header
+        header = image[0].header            #read in header data
         
-        imageData = image[0].data - bias
-        headerTime = header['DATE-OBS']
+        imageData = image[0].data - bias    #get image counts and subtract off bias
         
-        #change time if time is wrong (29 hours)
+        headerTime = header['DATE-OBS']     #get timestamp
+        
+        
+        '''change time if time is wrong (29 hours)'''
         hour = str(headerTime).split('T')[1].split(':')[0]
         imageMinute = str(headerTime).split(':')[1]
         dirMinute = imagePath.parent.name.split('_')[1].split('.')[1]
@@ -345,15 +349,18 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
         if int(hour) > 23:
             
             #directory name has local hour, header has UTC hour, need to convert (+4)
-            #on red don't need to convert between UTC and local (local is UTC)
+            #on red /greendon't need to convert between UTC and local (local is UTC)
             newLocalHour = int(imagePath.parent.name.split('_')[1].split('.')[0])
         
+            #if hour changed over during the minute of observations    
             if int(imageMinute) < int(dirMinute):
-               # newUTCHour = newLocalHour + 4 + 1     #add 1 if hour changed over during minute
-                newUTCHour = newLocalHour + 1         #add 1 if hour changed over during minute
+               # newUTCHour = newLocalHour + 4 + 1     #add 1 plus 4 to convert to UTC
+                newUTCHour = newLocalHour + 1          #add 1 
+            
+            #if hour has not changed over, can take new hour directly from directory name
             else:
-                #newUTCHour = newLocalHour + 4
-                newUTCHour  = newLocalHour  
+                #newUTCHour = newLocalHour + 4          #add 4 to convert to UTC
+                newUTCHour  = newLocalHour              #no addition necessary
         
             #replace bad hour in timestamp string with correct hour
             newUTCHour = str(newUTCHour)
@@ -369,7 +376,7 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
 
         imagesData.append(imageData)
         imagesTimes.append(headerTime)
-         
+          
     '''make into array'''
     imagesData = np.array(imagesData, dtype='float64')
     
@@ -392,7 +399,6 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
     
     hnumpix = 2048
     vnumpix = 2048
-    imgain = gain
 
     
     '''list of filenames to read between starting and ending points'''
@@ -404,7 +410,7 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
         headerTime = header['timestamp']
 
         images = nb_read_data(data)
-        image = split_images(images, hnumpix, vnumpix, imgain)
+        image = split_images(images, hnumpix, vnumpix, gain)
         image = np.subtract(image,bias)
 
         #change time if time is wrong (29 hours)
@@ -450,24 +456,24 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
     return imagesData, imagesTimes
 
 
-def initialFind(imageData, detect_thresh):
-    """ Locates the stars in the initial time slice 
-    input: flux data in 2D array for a fits image, detection threshold for star finding
+def initialFind(imageData, detect_thresh_level):
+    """ Locates the stars in an image
+    input: flux data in 2D array for an image, detection threshold for star finding
     returns: [x, y, half light radius] of all stars in pixels"""
 
-    ''' Background extraction for initial time slice'''
+    ''' Background extraction'''
     imageData_new = deepcopy(imageData)
     bkg = sep.Background(imageData_new)
     bkg.subfrom(imageData_new)
-    thresh = detect_thresh * bkg.globalrms  # set detection threshold to mean + 3 sigma
+    detect_thresh = detect_thresh_level * bkg.globalrms  # set detection threshold to mean + 3 sigma
 
     
-    ''' Identify stars in initial time slice '''
-    objects = sep.extract(imageData_new, thresh)
+    ''' Identify stars in background subtracted data'''
+    objects = sep.extract(imageData_new, detect_thresh)
 
 
-    ''' Characterize light profile of each star '''
-    halfLightRad = np.sqrt(objects['npix'] / np.pi) / 2.  # approximate half light radius as half of radius
+    ''' Approximate star's half light radius as half the radius'''
+    halfLightRad = np.sqrt(objects['npix'] / np.pi) / 2.  
 
     
     ''' Generate tuple of (x,y,r) positions for each star'''
@@ -795,7 +801,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     ''' adjustable parameters '''
     
     ap_r = 3.   #radius of aperture for flux measuremnets
-    detect_thresh = 4.   #threshold for object detection
+    detect_thresh_level = 4.   #threshold for object detection
 
 
     ''' get list of image names to process'''       
@@ -831,7 +837,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     print (datetime.datetime.now(), field_name, 'starfinding...',)
     
     #name of .npy file to save star positions in 
-    star_pos_file = base_path.joinpath('ColibriArchive', str(day_stamp), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
+    star_pos_file = base_path.joinpath('ColibriArchive', str(day_stamp), minuteDir.name + '_' + str(detect_thresh_level) + 'sig_pos.npy')
 
     # Remove position file if it exists - MJM (modified RAB Feb 2022)
     if star_pos_file.exists():
@@ -855,7 +861,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
         stacked = stackImages(minuteDir, savefolder, startIndex, numtoStack, bias, gain)
         
         #make list of star coords and half light radii
-        star_find_results = tuple(initialFind(stacked, detect_thresh))
+        star_find_results = tuple(initialFind(stacked, detect_thresh_level))
         
         #remove stars where centre is too close to edge of frame
         edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
@@ -1103,7 +1109,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = False          #True if you want to run directories in parallel
-telescope = 'Green'       #identifier for telescope
+telescope = 'Red'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 obs_date = datetime.date(2021, 8, 4)    #date observations 
 base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
