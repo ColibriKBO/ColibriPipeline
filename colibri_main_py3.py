@@ -1122,7 +1122,6 @@ else:
     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
     obs_date = datetime.date(2021, 8, 4)    #date observations 
 
-
 if __name__ == '__main__':
     
     '''get filepaths'''
