@@ -17,6 +17,7 @@ import VizieR_query
 from astropy import wcs
 import getRAdec
 import astrometrynet_funcs
+import sys
 
 def match_RADec(RA, DEC, gdata, SR):
     '''matches list of found stars with Gaia catalog by RA/dec to get magnitudes
