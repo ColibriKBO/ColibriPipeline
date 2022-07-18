@@ -406,41 +406,43 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
     files_to_read = [imagePath for i, imagePath in enumerate(imagePaths) if i >= startFrameNum and i < startFrameNum + numFrames]
     
     for imagePath in files_to_read:
+        try:
+            data, header = readRCD(imagePath)
+            headerTime = header['timestamp']
 
-        data, header = readRCD(imagePath)
-        headerTime = header['timestamp']
+            images = nb_read_data(data)
+            image = split_images(images, hnumpix, vnumpix, gain)
+            image = np.subtract(image,bias)
 
-        images = nb_read_data(data)
-        image = split_images(images, hnumpix, vnumpix, gain)
-        image = np.subtract(image,bias)
-
-        #change time if time is wrong (29 hours)
-        hour = str(headerTime).split('T')[1].split(':')[0]
-        imageMinute = str(headerTime).split(':')[1]
-        dirMinute = imagePath.parent.name.split('_')[1].split('.')[1]
-        
-        #check if hour is bad, if so take hour from directory name and change header
-        if int(hour) > 23:
+            #change time if time is wrong (29 hours)
+            hour = str(headerTime).split('T')[1].split(':')[0]
+            imageMinute = str(headerTime).split(':')[1]
+            dirMinute = imagePath.parent.name.split('_')[1].split('.')[1]
             
-            #directory name has local hour, header has UTC hour, need to convert (+4)
-            #for red: local time is UTC time (don't need +4)
-            newLocalHour = int(imagePath.parent.name.split('_')[1].split('.')[0])
-        
-            if int(imageMinute) < int(dirMinute):
-                #newUTCHour = newLocalHour + 4 + 1     #add 1 if hour changed over during minute
-                newUTCHour = newLocalHour + 1
-            else:
-                #newUTCHour = newLocalHour + 4
-                newUTCHour = newLocalHour
-        
-            #replace bad hour in timestamp string with correct hour
-            newUTCHour = str(newUTCHour)
-            newUTCHour = newUTCHour.zfill(2)
-        
-            replaced = str(headerTime).replace('T' + hour, 'T' + newUTCHour).strip('b').strip(' \' ')
-        
-            #encode into bytes
-            headerTime = replaced
+            #check if hour is bad, if so take hour from directory name and change header
+            if int(hour) > 23:
+                
+                #directory name has local hour, header has UTC hour, need to convert (+4)
+                #for red: local time is UTC time (don't need +4)
+                newLocalHour = int(imagePath.parent.name.split('_')[1].split('.')[0])
+            
+                if int(imageMinute) < int(dirMinute):
+                    #newUTCHour = newLocalHour + 4 + 1     #add 1 if hour changed over during minute
+                    newUTCHour = newLocalHour + 1
+                else:
+                    #newUTCHour = newLocalHour + 4
+                    newUTCHour = newLocalHour
+            
+                #replace bad hour in timestamp string with correct hour
+                newUTCHour = str(newUTCHour)
+                newUTCHour = newUTCHour.zfill(2)
+            
+                replaced = str(headerTime).replace('T' + hour, 'T' + newUTCHour).strip('b').strip(' \' ')
+            
+                #encode into bytes
+                headerTime = replaced
+            except:
+                pass
 
 
         imagesData.append(image)
