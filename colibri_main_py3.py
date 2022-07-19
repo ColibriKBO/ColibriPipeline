@@ -441,8 +441,8 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
             
                 #encode into bytes
                 headerTime = replaced
-            except:
-                pass
+        except:
+            pass
 
 
         imagesData.append(image)
