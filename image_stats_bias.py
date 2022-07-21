@@ -7,6 +7,9 @@ Read in all bias images from a single night, get the median value, save a text f
 filename | time | median | mean | mode | sensor temp | base temp | FPGA temp
 
 @author: Rachel A. Brown
+
+17-07-2022 modified by Roman A. : added readnoise.py into this script, enabling to see read noise of each directory in
+            the output txt. Modified date folder input method so that the script can be run easier from powershell
 """
 import numpy as np
 import numba as nb
@@ -14,6 +17,8 @@ import scipy.stats
 import binascii
 import datetime
 import pathlib
+import lightcurve_maker
+import math
 
 #Mike's rcd section ---------------------------------------------------------
 # Function for reading specified number of bytes
@@ -197,24 +202,43 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
         
     return imagesData, imagesTimes, (sensorTemp, baseTemp, FPGAtemp)
 
+#-------------------------Read noise section copied from readnoise.py----------------------#17-07-2022 Roman A.
+def get_ReadNoise(FirstBias,SecondBias,gain): 
+    
+    if gain=='high': #gain string to int
+        gain=0.82
+        
+    else:
+        gain=18.98
+    
+    
+    diffImage=FirstBias-SecondBias #subtract one image from another. This results in a differential image of the biases.
+    dev = np.std(diffImage)         #standard deviation of the differential image on a pixel per pixel basis
+    ReadNoise=dev*gain/math.sqrt(2) #read noise by https://www.photometrics.com/wp-content/uploads/2019/10/read-noise-calculator.pdf
+    return ReadNoise
+
+#--------------------------------------------------------------------------------
+
 
 if __name__ == '__main__':
    # if len(sys.argv) > 1:
    #     date = sys.argv[1]   #night directory
    
     '''--------------observation & solution info----------------'''
-    obs_date = datetime.date(2021, 8, 4)           #date of observation
-    telescope = 'Red'                             #telescope identifier
+    #obs_date = datetime.date(2022, 7, 6)           #date of observation
+    print('Telescope: BLUE, gain: HIGH\n')
+    obs_date=input("Input obesrvation date (ex. 2022-07-30): ")  #17-07-2022 Roman A.
+    telescope = 'Blue'                             #telescope identifier
     gain = 'high'           #keyword for gain - 'high' or 'low'
     
     '''------------set up paths to directories------------------'''
-    base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)      
+    base_path = pathlib.Path('/', 'D:/')      
     data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
     save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
     
     save_path.mkdir(parents=True, exist_ok=True)        #make save directory if it doesn't already exist
 
-    save_filepath = save_path.joinpath(str(obs_date) + '_stats.txt')        #.txt file to save results to
+    save_filepath = save_path.joinpath(str(obs_date) + '_stats2.txt')        #.txt file to save results to
     
     minutedirs = [f for f in data_path.iterdir() if f.is_dir()]          #all minutes in night bias directory
 
@@ -227,9 +251,60 @@ if __name__ == '__main__':
     '''----------loop through each minute and each image, calculate stats------------------'''
     
     for minute in minutedirs:
-        
+        print('------------------------------------')
         print('working on: ', minute.name)
         images = sorted(minute.glob('*.rcd'))   #list of images
+        biasFileList=images
+        pairs=0 #number of pairs that will be iterrated
+        ReadNoise=[] 
+        
+        Average_readnoises=[] 
+        Average_stds=[]
+
+        '''----------------------------READ OUT NOISE SECTION------------------------------------'''    
+        #17-07-2022 Roman A.
+        if len(biasFileList)% 2 == 0: #check for even or odd number of images in the directory
+        
+            for i in range(0,len(biasFileList),2): #iterrate through all pairs of subsequent bias images without dublicates
+    
+        
+       
+            #for .rcd files - RAB 06212022:
+                FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+    
+        
+                ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+                pairs+=1
+            print(pairs," pairs iterrated")
+            AverageRN=np.average(ReadNoise) 
+            StdRn=np.std(ReadNoise)         #standard deviation of read noise
+            
+            Average_readnoises.append(AverageRN)
+            Average_stds.append(StdRn)
+            
+        else:
+            
+            for i in range(0,len(biasFileList)-1,2):
+    
+        
+                FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+    
+        
+                ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+                pairs+=1
+            print(pairs," pairs iterrated")
+            AverageRN=np.average(ReadNoise)
+            StdRn=np.std(ReadNoise) 
+            
+            Average_readnoises.append(AverageRN)
+            Average_stds.append(StdRn)
+            
+        print("READ NOISE: ",'{:.4}'.format(AverageRN)+'+/-'+'{:.2}'.format(StdRn))
+        
+        
+        '''----------------------------READ OUT NOISE SECTION END------------------------------------'''
         
         #loop through each image in minute directory
         for image in images:
@@ -250,7 +325,13 @@ if __name__ == '__main__':
             #append image stats to file
             with open(save_filepath, 'a') as filehandle:
                 filehandle.write('%s %s %f %f %f %f %f %f %f\n' %(image, time[0], med, mean, mode, RMS, temps[0], temps[1], temps[2]))
-
+        
+        with open(save_filepath, 'a') as filehandle:
+            filehandle.write("READ NOISE: "+'{:.4}'.format(AverageRN)+'+/-'+'{:.2}'.format(StdRn)+"\n")
     
+    with open(save_filepath, 'a') as filehandle:          
+        filehandle.write("TOTAL READ NOISE: "+'{:.4}'.format(np.average(Average_readnoises))+'+/-'+'{:.2}'.format(np.average(Average_stds)))
+
+    print(" Total READ NOISE: ",'{:.4}'.format(np.average(Average_readnoises))+'+/-'+'{:.2}'.format(np.average(Average_stds)))
             
     
