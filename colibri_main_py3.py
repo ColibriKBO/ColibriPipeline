@@ -1112,7 +1112,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = True          #True if you want to run directories in parallel
-telescope = 'Blue'       #identifier for telescope
+telescope = os.environ['COMPUTERNAME']       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 
 '''get arguments - Added by MJM'''

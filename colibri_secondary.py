@@ -478,7 +478,7 @@ def getTransform(date):
 '''-----------code starts here -----------------------'''
 
 ''' set up parameters for running the code '''
-telescope = 'Blue'       #identifier for telescope
+telescope = os.environ['COMPUTERNAME']       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 soln_order = 3      #tweak order for astrometry.net solution
 obs_date = datetime.date(2021, 8, 4)    #date observations 
@@ -523,7 +523,7 @@ if __name__ == '__main__':
     process_date = datetime.date(int(procYYYYMMDD.split('/')[0]), int(procYYYYMMDD.split('/')[1]), int(procYYYYMMDD.split('/')[2]))
     
     ''' prepare occultation kernels set to match to light curves'''
-    
+
     #load in pre-made kernel set
     # kernel_set = np.loadtxt(base_path.parent.joinpath('kernels', 'kernels_040622.txt')) # Commented out - MJM
     kernel_set = np.loadtxt(base_path.joinpath('kernels', 'kernels_040622.txt'))
