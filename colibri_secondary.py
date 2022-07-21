@@ -18,6 +18,7 @@ from astropy import wcs
 import getRAdec
 import astrometrynet_funcs
 import sys
+import argparse
 
 def match_RADec(RA, DEC, gdata, SR):
     '''matches list of found stars with Gaia catalog by RA/dec to get magnitudes
@@ -477,21 +478,21 @@ def getTransform(date):
 '''-----------code starts here -----------------------'''
 
 ''' set up parameters for running the code '''
-telescope = 'Red'       #identifier for telescope
+telescope = 'Blue'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 soln_order = 3      #tweak order for astrometry.net solution
-# obs_date = datetime.date(2021, 8, 4)    #date observations 
+obs_date = datetime.date(2021, 8, 4)    #date observations 
 # process_date = datetime.date(2022, 4, 26)
-# base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
+base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
 
-'''get arguments - Added by MJM'''
-if len(sys.argv) > 1:
-    base_path = pathlib.Path(sys.argv[1])
-    obsYYYYMMDD = sys.argv[2]
-    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-else:
-    base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
-    obs_date = datetime.date(2021, 8, 4)    #date observations 
+# '''get arguments - Added by MJM'''
+# if len(sys.argv) > 1:
+#     base_path = pathlib.Path(sys.argv[1])
+#     obsYYYYMMDD = sys.argv[2]
+#     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+# else:
+#     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
+obs_date = datetime.date(2021, 8, 4)    #date observations 
 
 procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
 procyear = int(datetime.datetime.today().strftime('%Y'))
@@ -501,11 +502,31 @@ process_date = datetime.date(procyear, procmonth, procday)
 
 '''begin program'''
 if __name__ == '__main__':
+
+    ''' Argument parsing added by MJM - July 20, 2022 '''
+    arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
+        Usage:
+
+        """,
+        formatter_class=argparse.RawTextHelpFormatter)
+
+    arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', default=obs_date)
+    arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=process_date)
+
+    cml_args = arg_parser.parse_args()
+
+    base_path = pathlib.Path(cml_args.basedir)
+    obsYYYYMMDD = cml_args.date
+    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+    procYYYYMMDD = cml_args.procdate
+    process_date = datetime.date(int(procYYYYMMDD.split('/')[0]), int(procYYYYMMDD.split('/')[1]), int(procYYYYMMDD.split('/')[2]))
     
     ''' prepare occultation kernels set to match to light curves'''
- 
+    
     #load in pre-made kernel set
-    kernel_set = np.loadtxt(base_path.parent.joinpath('kernels', 'kernels_040622.txt'))
+    # kernel_set = np.loadtxt(base_path.parent.joinpath('kernels', 'kernels_040622.txt')) # Commented out - MJM
+    kernel_set = np.loadtxt(base_path.joinpath('kernels', 'kernels_040622.txt'))
     
     #check if each kernel has a detectable dip - moved out of dipdetection function RAB 031722
     noise = 0.8   #minimum kernel depth threshold RAB Mar 15 2022- detector noise levels (??) TODO: change - will depend on high/low
