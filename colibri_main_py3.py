@@ -578,8 +578,7 @@ def stackImages(folder, save_path, startIndex, numImages, bias, gain):
     
         '''take median of images and subtract bias'''
         fitsimageMed = np.median(fitsimages, axis=0)
-        imageMed = fitsimageMed 
-        hdu = fits.PrimaryHDU(imageMed)
+        hdu = fits.PrimaryHDU(fitsimageMed)
     
     else:
         #for rcd files:
