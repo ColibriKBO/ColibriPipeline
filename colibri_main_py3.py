@@ -10,6 +10,7 @@ KBO occultation events
 import sep
 import numpy as np
 import numba as nb
+import sys
 from astropy.io import fits
 from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
@@ -22,7 +23,6 @@ import datetime
 import os
 import gc
 import time as timer
-import sys
 
 
 def averageDrift(positions, times):
@@ -406,43 +406,41 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
     files_to_read = [imagePath for i, imagePath in enumerate(imagePaths) if i >= startFrameNum and i < startFrameNum + numFrames]
     
     for imagePath in files_to_read:
-        try:
-            data, header = readRCD(imagePath)
-            headerTime = header['timestamp']
 
-            images = nb_read_data(data)
-            image = split_images(images, hnumpix, vnumpix, gain)
-            image = np.subtract(image,bias)
+        data, header = readRCD(imagePath)
+        headerTime = header['timestamp']
 
-            #change time if time is wrong (29 hours)
-            hour = str(headerTime).split('T')[1].split(':')[0]
-            imageMinute = str(headerTime).split(':')[1]
-            dirMinute = imagePath.parent.name.split('_')[1].split('.')[1]
+        images = nb_read_data(data)
+        image = split_images(images, hnumpix, vnumpix, gain)
+        image = np.subtract(image,bias)
+
+        #change time if time is wrong (29 hours)
+        hour = str(headerTime).split('T')[1].split(':')[0]
+        imageMinute = str(headerTime).split(':')[1]
+        dirMinute = imagePath.parent.name.split('_')[1].split('.')[1]
+        
+        #check if hour is bad, if so take hour from directory name and change header
+        if int(hour) > 23:
             
-            #check if hour is bad, if so take hour from directory name and change header
-            if int(hour) > 23:
-                
-                #directory name has local hour, header has UTC hour, need to convert (+4)
-                #for red: local time is UTC time (don't need +4)
-                newLocalHour = int(imagePath.parent.name.split('_')[1].split('.')[0])
-            
-                if int(imageMinute) < int(dirMinute):
-                    #newUTCHour = newLocalHour + 4 + 1     #add 1 if hour changed over during minute
-                    newUTCHour = newLocalHour + 1
-                else:
-                    #newUTCHour = newLocalHour + 4
-                    newUTCHour = newLocalHour
-            
-                #replace bad hour in timestamp string with correct hour
-                newUTCHour = str(newUTCHour)
-                newUTCHour = newUTCHour.zfill(2)
-            
-                replaced = str(headerTime).replace('T' + hour, 'T' + newUTCHour).strip('b').strip(' \' ')
-            
-                #encode into bytes
-                headerTime = replaced
-        except:
-            pass
+            #directory name has local hour, header has UTC hour, need to convert (+4)
+            #for red: local time is UTC time (don't need +4)
+            newLocalHour = int(imagePath.parent.name.split('_')[1].split('.')[0])
+        
+            if int(imageMinute) < int(dirMinute):
+                #newUTCHour = newLocalHour + 4 + 1     #add 1 if hour changed over during minute
+                newUTCHour = newLocalHour + 1
+            else:
+                #newUTCHour = newLocalHour + 4
+                newUTCHour = newLocalHour
+        
+            #replace bad hour in timestamp string with correct hour
+            newUTCHour = str(newUTCHour)
+            newUTCHour = newUTCHour.zfill(2)
+        
+            replaced = str(headerTime).replace('T' + hour, 'T' + newUTCHour).strip('b').strip(' \' ')
+        
+            #encode into bytes
+            headerTime = replaced
 
 
         imagesData.append(image)
@@ -488,7 +486,7 @@ def initialFind(imageData, detect_thresh_level):
 def makeBiasSet(filepath, numOfBiases, gain):
     """ get set of median-combined biases for entire night that are sorted and indexed by time,
     these are saved to disk and loaded in when needed
-    input: filepath (string) to bias image directories, 
+    input: filepath (Path object) to bias image directories, 
     number of biases images to combine for master, gain keyword 
     return: array with bias image times and filepaths to saved biases on disk"""
 
@@ -507,6 +505,8 @@ def makeBiasSet(filepath, numOfBiases, gain):
         bias_savepath.mkdir()
         
         
+    ''' make median combined image for each minute where biases were taken '''
+    
     #make list of times and corresponding master bias images
     biasList = []
     
@@ -536,7 +536,7 @@ def makeBiasSet(filepath, numOfBiases, gain):
 
 def refineCentroid(imageData, time, coords, sigma):
     """ Refines the centroid for each star for an image based on previous coords 
-    input: flux data in 2D array for single fits image, header time of image, 
+    input: flux data in 2D array for single image, header time of image, 
     coord of stars in previous image, weighting (Gauss sigma)
     returns: new [x, y] positions, header time of image """
 
@@ -571,8 +571,8 @@ def stackImages(folder, save_path, startIndex, numImages, bias, gain):
         fitsimages = []   #list to hold bias data
     
         '''append data from each image to list of images'''
-        for i in range(startIndex, numImages):
-            fitsimages.append(fits.getdata(fitsimageFileList[i]))
+    #    for i in range(startIndex, numImages):
+    #        fitsimages.append(fits.getdata(fitsimageFileList[i]))
         
         fitsimages = importFramesFITS(fitsimageFileList, startIndex, numImages, bias)[0]
     
@@ -743,8 +743,11 @@ def split_images(data,pix_h,pix_v,gain):
 
 # Function to read RCD file data
 def readRCD(filename):
+    '''reads .rcd file
+    input: path to file [string or pathlib path]
+    returns: table with pixel data, header dictionary'''
 
-    hdict = {}
+    hdict = {}  #dictionary to hold data
 
     with open(filename, 'rb') as fid:
 
@@ -1111,20 +1114,22 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 '''set parameters for running code'''
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
-runPar = True          #True if you want to run directories in parallel
-telescope = os.environ['COMPUTERNAME']       #identifier for telescope
+runPar = False          #True if you want to run directories in parallel
+telescope = 'Red'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 
-'''get arguments - Added by MJM'''
+'''get arguments'''
 if len(sys.argv) > 1:
     base_path = pathlib.Path(sys.argv[1])
     obsYYYYMMDD = sys.argv[2]
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+
 else:
     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
     obs_date = datetime.date(2021, 8, 4)    #date observations 
 
 if __name__ == '__main__':
+    
     
     '''get filepaths'''
  
