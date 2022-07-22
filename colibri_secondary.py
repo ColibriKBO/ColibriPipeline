@@ -512,7 +512,7 @@ if __name__ == '__main__':
 
     arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
     arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', default=obs_date)
-    arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=process_date)
+    arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
 
     cml_args = arg_parser.parse_args()
 
