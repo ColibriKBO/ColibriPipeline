@@ -17,7 +17,7 @@ import VizieR_query
 from astropy import wcs
 import getRAdec
 import astrometrynet_funcs
-import sys
+import sys, os, time
 import argparse
 
 def match_RADec(RA, DEC, gdata, SR):
@@ -563,7 +563,11 @@ if __name__ == '__main__':
     
         
     '''loop through each detection file'''
-    
+    starttime = time.time() # Added timer - MJM
+    transformtime = 0 # Added timer - MJM
+    gaiatime = 0 # Added timer - MJM
+    occulttime = 0 # Added timer - MJM
+
     for filepath in detect_files:
         
         '''get event information from .txt file'''
@@ -581,7 +585,10 @@ if __name__ == '__main__':
         #get corresponding WCS transformation
         date = pathlib.Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
 
+        tstart = time.time() # Added timer - MJM
         transform = getTransform(date)
+        tend = time.time() # Added timer - MJM
+        transformtime += tend-tstart # Added timer - MJM
         
         #get star coords in RA/dec
         star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
@@ -592,6 +599,7 @@ if __name__ == '__main__':
         '''Get Gaia catalog of stars in surrounding region'''
         
         #query Gaia for nearby stars
+        gstart = time.time() # Added timer - MJM
         gaia_SR = 0.1         #search radius for query in degrees
         gaia = VizieR_query.makeQuery([star_RA, star_dec], gaia_SR)        #get dataframe of Gaia results {RA, dec, Gmag}
 
@@ -602,9 +610,11 @@ if __name__ == '__main__':
         SR = 0.005
         star_df = match_RADec(star_RA, star_dec, gaia, SR)
         
+        gend = time.time()
+        gaiatime += gend-gstart # Added timer - MJM
         
         '''Find best matched occultation kernel'''
-        
+        ostart = time.time() # Added timer - MJM
         event_type = eventData[5]
         
         if event_type == 'diffraction':
@@ -616,7 +626,8 @@ if __name__ == '__main__':
             geo_results.append((star_num, eventData[2], eventData[3], eventData[4], 
                                 kernelMatch(eventData, kernel_set, star_num, archive_dir, star_df), 
                                 star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
-
+        oend = time.time() # Added timer - MJM
+        occulttime += oend - ostart # Added timer - MJM
 
     '''save results'''
     
@@ -654,5 +665,7 @@ if __name__ == '__main__':
                                                   line[5], line[6], line[7], line[8]))
 
 
-
+    print('Time spent on astrometry... %f' % transformtime)
+    print('Time spent on Gaia... %f' % gaiatime)
+    print('Time spend on finding best kernel... %f' % occulttime)
 
