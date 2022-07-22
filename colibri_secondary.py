@@ -587,14 +587,14 @@ if __name__ == '__main__':
 
         tstart = time.time() # Added timer - MJM
         transform = getTransform(date)
-        tend = time.time() # Added timer - MJM
-        transformtime += tend-tstart # Added timer - MJM
         
         #get star coords in RA/dec
         star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
         star_RA = star_wcs[0]
         star_dec = star_wcs[1]
         
+        tend = time.time() # Added timer - MJM
+        transformtime += tend-tstart # Added timer - MJM
         
         '''Get Gaia catalog of stars in surrounding region'''
         
