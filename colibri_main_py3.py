@@ -16,7 +16,7 @@ from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
 from copy import deepcopy
 from multiprocessing import Pool
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import pathlib
 import multiprocessing
 import datetime
@@ -585,7 +585,6 @@ def stackImages(folder, save_path, startIndex, numImages, bias, gain):
         '''get list of images to combine'''
         rcdimageFileList = sorted(folder.glob('*.rcd'))         #list of .rcd images
         rcdimages = importFramesRCD(rcdimageFileList, startIndex, numImages, bias, gain)[0]     #import images & subtract bias
-
     
         imageMed = np.median(rcdimages, axis=0)          #get median value
     
@@ -620,14 +619,14 @@ def sumFlux(data, x_coords, y_coords, l):
 
 def timeEvolve(imageData, imageTime, prevStarData, x_drift, y_drift, r, numStars, x_length, y_length):
     """ Adjusts aperture based on star drift and calculates flux in aperture 
-    input: image data (flux in 2d array), image header times, star data (coords, flux, time) from previous image, 
-    x per sec drift rate, y per sec drift rate, aperture radius to sum flux in, 
+    input: image data (flux in 2d array), image header time, star data (coords, flux, time) from previous image, 
+    x px/s drift rate, y px/s drift rate, aperture radius to sum flux in [px], 
     number of stars, x image length, y image length
     returns: new star coords [x,y], image flux, times as tuple"""
 
     '''get proper frame times to apply drift'''
     frame_time = Time(imageTime, precision=9).unix   #current frame time from file header (unix)
-    drift_time = frame_time - prevStarData[1,3]    #time since previous frame [s]
+    drift_time = frame_time - prevStarData[1,3]      #time since previous frame [s]
     
     '''add drift to each star's coordinates based on time since last frame'''
     x = [prevStarData[ind, 0] + x_drift*drift_time for ind in range(0, numStars)]
@@ -778,7 +777,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     """ formerly 'main'
     Detect possible occultation events in selected file and archive results 
     
-    input: name of current folder, Rickerwavelet kernel, camera exposure time
+    input: filepath to current folder, list of master biases and times, Rickerwavelet kernel, camera exposure time,
+    gain level of images
     
     output: printout of processing tasks, .npy file with star positions (if doesn't exist), 
     .txt file for each occultation event with names of images to be saved, the time 
@@ -1056,13 +1056,14 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
             filehandle.write('#\n#\n#\n#\n')
             filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
             filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
+            filehandle.write('#\n')
             filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f][0]))
             filehandle.write('#    Telescope: %s\n' %(telescope))
             filehandle.write('#    Field: %s\n' %(field_name))
             filehandle.write('#    Dip Type: %s\n' %(save_types[np.where(save_frames == f)][0]))
             filehandle.write('#    Median Flux: %.2f\n' %(np.median(star_all_flux)))
             filehandle.write('#    Stddev Flux: %.3f\n' %(np.std(star_all_flux)))
-            filehandle.write('#\n#\n#\n')
+            filehandle.write('#\n#\n')
             filehandle.write('#filename     time      flux\n')
            
             ''' save data '''
@@ -1113,8 +1114,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 '''set parameters for running code'''
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
-runPar = True          #True if you want to run directories in parallel
-telescope = os.environ['COMPUTERNAME']       #identifier for telescope
+runPar = False          #True if you want to run directories in parallel
+telescope = 'Red'       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 
 '''get arguments'''
