@@ -1028,16 +1028,17 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     ''' data archival '''
     
     secondsToSave =  1.0    #number of seconds on either side of event to save 
-    save_frames = event_frames[np.where(event_frames > 0)]  #frame numbers for each event to be saved
-    save_chunk = int(round(secondsToSave / exposure_time))  #save certain num of frames on both sides of event
-    save_curves = light_curves[np.where(event_frames > 0)]  #light curves for each star to be saved
+    save_frames = event_frames[np.where(event_frames > 0)]  # frame numbers for each event to be saved
+    save_chunk = int(round(secondsToSave / exposure_time))  # save certain num of frames on both sides of event
+    save_curves = light_curves[np.where(event_frames > 0)]  # light curves for each star to be saved
     save_types = dip_types[np.where(event_frames > 0)]
     #loop through each detected event
     for f in save_frames:
         
-        date = headerTimes[f][0].split('T')[0]                                 #date of event
-        time = headerTimes[f][0].split('T')[1].split('.')[0].replace(':','')   #time of event
-        star_coords = initial_positions[np.where(event_frames == f)[0][0]]     #coords of occulted star
+        date = headerTimes[f][0].split('T')[0]                                 # date of event
+        time = headerTimes[f][0].split('T')[1].split('.')[0].replace(':','')   # time of event
+        mstime = headerTimes[f][0].split('T')[1].split('.')[1]                 # micros time of event
+        star_coords = initial_positions[np.where(event_frames == f)[0][0]]     # coords of occulted star
    
        # print(datetime.datetime.now(), ' saving event in frame', f)
         
@@ -1046,7 +1047,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
         #text file to save results in
         #saved file format: 'det_date_time_star#_telescope.txt'
 
-        savefile = base_path.joinpath('ColibriArchive', str(day_stamp), 'det_' + date + '_' + time + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
+        savefile = base_path.joinpath('ColibriArchive', str(day_stamp), 'det_' + date + '_' + time + '_' + mstime + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
         #columns: fits filename and path | header time (seconds) |  star flux
         
         #open file to save results
@@ -1057,7 +1058,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
             filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
             filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
             filehandle.write('#\n')
-            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f][0]))
+            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f][0][:26]))
             filehandle.write('#    Telescope: %s\n' %(telescope))
             filehandle.write('#    Field: %s\n' %(field_name))
             filehandle.write('#    Dip Type: %s\n' %(save_types[np.where(save_frames == f)][0]))

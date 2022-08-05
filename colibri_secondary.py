@@ -406,7 +406,6 @@ def readFile(filepath):
         
         #loop through each line of the file
         for i, line in enumerate(f):
-            
 
             #get event frame number
             if i == 4:
@@ -419,16 +418,17 @@ def readFile(filepath):
                 star_y = float(star_coords[1])
             
             #get event time
-            elif i == 6:
+            elif i == 7:
                 event_time = line.split('T')[2].split('\n')[0]
-                
-            elif i == 9:
-                event_type = line.split(':')[1].split('\n')[0].strip(" ")
+                print(event_time)
                 
             elif i == 10:
-                star_med = line.split(':')[1].split('\n')[0].strip(" ")
+                event_type = line.split(':')[1].split('\n')[0].strip(" ")
                 
             elif i == 11:
+                star_med = line.split(':')[1].split('\n')[0].strip(" ")
+                
+            elif i == 12:
                 star_std = line.split(':')[1].split('\n')[0].strip(' ')
                 
         #reset event frame to match index of the file
@@ -498,7 +498,8 @@ procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
 procyear = int(datetime.datetime.today().strftime('%Y'))
 procmonth = int(datetime.datetime.today().strftime('%m'))
 procday = int(datetime.datetime.today().strftime('%d'))
-process_date = datetime.date(procyear, procmonth, procday)
+# process_date = datetime.date(procyear, procmonth, procday)
+process_date = obs_date
 
 '''begin program'''
 if __name__ == '__main__':
