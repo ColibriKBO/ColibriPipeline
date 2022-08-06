@@ -500,6 +500,7 @@ procmonth = int(datetime.datetime.today().strftime('%m'))
 procday = int(datetime.datetime.today().strftime('%d'))
 # process_date = datetime.date(procyear, procmonth, procday)
 process_date = obs_date
+print(process_date)
 
 '''begin program'''
 if __name__ == '__main__':
@@ -513,16 +514,16 @@ if __name__ == '__main__':
 
     arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
     arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', default=obs_date)
-    arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
+    # arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
 
     cml_args = arg_parser.parse_args()
 
     base_path = pathlib.Path(cml_args.basedir)
     obsYYYYMMDD = cml_args.date
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    procYYYYMMDD = cml_args.procdate
-    process_date = datetime.date(int(procYYYYMMDD.split('/')[0]), int(procYYYYMMDD.split('/')[1]), int(procYYYYMMDD.split('/')[2]))
-    
+    # procYYYYMMDD = cml_args.procdate
+    # process_date = datetime.date(int(procYYYYMMDD.split('/')[0]), int(procYYYYMMDD.split('/')[1]), int(procYYYYMMDD.split('/')[2]))
+    process_date = obs_date
     ''' prepare occultation kernels set to match to light curves'''
 
     #load in pre-made kernel set

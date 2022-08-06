@@ -494,12 +494,13 @@ def makeBiasSet(filepath, numOfBiases, gain):
     
     ''' create folders for results '''
     
-    day_stamp = datetime.date.today()
+    day_stamp = obs_date
     save_path = base_path.joinpath('ColibriArchive', str(day_stamp))
     bias_savepath = save_path.joinpath('masterBiases')
     
     if not save_path.exists():
         save_path.mkdir()
+    print(save_path)
         
     if not bias_savepath.exists():
         bias_savepath.mkdir()
@@ -788,11 +789,14 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     global telescope
     
     print (datetime.datetime.now(), "Opening:", minuteDir)
+    print('Minute Dir: %s' % minuteDir)
+
     
 
     ''' create folder for results '''
-    
-    day_stamp = datetime.date.today()
+    # Commented out MJM
+    # day_stamp = datetime.date.today()
+    day_stamp = obs_date
     savefolder = base_path.joinpath('ColibriArchive', str(day_stamp))
     if not savefolder.exists():
         savefolder.mkdir()      
@@ -842,7 +846,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     print (datetime.datetime.now(), field_name, 'starfinding...',)
     
     #name of .npy file to save star positions in 
-    star_pos_file = base_path.joinpath('ColibriArchive', str(day_stamp), minuteDir.name + '_' + str(detect_thresh_level) + 'sig_pos.npy')
+    star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(detect_thresh_level) + 'sig_pos.npy')
 
     # Remove position file if it exists - MJM (modified RAB Feb 2022)
     if star_pos_file.exists():
@@ -1047,7 +1051,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
         #text file to save results in
         #saved file format: 'det_date_time_star#_telescope.txt'
 
-        savefile = base_path.joinpath('ColibriArchive', str(day_stamp), 'det_' + date + '_' + time + '_' + mstime + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
+        savefile = base_path.joinpath('ColibriArchive', str(obs_date), 'det_' + date + '_' + time + '_' + mstime + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
         #columns: fits filename and path | header time (seconds) |  star flux
         
         #open file to save results
@@ -1123,11 +1127,28 @@ gain = 'high'           #gain level for .rcd files ('low' or 'high')
 if len(sys.argv) > 1:
     base_path = pathlib.Path(sys.argv[1])
     obsYYYYMMDD = sys.argv[2]
+    obsdatesplit = obsYYYYMMDD.split('/')
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 
 else:
     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
-    obs_date = datetime.date(2021, 8, 4)    #date observations 
+    obs_date = datetime.date(2021, 8, 4)    #date observations
+
+# savefolder = base_path.joinpath('ColibriArchive', obsdatesplit[0]+'-'+obsdatesplit[1]+'-'+obsdatesplit[2])
+# print(savefolder)
+# if not savefolder.exists():
+#     savefolder.mkdir()
+
+# save_path = base_path.joinpath('ColibriArchive', obsdatesplit[0]+'-'+obsdatesplit[1]+'-'+obsdatesplit[2])
+# bias_savepath = save_path.joinpath('masterBiases')
+
+# # Commented out MJM
+# if not save_path.exists():
+#     save_path.mkdir()
+# print('blah, blah, blah %s' % save_path)
+    
+# if not bias_savepath.exists():
+#     bias_savepath.mkdir()
 
 if __name__ == '__main__':
     
