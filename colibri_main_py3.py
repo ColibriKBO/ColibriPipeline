@@ -794,9 +794,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     
 
     ''' create folder for results '''
-    # Commented out MJM
-    # day_stamp = datetime.date.today()
-    day_stamp = obs_date
+    day_stamp = obs_date # Changed to observation date - MJM
     savefolder = base_path.joinpath('ColibriArchive', str(day_stamp))
     if not savefolder.exists():
         savefolder.mkdir()      
@@ -1133,22 +1131,6 @@ if len(sys.argv) > 1:
 else:
     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
     obs_date = datetime.date(2021, 8, 4)    #date observations
-
-# savefolder = base_path.joinpath('ColibriArchive', obsdatesplit[0]+'-'+obsdatesplit[1]+'-'+obsdatesplit[2])
-# print(savefolder)
-# if not savefolder.exists():
-#     savefolder.mkdir()
-
-# save_path = base_path.joinpath('ColibriArchive', obsdatesplit[0]+'-'+obsdatesplit[1]+'-'+obsdatesplit[2])
-# bias_savepath = save_path.joinpath('masterBiases')
-
-# # Commented out MJM
-# if not save_path.exists():
-#     save_path.mkdir()
-# print('blah, blah, blah %s' % save_path)
-    
-# if not bias_savepath.exists():
-#     bias_savepath.mkdir()
 
 if __name__ == '__main__':
     
