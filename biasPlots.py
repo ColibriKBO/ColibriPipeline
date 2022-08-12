@@ -6,9 +6,13 @@ Created on Thu Aug 11 19:36:31 2022
 """
 
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 
+import pandas as pd
+
+
+
+
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 #scope = 'Green'
@@ -92,7 +96,7 @@ ax21.set_xticks([])
 ax21.set_xticklabels([])
 ax21.set_ylim(lower_m, upper_m)
 
-ax22.scatter(Green_bias['hour'], np.mean(Green_bias['FPGAtemp']) - Green_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
+ax22.scatter(Red_bias['hour'], np.mean(Red_bias['FPGAtemp']) - Red_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
 
 ax22.vlines(Red_index, lower_t, upper_t, color = 'black', linewidth = 1)
 ax22.set_xlabel('Time')
@@ -112,7 +116,7 @@ ax31.set_xticks([])
 ax31.set_xticklabels([])
 ax31.set_ylim(lower_m, upper_m)
 
-ax32.scatter(Green_bias['hour'], np.mean(Green_bias['FPGAtemp']) - Green_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
+ax32.scatter(Blue_bias['hour'], np.mean(Blue_bias['FPGAtemp']) - Blue_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
 
 ax32.vlines(Blue_index, lower_t, upper_t, color = 'black', linewidth = 1)
 ax32.set_xlabel('Time')
@@ -174,6 +178,7 @@ ax3.set_xticklabels(Blue_labels,rotation=20,fontsize=10)
 #ax1.ylim(lower-0.2, upper+0.2)
 
 plt.legend()
+
 
 plt.savefig(Green_data.joinpath('Green-Red-Blue' + '.png'),dpi=300)
 plt.show()
