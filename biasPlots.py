@@ -6,13 +6,9 @@ Created on Thu Aug 11 19:36:31 2022
 """
 
 import numpy as np
-
 import pandas as pd
-
-
-
-
 import matplotlib.pyplot as plt
+
 from pathlib import Path
 
 #scope = 'Green'
@@ -178,7 +174,6 @@ ax3.set_xticklabels(Blue_labels,rotation=20,fontsize=10)
 #ax1.ylim(lower-0.2, upper+0.2)
 
 plt.legend()
-
 
 plt.savefig(Green_data.joinpath('Green-Red-Blue' + '.png'),dpi=300)
 plt.show()
