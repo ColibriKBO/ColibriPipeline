@@ -10,9 +10,9 @@ filename | time | median | mean | mode | sensor temp | base temp | FPGA temp
 
 17-07-2022 modified by Roman A. : added readnoise.py into this script, enabling to see read noise of each directory in
             the output txt. Modified date folder input method so that the script can be run easier from powershell
-
-12-08-2022 modified by Roman A. : read noise is now written to separate txt file, the script produces 2 graphs
-	   that show how bias mean and median varies. 
+            
+14-08-2022 modified by Roman A. : read noise is now written to separate txt file, the script produces 2 graphs
+       that show how bias mean and median varies.
 """
 import numpy as np
 import numba as nb
@@ -253,14 +253,14 @@ if __name__ == '__main__':
     with open(save_filepath, 'a') as filehandle:
                 filehandle.write('filename    time    med    mean    mode    RMS      sensorTemp    baseTemp    FPGAtemp\n')  
                 
-    readnoise_filepath = save_path.joinpath(str(obs_date) + '_readnoise.txt')
+    readnoise_filepath = save_path.joinpath(str(obs_date) + '_readnoise.txt') # 08-15 Roman A. file for read noise data
     with open(readnoise_filepath, 'a') as filehandle:
             filehandle.write('minute    readnoise\n')
 
     print('number of subdirectories: ', len(minutedirs))
     
     '''----------loop through each minute and each image, calculate stats------------------'''
-    
+    Average_readnoises=[]
     for minute in minutedirs:
         print('------------------------------------')
         print('working on: ', minute.name)
@@ -269,7 +269,7 @@ if __name__ == '__main__':
         pairs=0 #number of pairs that will be iterrated
         ReadNoise=[] 
         
-        Average_readnoises=[] 
+         
         Average_stds=[]
 
         '''----------------------------READ OUT NOISE SECTION------------------------------------'''    
@@ -340,17 +340,17 @@ if __name__ == '__main__':
             with open(save_filepath, 'a') as filehandle:
                 filehandle.write('%s %s %f %f %f %f %f %f %f\n' %(image, time[0], med, mean, mode, RMS, temps[0], temps[1], temps[2]))
         
-    with open(readnoise_filepath, 'a') as filehandle:
+    with open(readnoise_filepath, 'a') as filehandle: #write read noise data in txt file
                 filehandle.write('Total average Read Noise: %f\n' %(np.average(Average_readnoises)))
     print(" Total READ NOISE: ",'{:.4}'.format(np.average(Average_readnoises))+'+/-'+'{:.2}'.format(np.average(Average_stds)))
     
     '''-----------------------------Building graphs-------------------------------------'''
     
         #%%
-    #reading tables
+    #one night version
     
     
-    scope = telescope
+    scope = 'Green'
     #night = '2022-08-06'
     night=obs_date
     data_file=Path('/','D:','/ColibriArchive',night.replace('-', '')+'_diagnostics','Bias_Stats')
@@ -374,8 +374,8 @@ if __name__ == '__main__':
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True, figsize = (16,8), gridspec_kw=dict(hspace = 0.05))
     
     #minimum and maximum value in one night
-    lower_m = -1 #data['mean'].min()
-    upper_m = 1 #data['mean'].max()
+    lower_m = -3 #data['mean'].min()
+    upper_m = 3 #data['mean'].max()
     
     ax1.scatter(data['hour'], np.mean(data['mean']) - data['mean'], label = 'mean', s = 2)
     
@@ -384,7 +384,7 @@ if __name__ == '__main__':
     ax1.vlines(index, lower_m, upper_m, color = 'black', linewidth = 1)
     ax1.set_xticks([])
     ax1.set_xticklabels([])
-    ax1.set_ylim(lower_m, upper_m)
+    ax1.set_ylim(np.min(np.mean(data['mean']) - data['mean'])-0.5,np.amax(np.mean(data['mean']) - data['mean'])+0.5) #modified to see whole Graph
     
     #ax1.legend()
     
@@ -393,12 +393,12 @@ if __name__ == '__main__':
     #ax2.scatter(data['hour'], data['baseTemp'], label = 'Base temp', s = 2)
     ax2.scatter(data['hour'], np.mean(data['FPGAtemp']) - data['FPGAtemp'], label = 'FGPA temp', s = 2)
     
-    ax2.vlines(index, lower_t, upper_t, color = 'black', linewidth = 1)
+    ax2.vlines(index, np.min(np.mean(data['FPGAtemp']) - data['FPGAtemp']), np.amax(np.mean(data['FPGAtemp']) - data['FPGAtemp']), color = 'black', linewidth = 1)
     ax2.set_xlabel('Time')
     ax2.set_ylabel('(mean temperature) - temperature (C)')
     ax2.set_xticks(index)
     ax2.set_xticklabels(labels,rotation=90)
-    ax2.set_ylim(lower_t, upper_t)
+    ax2.set_ylim(np.min(np.mean(data['FPGAtemp']) - data['FPGAtemp'])-0.5, np.amax(np.mean(data['FPGAtemp']) - data['FPGAtemp'])+0.5) #modified to see whole Graph
     
     #ax2.legend()
     
@@ -408,10 +408,9 @@ if __name__ == '__main__':
         
     
         #%%
-    #plot with mean and median
     lower = 70
     upper = 78
-    #plot with single nights data
+    #plot with single nights data of mean and median
     plt.scatter(data['hour'], data['med'], label = 'median', s = 2)
     plt.scatter(data['hour'], data['mean'], label = 'mean', s = 2)
     #plt.scatter(data['hour'], data['mode'], label = 'mode', s = 2)
@@ -420,7 +419,7 @@ if __name__ == '__main__':
     
     plt.title(scope + ' biases - ' + data.loc[0]['day'])
     plt.ylabel('image pixel value')
-    plt.vlines(index, np.min(data['med'])-0.5, np.amax(data['med'])+0.5, color = 'black', linewidth = 1)
+    plt.vlines(index, np.min(data['med'])-0.5, np.amax(data['med'])+0.5, color = 'black', linewidth = 1) #modified to see whole Graph
     plt.xlabel('time')
     plt.xticks(index, labels,rotation=20,fontsize=7)
     #plt.ylim(lower-0.2, upper+0.2)
