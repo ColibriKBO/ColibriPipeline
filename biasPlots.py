@@ -2,7 +2,7 @@
 """
 Created on Thu Aug 11 19:36:31 2022
 
-@author: GreenBird
+@author: Roman A. used Rachel's bias graphing scripts
 """
 
 import numpy as np
@@ -59,8 +59,8 @@ Blue_labels = Blue_labels.str.split('.', expand = True)[0]
 fig, [[ax11, ax21, ax31], [ax12, ax22, ax32]] = plt.subplots(ncols=3, nrows=2, sharex = True, figsize = (22,8), gridspec_kw=dict(hspace = 0.15))
 
 #minimum and maximum value in one night
-lower_m = -1 #data['mean'].min()
-upper_m = 1 #data['mean'].max()
+lower_m = -4#data['mean'].min()
+upper_m = 4 #data['mean'].max()
 
 ax11.scatter(Green_bias['hour'], np.mean(Green_bias['mean']) - Green_bias['mean'], label = 'mean', s = 2)
 
@@ -96,7 +96,7 @@ ax21.set_xticks([])
 ax21.set_xticklabels([])
 ax21.set_ylim(lower_m, upper_m)
 
-ax22.scatter(Green_bias['hour'], np.mean(Green_bias['FPGAtemp']) - Green_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
+ax22.scatter(Red_bias['hour'], np.mean(Red_bias['FPGAtemp']) - Red_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
 
 ax22.vlines(Red_index, lower_t, upper_t, color = 'black', linewidth = 1)
 ax22.set_xlabel('Time')
@@ -116,7 +116,7 @@ ax31.set_xticks([])
 ax31.set_xticklabels([])
 ax31.set_ylim(lower_m, upper_m)
 
-ax32.scatter(Green_bias['hour'], np.mean(Green_bias['FPGAtemp']) - Green_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
+ax32.scatter(Blue_bias['hour'], np.mean(Blue_bias['FPGAtemp']) - Blue_bias['FPGAtemp'], label = 'FGPA temp', s = 2)
 
 ax32.vlines(Blue_index, lower_t, upper_t, color = 'black', linewidth = 1)
 ax32.set_xlabel('Time')
@@ -137,7 +137,7 @@ plt.close()
 lower = 70
 upper = 78
 
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, sharey = False, figsize = (24,9), gridspec_kw=dict(wspace = 0.1))
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharey = False, figsize = (24,10), gridspec_kw=dict(hspace = 0.38))
 
 ax1.scatter(Green_bias['hour'], Green_bias['med'], label = 'median', s = 2)
 ax1.scatter(Green_bias['hour'], Green_bias['mean'], label = 'mean', s = 2)
@@ -156,7 +156,7 @@ ax3.scatter(Blue_bias['hour'], Blue_bias['mean'], label = 'mean', s = 2)
 ax1.set_title('Green biases - ' + Green_bias.loc[0]['day'])
 ax1.set_ylabel('image pixel value')
 ax1.vlines(Green_index, np.min(Green_bias['med'])-0.5, np.amax(Green_bias['med'])+0.5, color = 'black', linewidth = 1)
-ax1.set_xlabel('time')
+#ax1.set_xlabel('time')
 ax1.set_xticks(Green_index)
 ax1.set_xticklabels(Green_labels,rotation=20,fontsize=10)
 #ax1.ylim(lower-0.2, upper+0.2)
@@ -164,7 +164,7 @@ ax1.set_xticklabels(Green_labels,rotation=20,fontsize=10)
 ax2.set_title('Red biases - ' + Red_bias.loc[0]['day'])
 ax2.set_ylabel('image pixel value')
 ax2.vlines(Red_index, np.min(Red_bias['med'])-0.5, np.amax(Red_bias['med'])+0.5, color = 'black', linewidth = 1)
-ax2.set_xlabel('time')
+#ax2.set_xlabel('time')
 ax2.set_xticks(Red_index)
 ax2.set_xticklabels(Red_labels,rotation=20,fontsize=10)
 #ax1.ylim(lower-0.2, upper+0.2)
@@ -172,7 +172,7 @@ ax2.set_xticklabels(Red_labels,rotation=20,fontsize=10)
 ax3.set_title('Blue  biases - ' + Blue_bias.loc[0]['day'])
 ax3.set_ylabel('image pixel value')
 ax3.vlines(Blue_index, np.min(Blue_bias['med'])-0.5, np.amax(Blue_bias['med'])+0.5, color = 'black', linewidth = 1)
-ax3.set_xlabel('time')
+#ax3.set_xlabel('time')
 ax3.set_xticks(Blue_index)
 ax3.set_xticklabels(Blue_labels,rotation=20,fontsize=10)
 #ax1.ylim(lower-0.2, upper+0.2)
