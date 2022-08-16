@@ -26,7 +26,7 @@ def getRAdec(transform, star_pos_file, savefile):
     star_pos = np.load(star_pos_file)
     
     #get transformation
-    world = transform.wcs_pix2world(star_pos, 0)
+    world = transform.all_pix2world(star_pos, 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
    # print(world)
    # px = transform.wcs_world2pix(world, 0)
    # print(px)
@@ -55,7 +55,7 @@ def getRAdecfromFile(transform_file, star_pos_file, savefile):
     star_pos = np.load(star_pos_file)
     
     #get transformation
-    world = transform.wcs_pix2world(star_pos, 0)
+    world = transform.all_pix2world(star_pos, 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
    # print(world)
    # px = transform.wcs_world2pix(world, 0)
    # print(px)
@@ -106,7 +106,8 @@ def getRAdecSingle(transform, star_pos):
         
     #get transformation
     star_pos = np.array([[star_pos[0], star_pos[1]]])
-    world = transform.wcs_pix2world(np.array(star_pos), 0)
+    
+    world = transform.all_pix2world(np.array(star_pos), 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
   #  star_pos = np.array([star_pos[0], star_pos[1]])
    # world = transform.pixel_to_world(np.array(star_pos))
     
