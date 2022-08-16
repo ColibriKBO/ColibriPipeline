@@ -48,8 +48,8 @@ def match_RADec(data, gdata, SR):
         df = df[(df['DE_ICRS'] >= (DEC-SR))]          #only include rows from this new df that are withing lower dec limit
          
          #RAB - uncomment lines below to match based on smallest distance
-        df['diff'] = np.sqrt(((df.RA_ICRS - RA)**2*np.cos(np.radians(df.DE_ICRS))) + (df.DE_ICRS - DEC)**2)
-        df.sort_values(by=['diff'], ascending=True, inplace = True)
+        #df['diff'] = np.sqrt(((df.RA_ICRS - RA)**2*np.cos(np.radians(df.DE_ICRS))) + (df.DE_ICRS - DEC)**2)
+        #df.sort_values(by=['diff'], ascending=True, inplace = True)
        
         #RAB - uncomment line below to match based on brightest magnitude
         df.sort_values(by=["Gmag"], ascending=True, inplace=True) #sort matches by brightness (brightest at top)
@@ -197,8 +197,8 @@ def RAdec_diffPlot(matched):
 print('setting up')
 #time and date of observations/processing
 #MODIFY LINES BELOW BEFORE RUNNING
-obs_date = datetime.date(2022, 5, 18)           #date of observation
-obs_time = datetime.time(5, 40, 22)             #time of observation (to the second)
+obs_date = datetime.date(2021, 8, 4)           #date of observation
+obs_time = datetime.time(4, 49, 6)             #time of observation (to the second)
 image_index = '2'                               #index of image to use (if uploading to astrometry.net manually)
 polynom_order = '4th'                           #order of astrometry.net plate solution polynomial
 ap_r = 3                                        #radius of aperture for photometry
@@ -209,8 +209,8 @@ detect_thresh = 4.                              #detection threshold
 
 #paths to required files
 #MODIFY BASE PATH BEFORE RUNNING
-#base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  
-base_path = pathlib.Path('D:')                            #path to main directory
+base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  
+#base_path = pathlib.Path('D:')                            #path to main directory
 data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''))    #path to data
 
 #get exact name of desired minute directory
@@ -219,8 +219,8 @@ minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]    
 #minute_dir = '20220518_05.40.22.844'                                           #minute label (if don't have data)
 
 #path to output files
-save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
-#save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+#save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
 
 
 lightcurve_path = save_path.joinpath(gain + '_' + str(detect_thresh) +  'sig_lightcurves')          #path that light curves are saved to
@@ -309,7 +309,7 @@ stars = pd.DataFrame(snplots.snr_single(lightcurve_path), columns = ['X', 'Y', '
 '''----------------matching tables----------------------------'''
 print('matching tables')
 # 1: match (RA, dec) from light curves with (RA, dec) from Gaia to get magnitudes
-SR = 0.006   #half side length of search box in degrees (18 arcsec)
+SR = 0.0038   #half side length of search box in degrees (21 arcsec)
 
 rd_mag = match_RADec(coords_df, gaia, SR)       #dataframe of Colibri detections with Gaia magnitudes {X, Y, ra, dec, gmag}
 
