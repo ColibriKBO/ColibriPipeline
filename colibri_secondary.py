@@ -637,7 +637,8 @@ if __name__ == '__main__':
     geo_save_file = archive_dir.joinpath(str(obs_date) + '_' + telescope + '_geometric_kernelMatches.txt')
 
     with open(diff_save_file, 'w') as file:
-        
+        print('Saving files...')
+        print(diff_results)
         file.write('#starNumber  starX  starY  eventTime  kernelIndex  Chi2  startLocation  ObjectD   StellarD   b    shift    GaiaRA    GaiaDec   GaiaGMAG    GaiaB-R\n')
             
         for line in diff_results:

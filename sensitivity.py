@@ -197,21 +197,21 @@ def RAdec_diffPlot(matched):
 print('setting up')
 #time and date of observations/processing
 #MODIFY LINES BELOW BEFORE RUNNING
-obs_date = datetime.date(2021, 8, 4)           #date of observation
-obs_time = datetime.time(4, 49, 6)             #time of observation (to the second)
+obs_date = datetime.date(2022, 8, 12)           #date of observation
+obs_time = datetime.time(3, 42, 31)             #time of observation (to the second)
 image_index = '2'                               #index of image to use (if uploading to astrometry.net manually)
 polynom_order = '4th'                           #order of astrometry.net plate solution polynomial
 ap_r = 3                                        #radius of aperture for photometry
 gain = 'high'                                   #which gain to take from rcd files ('low' or 'high')
-telescope = 'Red'                               #telescope identifier
+telescope = 'Blue'                               #telescope identifier
 field_name = 'field1'                           #name of field observed
 detect_thresh = 4.                              #detection threshold
 
 #paths to required files
 #MODIFY BASE PATH BEFORE RUNNING
-base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  
-#base_path = pathlib.Path('D:')                            #path to main directory
-data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''))    #path to data
+#base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  
+base_path = pathlib.Path('D:')                            #path to main directory
+data_path = base_path.joinpath('ColibriData2', str(obs_date).replace('-', ''))    #path to data
 
 #get exact name of desired minute directory
 subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory (comment out if setting minutedir explicitly)
@@ -219,8 +219,8 @@ minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]    
 #minute_dir = '20220518_05.40.22.844'                                           #minute label (if don't have data)
 
 #path to output files
-#save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
-save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+#save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
 
 
 lightcurve_path = save_path.joinpath(gain + '_' + str(detect_thresh) +  'sig_lightcurves')          #path that light curves are saved to
@@ -231,11 +231,11 @@ save_path.mkdir(parents=True, exist_ok=True)
 
 '''-------------make light curves of data----------------------'''
 print('making light curve .txt files')
-lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
+#lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
 
 #save .png plots of lightcurves
 print('saving plots of light curves')
-lightcurve_looker.plot_wholecurves(lightcurve_path)
+#lightcurve_looker.plot_wholecurves(lightcurve_path)
 
 '''--------upload image to astrometry.net for plate solution------'''
 median_image = save_path.joinpath('high_medstacked.fits')     #path to median combined file for astrometry solution

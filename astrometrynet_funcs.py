@@ -29,7 +29,13 @@ def getSolution(image_file, save_file, order):
             
     return wcs_header
 
+# def getLocalSolution(image_file, save_file, order):
+#     # ast = AstrometryNet()
 
+#     wcs_header = 
+
+#     if not save_file.exists():
+#         wcs_header.tofile(save_file)
 #file = pathlib.Path('..', 'ColibriArchive', 'Red', '2022-04-06', 'high20210804_04.49.06.823_medstacked.fits')
 #savefile = file.parent.joinpath('testsave.fits')
 
