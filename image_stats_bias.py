@@ -26,6 +26,8 @@ import math
 
 import matplotlib.pyplot as plt
 from pathlib import Path
+import os
+import argparse
 
 #Mike's rcd section ---------------------------------------------------------
 # Function for reading specified number of bytes
@@ -225,7 +227,8 @@ def get_ReadNoise(FirstBias,SecondBias,gain):
     return ReadNoise
 
 #--------------------------------------------------------------------------------
-
+telescope = os.environ['COMPUTERNAME']       #identifier for telescope
+gain = 'high'           #gain level for .rcd files ('low' or 'high')
 
 if __name__ == '__main__':
    # if len(sys.argv) > 1:
@@ -233,13 +236,28 @@ if __name__ == '__main__':
    
     '''--------------observation & solution info----------------'''
     #obs_date = datetime.date(2022, 7, 6)           #date of observation
-    #print('Telescope: Green, gain: HIGH\n')
-    obs_date=input("Input obesrvation date (ex. 2022-07-30): ")  #17-07-2022 Roman A.
-    telescope = 'Blue'                             #telescope identifier
-    gain = 'high'           #keyword for gain - 'high' or 'low'
+#    #print('Telescope: Green, gain: HIGH\n')
+#    obs_date=input("Input obesrvation date (ex. 2022-07-30): ")  #17-07-2022 Roman A.
+#    telescope = 'Blue'                             #telescope identifier
+#    gain = 'high'           #keyword for gain - 'high' or 'low'
+    
+    #2022.09.12 Roman A. --- modifications for automation
+    arg_parser = argparse.ArgumentParser(description=""" Run image stats script.
+		Usage:
+
+		""",formatter_class=argparse.RawTextHelpFormatter)
+
+    arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+
+    cml_args = arg_parser.parse_args()
+
+    base_path = pathlib.Path(cml_args.basedir)
+    obsYYYYMMDD = cml_args.date
+    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     
     '''------------set up paths to directories------------------'''
-    base_path = pathlib.Path('/', 'D:/')      
+    #base_path = pathlib.Path('/', 'D:/')      
     data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
     save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
     
@@ -350,12 +368,12 @@ if __name__ == '__main__':
     #one night version
     
     
-    scope = 'Green'
+    scope = telescope
     #night = '2022-08-06'
-    night=obs_date
-    data_file=Path('/','D:','/ColibriArchive',night.replace('-', '')+'_diagnostics','Bias_Stats')
+    
+    data_file=save_path
     #data = pd.read_csv('./meanTests/' + night + '_mean_' + scope + '.txt', delim_whitespace = True, nrows = 16764)
-    data = pd.read_csv(data_file.joinpath(night+'_stats.txt'), delim_whitespace = True)
+    data = pd.read_csv(data_file.joinpath(str(obs_date)+'_stats.txt'), delim_whitespace = True)
     #data = pd.read_csv(('D:/ColibriArchive/20220731_diagnostics/Bias_Stats/2022-07-31_stats.txt'), delim_whitespace = True)
     data[['day','hour']] = data['time'].str.split('T', expand = True)
     
@@ -402,8 +420,8 @@ if __name__ == '__main__':
     
     #ax2.legend()
     
-    plt.savefig(data_file.joinpath( night + 'meanofmean_bias_stats_' + scope + '.png'),bbox_inches = "tight",dpi=300)
-    plt.show()
+    plt.savefig(data_file.joinpath( str(obs_date) + 'meanofmean_bias_stats_' + scope + '.png'),bbox_inches = "tight",dpi=300)
+#    plt.show()
     plt.close()
         
     
@@ -428,5 +446,5 @@ if __name__ == '__main__':
     
     
     plt.savefig(data_file.joinpath(scope + '.png'),dpi=300)
-    plt.show()
+#    plt.show()
     plt.close()
