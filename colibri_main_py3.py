@@ -26,6 +26,10 @@ import gc
 import time as timer
 
 
+##############################
+## Function Definitions
+##############################
+
 def averageDrift(positions, times):
     """
     Determines the median x/y drift rates of all stars in a minute (first to
@@ -790,54 +794,6 @@ def timeEvolve(imageData, imageTime, prevStarData, r, numStars,
     return star_data
 
 
-def timeEvolveNoDrift(imageData, imageTime, prevStarData, r, numStars, 
-                      x_length, y_length):
-    """
-    Adjusts aperture based on star drift and calculates flux in aperture
-    
-        Parameters:
-            imageData (arr): 2D image flux array
-            imageTime (int/float): Header image time
-            prevStarData (arr): Star data (coordinates, flux, time) from previous image
-            r (int): Aperture radius to sum flux (in pixels)
-            numStars (int): Number of stars in image
-            x_length (int/float): Image length in x-direction
-            y_length (int/float): Image length in y-direction
-            
-        Returns:
-            star_data (tuple): New star coordinates, image flux, time as tuple
-     """    
-
-    '''get proper frame times`'''
-    frame_time = Time(imageTime, precision=9).unix  #current frame time from file header (unix)
-     
-    ''''get each star's coordinates (not accounting for drift)'''
-    x = [prevStarData[ind, 0] for ind in range(0, numStars)]
-    y = [prevStarData[ind, 1] for ind in range(0, numStars)]
-    
-    '''get list of indices near edge of frame'''
-    EdgeInds = clipCutStars(x, y, x_length, y_length)
-    EdgeInds = list(set(EdgeInds))
-    EdgeInds.sort()
-    
-    '''remove stars near edge of frame'''
-    xClip = np.delete(np.array(x), EdgeInds)
-    yClip = np.delete(np.array(y), EdgeInds)
-    
-    '''add up all flux within aperture'''
-    sepfluxes = (sep.sum_circle(imageData, xClip, yClip, r, bkgann = (r + 6., r + 11.))[0]).tolist()
-   # fluxes = (sumFlux(data, xClip, yClip, l))
-
-    '''set fluxes at edge to 0'''
-    for i in EdgeInds:
-       # fluxes.insert(i, 0)
-        sepfluxes.insert(i,0)
-    
-    '''returns x, y star positions, fluxes at those positions, times'''
-    #star_data = tuple(zip(x, y, fluxes, np.full(len(fluxes), frame_time)))
-    star_data = tuple(zip(x, y, sepfluxes, np.full(len(sepfluxes), frame_time)))
-    return star_data
-
 
 #############
 # RCD reading section - MJM 20210827
@@ -1164,7 +1120,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
                 headerTimes.append(imageFile[1])  #add header time to list
             
             #calculate star fluxes from image
-            starData[i] = timeEvolveNoDrift(*imageFile, deepcopy(starData[i - 1]), 
+            starData[i] = timeEvolve(*imageFile, deepcopy(starData[i - 1]), 
                                      ap_r, num_stars, x_length, y_length)
 
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
