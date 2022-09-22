@@ -219,14 +219,13 @@ def dipDetection(fluxProfile, kernel, num):
         return -1, [], ''  # reject events that do not pass dip detection
     
     
-def getBias(filepath, numOfBiases, gain):
+def getBias(filepath, numOfBiases):
     """
     Get median bias image from a set of biases
     
         Parameters:
             filepath (str): Filepath to bias image directory
             numOfBiases (int): Number of bias  images to take median of
-            gain (str): Gain keyword ('high' or 'low')
             
         Return:
             biasMed (arr): Median bias image
@@ -247,8 +246,8 @@ def getBias(filepath, numOfBiases, gain):
             with open(filepath.joinpath('converted.txt'), 'a'):
                 os.utime(filepath.joinpath('converted.txt'))
             
-                if gain == 'high':
-                    os.system("python ../RCDtoFTS.py " + str(filepath) + '/ ' + gain)
+                if gain_high:
+                    os.system("python ../RCDtoFTS.py " + str(filepath) + '/ high')
             
                 else:
                     os.system("python ../RCDtoFTS.py " + str(filepath) + '/')
@@ -277,7 +276,7 @@ def getBias(filepath, numOfBiases, gain):
         rcdbiasFileList = sorted(filepath.glob('*.rcd'))
     
         #import images, using array of zeroes as bias
-        rcdbiases = importFramesRCD(rcdbiasFileList, 0, numOfBiases, np.zeros((2048,2048)), gain)[0]
+        rcdbiases = importFramesRCD(rcdbiasFileList, 0, numOfBiases, np.zeros((2048,2048)))[0]
     
         '''take median of bias images'''
         biasMed = np.median(rcdbiases, axis=0)
@@ -460,7 +459,7 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
     return imagesData, imagesTimes
 
 
-def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
+def importFramesRCD(imagePaths, startFrameNum, numFrames, bias):
     """
     Reads in frames from .rcd files starting at a specific frame
     
@@ -469,7 +468,6 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
             startFrameNum (int): Starting frame number
             numFrames (int): How many frames to read in
             bias (arr): 2D array of fluxes from bias image
-            gain (str): Gain keyword ('high' or 'low')
             
         Returns:
             imagesData (arr): Image data
@@ -492,7 +490,7 @@ def importFramesRCD(imagePaths, startFrameNum, numFrames, bias, gain):
         headerTime = header['timestamp']
 
         images = nb_read_data(data)
-        image = split_images(images, hnumpix, vnumpix, gain)
+        image = split_images(images, hnumpix, vnumpix)
         image = np.subtract(image,bias)
 
         #change time if time is wrong (29 hours)
@@ -571,7 +569,7 @@ def initialFind(imageData, detect_thresh_level):
     return positions
 
 
-def makeBiasSet(filepath, numOfBiases, gain):
+def makeBiasSet(filepath, numOfBiases):
     """
     Get set of median-combined biases for entire night that are sorted and
     indexed by time, these are saved to disk and loaded in when needed
@@ -579,7 +577,6 @@ def makeBiasSet(filepath, numOfBiases, gain):
         Parameters:
             filepath (str): Filepath to bias image directory
             numOfBiases (int): Number of bias images to comvine for master
-            gain (str): Gain keyword ('high' or 'low')
             
         Return:
             biasList (arr): Bias image times and filepaths to saved biases
@@ -608,7 +605,7 @@ def makeBiasSet(filepath, numOfBiases, gain):
     
     #loop through each folder of biases
     for folder in biasFolderList:
-        masterBiasImage = getBias(folder, numOfBiases, gain)      #get median combined image from this folder
+        masterBiasImage = getBias(folder, numOfBiases)      #get median combined image from this folder
         
         #save as .fits file if doesn't already exist
         hdu = fits.PrimaryHDU(masterBiasImage)
@@ -658,12 +655,12 @@ def refineCentroid(imageData, time, coords, sigma):
     return tuple(zip(x, y)), time
 
 
-def runParallel(minuteDir, MasterBiasList, ricker_kernel, exposure_time, gain):
-    firstOccSearch(minuteDir, MasterBiasList, ricker_kernel, exposure_time, gain)
+def runParallel(minuteDir, MasterBiasList, ricker_kernel, exposure_time):
+    firstOccSearch(minuteDir, MasterBiasList, ricker_kernel, exposure_time)
     gc.collect()
     
 
-def stackImages(folder, save_path, startIndex, numImages, bias, gain):
+def stackImages(folder, save_path, startIndex, numImages, bias):
     """
     Make median combined image of first numImages in a directory
     
@@ -673,7 +670,6 @@ def stackImages(folder, save_path, startIndex, numImages, bias, gain):
             startIndex (int): Image starting index
             numImages (int): Number of images to combine
             bias (arr): 2D flux array from the bias image
-            gain (str): Gain keyword ('high' or 'low')
             
         Returns:
             imageMed (arr): Median combined, bias-subtracted image for star
@@ -700,14 +696,17 @@ def stackImages(folder, save_path, startIndex, numImages, bias, gain):
         #for rcd files:
         '''get list of images to combine'''
         rcdimageFileList = sorted(folder.glob('*.rcd'))         #list of .rcd images
-        rcdimages = importFramesRCD(rcdimageFileList, startIndex, numImages, bias, gain)[0]     #import images & subtract bias
+        rcdimages = importFramesRCD(rcdimageFileList, startIndex, numImages, bias)[0]     #import images & subtract bias
     
         imageMed = np.median(rcdimages, axis=0)          #get median value
     
         '''save median combined bias subtracted image as .fits'''
         hdu = fits.PrimaryHDU(imageMed) 
 
-    medFilepath = save_path.joinpath(gain + folder.name + '_medstacked.fits')     #save stacked image
+    if gain_high:
+        medFilepath = save_path.joinpath('high' + folder.name + '_medstacked.fits')     #save stacked image
+    else:
+        medFilepath = save_path.joinpath('low' + folder.name + '_medstacked.fits')     #save stacked image
 
     #if image doesn't already exist, save to path
     if not os.path.exists(medFilepath):
@@ -832,13 +831,13 @@ def nb_read_data(data_chunk):
 
 
 # Function to split high and low gain images
-def split_images(data,pix_h,pix_v,gain):
+def split_images(data,pix_h,pix_v):
     interimg = np.reshape(data, [2*pix_v,pix_h])
 
-    if gain == 'low':
-        image = interimg[::2]
-    else:
+    if gain_high:
         image = interimg[1::2]
+    else:
+        image = interimg[::2]
 
     return image
 
@@ -883,7 +882,7 @@ def readRCD(filename):
 #############
 
 
-def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
+def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time):
     """ 
     Formerly 'main'.
     Detect possible occultation events in selected file and archive results 
@@ -893,7 +892,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
             MasterBiasList (list): List of master biases and times
             kernel (arr): Ricker wavelet kernel
             exposure_time (int/float): Camera exposure time (in __)
-            gain (str): Gain keyword ('high' or 'low')
         
         Returns:
             __ (str): Printout of processing tasks
@@ -983,7 +981,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
         #print('stacking images %i to %i\n' %(startIndex, numtoStack))
         
         #create median combined image for star finding
-        stacked = stackImages(minuteDir, savefolder, startIndex, numtoStack, bias, gain)
+        stacked = stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
         
         #make list of star coords and half light radii
         star_find_results = tuple(initialFind(stacked, detect_thresh_level))
@@ -1022,9 +1020,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
     ''' Drift calculations '''
 
     if RCDfiles == True: # Choose to open rcd or fits - MJM
-        first_frame = importFramesRCD(imagePaths, 0, 1, bias, gain)   #import first image
+        first_frame = importFramesRCD(imagePaths, 0, 1, bias)   #import first image
         headerTimes = [first_frame[1]] #list of image header times
-        last_frame = importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias, gain)  #import last image
+        last_frame = importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
     
     else:
         first_frame = importFramesFITS(imagePaths, 0, 1, bias)      #data and time from 1st image
@@ -1086,7 +1084,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
             #import .rcd image data
             if RCDfiles == True:
                 #image file contains both image array and header time
-                imageFile = importFramesRCD(imagePaths, i, 1, bias, gain)
+                imageFile = importFramesRCD(imagePaths, i, 1, bias)
                 headerTimes.append(imageFile[1])  #add header time to list
             
             #import .fits image data
@@ -1110,7 +1108,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
             #import .rcd image data
             if RCDfiles == True:
                 #image file contains both image array and header time
-                imageFile = importFramesRCD(imagePaths, i, 1, bias, gain)
+                imageFile = importFramesRCD(imagePaths, i, 1, bias)
                 headerTimes.append(imageFile[1])  #add header time to list
             
             #import .fits image data
@@ -1237,7 +1235,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, gain):
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = True          #True if you want to run directories in parallel
 telescope = os.environ['COMPUTERNAME']   #name of telescope
-gain = 'high'           #gain level for .rcd files ('low' or 'high')
+gain_high = True           #gain level for .rcd files ('low' == False or 'high' == True)
 
 '''get arguments'''
 if len(sys.argv) > 1:
@@ -1276,7 +1274,7 @@ if __name__ == '__main__':
     NumBiasImages = 9       #number of bias images to combine in median bias images
 
     #get 2d numpy array with bias datetimes and master bias filepaths
-    MasterBiasList = makeBiasSet(bias_dir, NumBiasImages, gain)
+    MasterBiasList = makeBiasSet(bias_dir, NumBiasImages)
     
 
     ''' prepare RickerWavelet/Mexican hat kernel to convolve with light curves'''
@@ -1295,7 +1293,7 @@ if __name__ == '__main__':
         start_time = timer.time()
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
-        args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, gain) for f in range(0,len(minute_dirs)))
+        args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time) for f in range(0,len(minute_dirs)))
         pool.starmap(runParallel,args)
         pool.close()
         pool.join()
@@ -1322,8 +1320,8 @@ if __name__ == '__main__':
                             os.utime(str(minute_dirs[f].joinpath('converted.txt')))
                             
                             #do .rcd -> .fits conversion using the desired gain level
-                            if gain == 'high':
-                                os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' ' + gain)
+                            if gain_high:
+                                os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
                             else:
                                 os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
                     
@@ -1336,7 +1334,7 @@ if __name__ == '__main__':
             start_time = timer.time()
 
             print('Running sequentially...')
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, gain)
+            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time)
             
             gc.collect()
 
