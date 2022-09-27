@@ -1165,7 +1165,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time):
         #text file to save results in
         #saved file format: 'det_date_time_star#_telescope.txt'
 
-        savefile = base_path.joinpath('ColibriArchive', str(obs_date), 'det_' + date + '_' + time + '_' + mstime + '_star' + str(np.where(event_frames == f)[0][0]) + '_' + telescope + '.txt')
+        savefile = base_path.joinpath('ColibriArchive', str(obs_date), ''.join(('det_', date, '_', time, '_', mstime, '_star', str(np.where(event_frames == f)[0][0]), '_', telescope, '.txt')))
         #columns: fits filename and path | header time (seconds) |  star flux
         
         #open file to save results
@@ -1234,7 +1234,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time):
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = True          #True if you want to run directories in parallel
-telescope = os.environ['COMPUTERNAME']   #name of telescope
+#telescope = os.environ['COMPUTERNAME']   #name of telescope
+telescope = "Red"
 gain_high = True           #gain level for .rcd files ('low' == False or 'high' == True)
 
 '''get arguments'''
@@ -1245,8 +1246,8 @@ if len(sys.argv) > 1:
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 
 else:
-    base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
-    obs_date = datetime.date(2021, 8, 4)    #date observations
+    base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')  #path to main directory
+    obs_date = datetime.date(2022, 8, 12)    #date observations
 
 if __name__ == '__main__':
     
