@@ -1234,18 +1234,20 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time):
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = True          #True if you want to run directories in parallel
-#telescope = os.environ['COMPUTERNAME']   #name of telescope
-telescope = "Red"
+try: # get name of telescope
+    telescope = os.environ['COMPUTERNAME']
+except KeyError:
+    telescope = "TEST"
 gain_high = True           #gain level for .rcd files ('low' == False or 'high' == True)
 
 '''get arguments'''
 if len(sys.argv) > 1:
-    base_path = pathlib.Path(sys.argv[1])
-    obsYYYYMMDD = sys.argv[2]
+    base_path = pathlib.Path(sys.argv[1]) # path to data directory
+    obsYYYYMMDD = sys.argv[2] # date to be analyzed formatted as "YYYY/MM/DD"
     obsdatesplit = obsYYYYMMDD.split('/')
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 
-else:
+else: # default 
     base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')  #path to main directory
     obs_date = datetime.date(2022, 8, 12)    #date observations
 
