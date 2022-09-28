@@ -658,6 +658,7 @@ def refineCentroid(imageData, time, coords, sigma):
 def runParallel(minuteDir, MasterBiasList, ricker_kernel, exposure_time):
     firstOccSearch(minuteDir, MasterBiasList, ricker_kernel, exposure_time)
     gc.collect()
+    #runParallel should be scrapped
     
 
 def stackImages(folder, save_path, startIndex, numImages, bias):
@@ -1234,11 +1235,11 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time):
 
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = True          #True if you want to run directories in parallel
+gain_high = True           #gain level for .rcd files ('low' == False or 'high' == True)
 try: # get name of telescope
     telescope = os.environ['COMPUTERNAME']
 except KeyError:
     telescope = "TEST"
-gain_high = True           #gain level for .rcd files ('low' == False or 'high' == True)
 
 '''get arguments'''
 if len(sys.argv) > 1:
