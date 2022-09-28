@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Fri Apr  8 15:29:02 2022
@@ -8,8 +8,9 @@ Updated: Thurs. June 23, 2022
 
 Script to make use of astrometry.net API - see online docs
 """
-
+import time, subprocess, os
 from astroquery.astrometry_net import AstrometryNet
+from astropy.io.fits import Header
 
 def getSolution(image_file, save_file, order):
     '''send request to solve image from astrometry.net
@@ -29,16 +30,38 @@ def getSolution(image_file, save_file, order):
             
     return wcs_header
 
-# def getLocalSolution(image_file, save_file, order):
-#     # ast = AstrometryNet()
+def getLocalSolution(image_file, save_file, order):
+    """
+    To use the local solution, you'll need to modify call to the function somewhat.
+    This function will write the new fits file w/ plate solution to a file with the name save_file in the
+    tmp directory on the d: drive.
+    The function will return wcs_header. Alternatively, you could comment out those lines and read it from
+    the pipeline.
+    """
+    try:
+        # -D to specify write directory, -o to specify output base name, -N new-fits-filename
+        print(image_file)
+        print(save_file.split(".")[0])
 
-#     wcs_header = 
+        cwd = os.getcwd()
+        os.chdir('d:\\')
 
-#     if not save_file.exists():
-#         wcs_header.tofile(save_file)
-#file = pathlib.Path('..', 'ColibriArchive', 'Red', '2022-04-06', 'high20210804_04.49.06.823_medstacked.fits')
-#savefile = file.parent.joinpath('testsave.fits')
+        p = subprocess.run('wsl time solve-field --no-plots -D /mnt/d/tmp -O -o ' + save_file.split(".")[0] + ' -N ' + save_file + ' -t ' + str(order) + ' --scale-units arcsecperpix --scale-low 2.2 --scale-high 2.6 ' + image_file)
+        
+        os.chdir(cwd)
+        print(os.getcwd())
 
-#getSolution(file, savefile, 3)
+        wcs_header = Header.fromtextfile('d:\\tmp\\' + save_file.split('.')[0] + '.wcs')
+
+    except:
+        pass
+
+    return wcs_header
+
+    # return wcs_header
+
+if __name__ == '__main__':
+    wcs = getLocalSolution('/mnt/d/testmedstack.fits', 'test-newer.fits', 3)
+    print(wcs)
 
 
