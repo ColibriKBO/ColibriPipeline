@@ -32,6 +32,7 @@ def getSolution(image_file, save_file, order):
 
 def getLocalSolution(image_file, save_file, order):
     """
+    Astrometry.net must be installed locally to use this function. It installs under WSL.
     To use the local solution, you'll need to modify call to the function somewhat.
     This function will write the new fits file w/ plate solution to a file with the name save_file in the
     tmp directory on the d: drive.
