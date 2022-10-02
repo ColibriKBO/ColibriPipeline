@@ -3,6 +3,8 @@ Created March 8, 2022 by Rachel Brown
 
 Update: March 10, 2022 by Rachel Brown
 
+Update: 2022-09-21 Roman A. : modified output graph and deleted astnet solution calculation, also now this code works on matched files
+
 -secondary Colibri pipeline for matching identified events to a kernel
 """
 
@@ -19,6 +21,34 @@ import getRAdec
 import astrometrynet_funcs
 import sys, os, time
 import argparse
+
+def readRAdec(filepath):                                    #modified readFile from Colibri Pipeline
+    '''read in a .txt detection file and get information from it'''
+    
+    #make dataframe containing image name, time, and star flux value for the star
+    # starData = pd.read_csv(filepath, delim_whitespace = True, 
+    #        names = ['filename', 'time', 'flux'], comment = '#')
+
+    
+    
+    #get header info from file
+    with filepath.open() as f:
+        
+        #loop through each line of the file
+        for i, line in enumerate(f):
+          
+            #get star coords
+            
+                
+            if i==6:
+                star_coords = line.split(':')[1].split(' ')[1:3]
+                star_ra = float(star_coords[0])
+                star_dec = float(star_coords[1])
+                
+        
+
+    #return    
+    return (star_ra,star_dec)
 
 def match_RADec(RA, DEC, gdata, SR):
     '''matches list of found stars with Gaia catalog by RA/dec to get magnitudes
@@ -74,7 +104,7 @@ def getKernelParams(kernel_i):
     return kernel_params.iloc[kernel_i]
 
 
-def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, params, fit_line, minChi, star_df):
+def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, params, fit_line, minChi, star_df,scope,filename):
     '''make plot of the convolution of lightcurve and best fitting kernel'''
     
     fluxTimes = list(eventData[0]['time'])
@@ -142,7 +172,7 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     textstr1 = '\n'.join((
     'Linear fit to data:',
     '%s' % str(fit_line),
-    'Event type:',
+    'Event significance:',
     eventData[5],
     'Star SNR = %.2f' % (float(eventData[6])/float(eventData[7]))))
     
@@ -150,18 +180,18 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     textstr2 = '\n'.join((
     'Model params:',
     'Object R [m] = %.0f' % (params[2], ),
-    'Star D [mas] = %.2f' % (params[3], ),
+    'Star D [mas] = %.3f' % (params[3], ),
     'Impact param [m] = %.0f' % (params[4], ),
     'Shift [frames] = %.2f' % (params[5], ),
-    'Chi Square: %.2f' %(minChi)))
+    'Chi Square: %.3f' %(minChi)))
     
     textstr3 = '\n'.join((
         'Star Coords (X, Y):',
-        '(%.3f, %.3f)' %(eventData[2], eventData[3]),
+        '(%.1f, %.1f)' %(eventData[2], eventData[3]),
         'Gaia star (RA, Dec):',
-        '(%.3f, %.3f)' %(star_df['Gaia_RA'], star_df['Gaia_dec']),
-        'g-band mag: %.3f' % (star_df['GMAG']),
-        'B-R Colour: %.3f' % (star_df['Gaia_B-R'])))
+        '(%.4f, %.4f)' %(star_df['Gaia_RA'], star_df['Gaia_dec']),
+        'g-band mag: %.2f' % (star_df['GMAG']),
+        'B-R Colour: %.2f' % (star_df['Gaia_B-R'])))
     
     textstr4 = '\n'.join((
         'Date: ',
@@ -213,7 +243,7 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
 
     #titles and labels for main plot
    # ax1.set_title('Occultation event candidate matched with TNO occultation model', fontsize = 18)
-    ax1.set_title('Star ' + starNum + ' normalized light curve matched with kernel ' + str(int(params[0])), fontsize = 18)
+    ax1.set_title(scope+' Star ' + starNum + ' normalized light curve matched with kernel ' + str(int(params[0])), fontsize = 18)
     ax1.set_xlabel('Time (s)', fontsize = 15)
     ax2.set_xlabel('Frame number', fontsize = 15)
     ax1.set_ylabel('Flux normalized by linear fit (counts)', fontsize = 15)
@@ -238,7 +268,8 @@ def plotKernel(lightcurve, eventData, kernel, start_i, starNum, directory, param
     #fig.legend()
     
     #plt.show()
-    plt.savefig(directory.joinpath('star' + starNum + '_' + eventDate + '_matched.png'), bbox_inches = 'tight')#, dpi=1000)
+#    plt.savefig(directory.joinpath('star' + starNum + '_' + eventDate + '_matched.png'), bbox_inches = 'tight')#, dpi=1000)
+    plt.savefig(directory.joinpath(filename + '.png'), bbox_inches = 'tight')#, dpi=1000)
     plt.close()
     
     return 0
@@ -270,10 +301,11 @@ def diffMatch(template, data, sigmaP):
     return minChi, minX
 
 
-def kernelMatch(eventData, kernels, starNum, directory, starData_df):
+def kernelMatch(eventData, kernels, starNum, directory, starData_df,scope,filename):
     """ Matches dip event with simulated occultation pattern, checks for significance
     input: tuple of event data (including flux, time, and frame number), set of kernels [array], 
-    star number, directory to save results to, dataframe with star's coordinates and Gaia data
+    star number, directory to save results to, dataframe with star's coordinates and Gaia data,
+    scope for telescope name in the event graph, filename for the output graph name
     returns: index of best matched kernel, minimum Chi2 value, location of kernel match starting frame,
     parameters of best matched kernel, or -1 if no kernels matched with significance"""
 
@@ -282,7 +314,7 @@ def kernelMatch(eventData, kernels, starNum, directory, starData_df):
     fluxTimes = list(eventData[0]['time'])          #list of frame times
     dipFrame = eventData[1]                         #frame where dip was detected
      
-
+    
     #normalized sigma corresponding to LHS of Eq. 2 in Pass et al. 2018
     #sigmaNorm = np.std(trunc_profile[(FramesperMin-NumBkgndElements):FramesperMin]) / np.median(trunc_profile[(FramesperMin-NumBkgndElements):FramesperMin])
     #really not sure how this matches what is in Emily's paper.....
@@ -372,7 +404,7 @@ def kernelMatch(eventData, kernels, starNum, directory, starData_df):
         params = getKernelParams(active_kernel)
         
         #make plot with all the event information
-        plot = plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, starNum, directory, params, bkgd_fitLine, StatMin, starData_df)
+        plot = plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, starNum, directory, params, bkgd_fitLine, StatMin, starData_df,scope,filename)
 
         #reject events with a large jump in time between exposures
         if plot < 0:
@@ -397,7 +429,7 @@ def readFile(filepath):
     
     #make dataframe containing image name, time, and star flux value for the star
     starData = pd.read_csv(filepath, delim_whitespace = True, 
-           names = ['filename', 'time', 'flux'], comment = '#')
+           names = ['filename', 'time', 'flux','conv_flux'], comment = '#')
 
     first_frame = int(starData['filename'][0].split('_')[-1].split('.')[0])
     
@@ -421,69 +453,72 @@ def readFile(filepath):
             elif i == 7:
                 event_time = line.split('T')[2].split('\n')[0]
                 print(event_time)
-                
+            
             elif i == 10:
-                event_type = line.split(':')[1].split('\n')[0].strip(" ")
+                significance = line.split(':')[1].split('\n')[0].strip(" ")
                 
             elif i == 11:
-                star_med = line.split(':')[1].split('\n')[0].strip(" ")
+                star_std = line.split(':')[1].split('\n')[0].strip(' ')
                 
             elif i == 12:
-                star_std = line.split(':')[1].split('\n')[0].strip(' ')
+                star_med = line.split(':')[1].split('\n')[0].strip(" ")
+                
+            
                 
         #reset event frame to match index of the file
         event_frame = event_frame - first_frame
 
     #return all event data from file as a tuple    
-    return (starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std)
+    return (starData, event_frame, star_x, star_y, event_time, significance, star_med, star_std)
     #return starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std
     
     
-def getTransform(date):
-    '''get astrometry.net transform for a given minute'''
-
-    #if transformation has already been calculated, get from dictionary
-    if date in transformations:
-        return transformations[date]
-    
-    #calculate new transformation from astrometry.net
-    else:
-        #get median combined image
-        median_image = [f for f in median_combos if date in f.name][0]
-        
-        #get name of transformation header file to save
-        transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
-        
-        #check if the tranformation has already been calculated and saved
-        if transform_file.exists():
-            
-            #open file and get transformation
-            wcs_header = fits.open(transform_file)
-            transform = wcs.WCS(wcs_header[0])
-
-        #calculate new transformation
-        else:
-            #get WCS header from astrometry.net plate solution
-            wcs_header = astrometrynet_funcs.getSolution(median_image, transform_file, soln_order)
-        
-            #calculate coordinate transformation
-            transform = wcs.WCS(wcs_header)
-        
-        #add to dictionary
-        transformations[date] = transform
-        
-        return transform
+#def getTransform(date):
+#    '''get astrometry.net transform for a given minute'''
+#
+#    #if transformation has already been calculated, get from dictionary
+#    if date in transformations:
+#        return transformations[date]
+#    
+#    #calculate new transformation from astrometry.net
+#    else:
+#        #get median combined image
+#        median_image = [f for f in median_combos if date in f.name][0]
+#        
+#        #get name of transformation header file to save
+#        transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
+#        
+#        #check if the tranformation has already been calculated and saved
+#        if transform_file.exists():
+#            
+#            #open file and get transformation
+#            wcs_header = fits.open(transform_file)
+#            transform = wcs.WCS(wcs_header[0])
+#
+#        #calculate new transformation
+#        else:
+#            #get WCS header from astrometry.net plate solution
+#            wcs_header = astrometrynet_funcs.getSolution(median_image, transform_file, soln_order)
+#        
+#            #calculate coordinate transformation
+#            transform = wcs.WCS(wcs_header)
+#        
+#        #add to dictionary
+#        transformations[date] = transform
+#        
+#        return transform
     
     
 '''-----------code starts here -----------------------'''
 
 ''' set up parameters for running the code '''
+global telescope
 telescope = os.environ['COMPUTERNAME']       #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
-soln_order = 3      #tweak order for astrometry.net solution
-obs_date = datetime.date(2021, 8, 4)    #date observations 
+#soln_order = 4      #tweak order for astrometry.net solution
+# obs_date = datetime.date(2021, 8, 4)    #date observations 
 # process_date = datetime.date(2022, 4, 26)
-base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
+# base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
 
 # '''get arguments - Added by MJM'''
 # if len(sys.argv) > 1:
@@ -492,15 +527,15 @@ base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescop
 #     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 # else:
 #     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
-obs_date = datetime.date(2021, 8, 4)    #date observations 
+# obs_date = datetime.date(2021, 8, 4)    #date observations 
 
-procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
-procyear = int(datetime.datetime.today().strftime('%Y'))
-procmonth = int(datetime.datetime.today().strftime('%m'))
-procday = int(datetime.datetime.today().strftime('%d'))
-# process_date = datetime.date(procyear, procmonth, procday)
-process_date = obs_date
-print(process_date)
+# procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
+# procyear = int(datetime.datetime.today().strftime('%Y'))
+# procmonth = int(datetime.datetime.today().strftime('%m'))
+# procday = int(datetime.datetime.today().strftime('%d'))
+# # process_date = datetime.date(procyear, procmonth, procday)
+# process_date = obs_date
+# print(process_date)
 
 '''begin program'''
 if __name__ == '__main__':
@@ -513,17 +548,25 @@ if __name__ == '__main__':
         formatter_class=argparse.RawTextHelpFormatter)
 
     arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
-    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', default=obs_date)
+    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
     # arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
+    cml_args = arg_parser.parse_args()
+    obsYYYYMMDD = cml_args.date
+    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+    
+    procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
+    procyear = int(datetime.datetime.today().strftime('%Y'))
+    procmonth = int(datetime.datetime.today().strftime('%m'))
+    procday = int(datetime.datetime.today().strftime('%d'))
+    # process_date = datetime.date(procyear, procmonth, procday)
+    process_date = obs_date
+    print(process_date)
 
     cml_args = arg_parser.parse_args()
 
     base_path = pathlib.Path(cml_args.basedir)
+    #base_path=base_path.joinpath('/Colibri/Green')
     obsYYYYMMDD = cml_args.date
-    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    # procYYYYMMDD = cml_args.procdate
-    # process_date = datetime.date(int(procYYYYMMDD.split('/')[0]), int(procYYYYMMDD.split('/')[1]), int(procYYYYMMDD.split('/')[2]))
-    process_date = obs_date
     ''' prepare occultation kernels set to match to light curves'''
 
     #load in pre-made kernel set
@@ -548,13 +591,17 @@ if __name__ == '__main__':
     
     #directory containing detection .txt files
     archive_dir = base_path.joinpath('ColibriArchive', str(process_date))
-    
+    matched_dir=archive_dir.joinpath('matched')#09-21 Roman A. now this code runs on matched events
     #list of filepaths to .txt detection files
-    day_files = [f for f in archive_dir.iterdir() if str(obs_date) in f.name]
+    day_files = [f for f in matched_dir.iterdir() if str(process_date) in f.name]
     detect_files = [f for f in day_files if 'det' in f.name]
+    
+    
 
     #list of median combined images
     median_combos = [f for f in archive_dir.iterdir() if 'medstacked' in f.name]
+    
+    matched_files = os.listdir(matched_dir)
 #    transform_files = [f for f in archive_dir.iterdir() if 'new-image' in f.name]
     
     #dictionary to hold WCS transformations for each transform file
@@ -585,18 +632,19 @@ if __name__ == '__main__':
 
         '''get transformation from image coordinates [X, Y] to ecliptic coords [RA, dec]'''
         #get corresponding WCS transformation
-        date = pathlib.Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
+        # date = pathlib.Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
 
-        tstart = time.time() # Added timer - MJM
-        transform = getTransform(date)
+        # tstart = time.time() # Added timer - MJM
+        # transform = getTransform(date)
         
         #get star coords in RA/dec
-        star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
-        star_RA = star_wcs[0]
-        star_dec = star_wcs[1]
+        # star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
         
-        tend = time.time() # Added timer - MJM
-        transformtime += tend-tstart # Added timer - MJM
+        star_RA, star_dec = readRAdec(filepath)#09-21 Roman A. now coords are in txt file
+        
+        
+        # tend = time.time() # Added timer - MJM
+        # transformtime += tend-tstart # Added timer - MJM
         
         '''Get Gaia catalog of stars in surrounding region'''
         
@@ -617,28 +665,31 @@ if __name__ == '__main__':
         
         '''Find best matched occultation kernel'''
         ostart = time.time() # Added timer - MJM
-        event_type = eventData[5]
+        significancee = eventData[5]
         
-        if event_type == 'diffraction':
-            diff_results.append((star_num, eventData[2], eventData[3], eventData[4], 
-                                 kernelMatch(eventData, kernel_set, star_num, archive_dir, star_df), 
-                                 star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
+        #21-09 Roman A. no more event types
+        
+        scope= filepath.name.split('_')[5].split('.')[0]
+        filename=filepath.name.split('.')[0]
+        diff_results.append((star_num, eventData[2], eventData[3], eventData[4], 
+                              kernelMatch(eventData, kernel_set, star_num, matched_dir, star_df,scope,filename), 
+                              star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
        
-        if event_type == 'geometric':
-            geo_results.append((star_num, eventData[2], eventData[3], eventData[4], 
-                                kernelMatch(eventData, kernel_set, star_num, archive_dir, star_df), 
-                                star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
+        # if event_type == 'geometric':
+#        geo_results.append((star_num, eventData[2], eventData[3], eventData[4], 
+#                            kernelMatch(eventData, kernel_set, star_num, archive_dir, star_df), 
+#                            star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
         oend = time.time() # Added timer - MJM
         occulttime += oend - ostart # Added timer - MJM
 
     '''save results'''
     
     diff_save_file = archive_dir.joinpath(str(obs_date) + '_' + telescope + '_diffraction_kernelMatches.txt')
-    geo_save_file = archive_dir.joinpath(str(obs_date) + '_' + telescope + '_geometric_kernelMatches.txt')
+    #geo_save_file = archive_dir.joinpath(str(obs_date) + '_' + telescope + '_geometric_kernelMatches.txt')
 
     with open(diff_save_file, 'w') as file:
         print('Saving files...')
-        print(diff_results)
+        #print(diff_results)
         file.write('#starNumber  starX  starY  eventTime  kernelIndex  Chi2  startLocation  ObjectD   StellarD   b    shift    GaiaRA    GaiaDec   GaiaGMAG    GaiaB-R\n')
             
         for line in diff_results:
@@ -652,23 +703,22 @@ if __name__ == '__main__':
                                                   line[4][3][2], line[4][3][3], line[4][3][4], line[4][3][5],
                                                   line[5], line[6], line[7], line[8]))
     
-    with open(geo_save_file, 'w') as file:
+    # with open(geo_save_file, 'w') as file:
         
-        file.write('#starNumber  starX  starY  eventTime  kernelIndex  Chi2  startLocation  ObjectD   StellarD   b    shift    GaiaRA   GaiaDec   GaiaGMAG    GaiaB-R\n')
+    #     file.write('#starNumber  starX  starY  eventTime  kernelIndex  Chi2  startLocation  ObjectD   StellarD   b    shift    GaiaRA   GaiaDec   GaiaGMAG    GaiaB-R\n')
         
-        for line in geo_results:
+    #     for line in geo_results:
             
-            #events that didn't pass kernel matching
-            if line[4] == -1:
-                continue
+    #         #events that didn't pass kernel matching
+    #         if line[4] == -1:
+    #             continue
             
-            file.write('%s %f %f %s %i %f %i %f %f %f %f %f %f %f %f\n' %(line[0], line[1], line[2], line[3], 
-                                                  line[4][0], line[4][1], line[4][2], 
-                                                  line[4][3][2], line[4][3][3], line[4][3][4], line[4][3][5],
-                                                  line[5], line[6], line[7], line[8]))
+    #         file.write('%s %f %f %s %i %f %i %f %f %f %f %f %f %f %f\n' %(line[0], line[1], line[2], line[3], 
+    #                                               line[4][0], line[4][1], line[4][2], 
+    #                                               line[4][3][2], line[4][3][3], line[4][3][4], line[4][3][5],
+    #                                               line[5], line[6], line[7], line[8]))
 
 
     print('Time spent on astrometry... %f' % transformtime)
     print('Time spent on Gaia... %f' % gaiatime)
     print('Time spend on finding best kernel... %f' % occulttime)
-
