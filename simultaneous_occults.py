@@ -3,6 +3,8 @@
 Created on Jul 29 10:04:14 2022
 
 @author: Roman A.
+
+2022-09-21 Roman A. simplified some steps and added data removal output
 """
 
 import numpy as np
@@ -20,15 +22,32 @@ import itertools
 from math import isclose
 import sys
 import fnmatch
+import math
+import argparse
+#import datetime
+from datetime import datetime
+
+def ReadTime(filepath):#added 09-21 Roman A.
+    '''read in a .txt detection file and get information from it'''
+    
+    #get header info from file
+    starData = pd.read_csv(filepath, delim_whitespace = True, 
+           names = ['filename', 'time', 'flux','conv_flux'], comment = '#')
+
+    event_time = str(starData['filename'][0].split('_')[1].split('\\')[0])
+            
+
+    #return all event data from file as a tuple    
+    return (event_time)
 
 def readRAdec(filepath):                                    #modified readFile from Colibri Pipeline
     '''read in a .txt detection file and get information from it'''
     
     #make dataframe containing image name, time, and star flux value for the star
-    starData = pd.read_csv(filepath, delim_whitespace = True, 
-           names = ['filename', 'time', 'flux'], comment = '#')
+    # starData = pd.read_csv(filepath, delim_whitespace = True, 
+    #        names = ['filename', 'time', 'flux'], comment = '#')
 
-    first_frame = int(starData['filename'][0].split('_')[-1].split('.')[0])
+    # first_frame = int(starData['filename'][0].split('_')[-1].split('.')[0])
     
     #get header info from file
     with filepath.open() as f:
@@ -38,19 +57,19 @@ def readRAdec(filepath):                                    #modified readFile f
             
 
             #get event frame number
-            if i == 4:
-                event_frame = int(line.split('_')[-1].split('.')[0])
+            # if i == 4:
+            #     event_frame = int(line.split('_')[-1].split('.')[0])
 
             #get star coords
             
                 
-            elif i==6:
+            if i==6:
                 star_coords = line.split(':')[1].split(' ')[1:3]
                 star_ra = float(star_coords[0])
                 star_dec = float(star_coords[1])
                 
         #reset event frame to match index of the file
-        event_frame = event_frame - first_frame
+        # event_frame = event_frame - first_frame
 
     #return    
     return (star_ra,star_dec)
@@ -61,7 +80,7 @@ def readFile(filepath):                                      #redifinition from 
     
     #make dataframe containing image name, time, and star flux value for the star
     starData = pd.read_csv(filepath, delim_whitespace = True, 
-           names = ['filename', 'time', 'flux'], comment = '#')
+           names = ['filename', 'time', 'flux','conv_flux'], comment = '#')
 
     first_frame = int(starData['filename'][0].split('_')[-1].split('.')[0])
     
@@ -140,12 +159,23 @@ def getTransform(date):                                     #redifinition from C
     
 '''---------------------------------------------SCRIPT STARTS HERE--------------------------------------'''
 
-#base_path=Path('/', 'C:','\\Users', 'Admin', 'Desktop', 'Colibri', 'occultations') #general path, probably a nightdir in a ColibriArchive
+''' Argument parsing added by MJM - July 20, 2022 '''
+if len(sys.argv) == 2:
+    arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
+        Usage:
+    
+        """,
+        formatter_class=argparse.RawTextHelpFormatter)
+    
+    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+    # arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
+    cml_args = arg_parser.parse_args()
+    obsYYYYMMDD = cml_args.date
+    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+else:
+    obs_date='2022-09-30'
 
-#green_path=base_path.joinpath('GREEN') #path for Green pipeline results
-#red_path=base_path.joinpath('RED')  #path for Red pipeline results
-#blue_path=base_path.joinpath('BLUE')    #path for Blue pipeline results
-night_dir="2022-08-12"
+night_dir=str(obs_date)
 green_path=Path('/','D:','/ColibriArchive',night_dir) #path for Green pipeline results
 red_path=Path('/','Y:',night_dir) #path for Red pipeline results
 blue_path=Path('/','Z:',night_dir)    #path for Blue pipeline results
@@ -153,7 +183,6 @@ blue_path=Path('/','Z:',night_dir)    #path for Blue pipeline results
 coord_tol=0.001 #max coordinates difference for matching
 milisec_tol=0.21 #max milliseconds window for matching
 
-#matched_dir=base_path.joinpath('matched') #create directory for matched occultations
 
 #create directory for matched occultations
 
@@ -178,69 +207,76 @@ coords_unmatched=green_path.joinpath('coords_unmatched')
 # BlueList = sorted(blue_path.glob('*Blue.txt'))
 
 #take star index and occultation time from each txt file from each telescope
-print("Reading data...")
+print("Reading data...")# 21-09 Roman A. commented out unnecessary lines
 Green_minutes=[minute for file in sorted(os.listdir(green_path)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]
-Green_stars=[minute for file in sorted(os.listdir(green_path)) if 'det' in file for minute in re.findall("(star\w{3})", file)]
+# Green_stars=[minute for file in sorted(os.listdir(green_path)) if 'det' in file for minute in re.findall("(star\w{3})", file)]
 
 Red_minutes=[minute for file in sorted(os.listdir(red_path)) if 'det' in file for minute in re.findall("_(\d{6})_" , file)]
-Red_stars=[minute for file in sorted(os.listdir(red_path)) if 'det' in file for minute in re.findall("(star\w{3})", file)]
+# Red_stars=[minute for file in sorted(os.listdir(red_path)) if 'det' in file for minute in re.findall("(star\w{3})", file)]
 
 Blue_minutes=[minute for file in sorted(os.listdir(blue_path)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]
-Blue_stars=[minute for file in sorted(os.listdir(blue_path)) if 'det' in file for minute in re.findall("(star\w{3})", file)]
+# Blue_stars=[minute for file in sorted(os.listdir(blue_path)) if 'det' in file for minute in re.findall("(star\w{3})", file)]
 
 #create array with star number and occultation time
-Greens=np.column_stack((Green_stars,Green_minutes))
-Reds=np.column_stack((Red_stars,Red_minutes))
-Blues=np.column_stack((Blue_stars,Blue_minutes))
+# Greens=np.column_stack((Green_stars,Green_minutes))
+# Reds=np.column_stack((Red_stars,Red_minutes))
+# Blues=np.column_stack((Blue_stars,Blue_minutes))
 
 
 '''------------------------------------1-second MATCHING--------------------------------'''
-print("Matching in 1 second window...")
-start_time = time.time()
+print("Matching in time ...")
+start_time = time.time()#09-21 Roman A. commented out bad coding
 #match Green and Red times
-GRMatched=np.empty((1,2),dtype=np.string_) #create an empty 2D array of green and red matches
-for i in range(len(Greens)):
-    for k in range(len(Reds)):
+# GRMatched=np.empty((1,2),dtype=np.string_) #create an empty 2D array of green and red matches
+# for i in range(len(Greens)):
+#     for k in range(len(Reds)):
         
-        if (Greens[i][1]==Reds[k][1]):
+#         if (Greens[i][1]==Reds[k][1]):
             
-            try:
-                GRMatched=np.vstack([GRMatched,Greens[i]]) #if no matches in Red and Green python will rise an 
-                                                #error that it cannot read random byte in empty array
-            except UnicodeDecodeError:
-                print('No matches today!')
-                sys.exit()
+#             try:
+#                 GRMatched=np.vstack([GRMatched,Greens[i]]) #if no matches in Red and Green python will rise an 
+#                                                 #error that it cannot read random byte in empty array
+#             except UnicodeDecodeError:
+#                 print('No matches today!')
+#                 sys.exit()
                 
             
             
-GRMatched=np.delete(GRMatched,(0),axis=0) #delete first randomly filled row
-GRMatched=np.unique(GRMatched,axis=0) #delete repeating matches
+# GRMatched=np.delete(GRMatched,(0),axis=0) #delete first randomly filled row
+# GRMatched=np.unique(GRMatched,axis=0) #delete repeating matches
 
-total_match=np.empty((1,2),dtype=np.string_) #create an empty array of grenn red blue time matches
+# total_match=np.empty((1,2),dtype=np.string_) #create an empty array of grenn red blue time matches
 
-second_matched=0
-for i in range(len(GRMatched)):
-    for k in range(len(Blues)):
+# second_matched=0
+# for i in range(len(GRMatched)):
+#     for k in range(len(Blues)):
         
-        if (GRMatched[i][1]==Blues[k][1]):
-            second_matched+=1
-            total_match=np.vstack([total_match,GRMatched[i]])
+#         if (GRMatched[i][1]==Blues[k][1]):
+#             second_matched+=1
+#             total_match=np.vstack([total_match,GRMatched[i]])
             
-print("one second window matches: ",second_matched)            
-total_match=np.delete(total_match,(0),axis=0) #delete first randomly filled row
-total_match=np.unique(total_match,axis=0)  #delete repeating matches
+# print("one second window matches: ",second_matched)            
+# total_match=np.delete(total_match,(0),axis=0) #delete first randomly filled row
+# total_match=np.unique(total_match,axis=0)  #delete repeating matches
 
-#key_name=total_match.flatten(order='C')
+# #key_name=total_match.flatten(order='C')
 
-#check if there are any time matches
-if len(total_match)==0: #this list is empty only if there are no matches between red green and blue
-    print("No time matches today!")
-    sys.exit()
+# #check if there are any time matches
+# if len(total_match)==0: #this list is empty only if there are no matches between red green and blue
+#     print("No time matches today!")
+#     sys.exit()
 
-pattern=[] #create list of time strings that match
-for i in range(len(total_match)):
-    pattern.append(str(total_match[i,1]))
-pattern=list(np.unique(pattern,axis=0))
+# pattern=[] #create list of time strings that match
+# for i in range(len(total_match)):
+#     pattern.append(str(total_match[i,1]))
+# pattern=list(np.unique(pattern,axis=0))
+
+pattern=sorted(list(set(set(Green_minutes).intersection(Red_minutes)).intersection(Blue_minutes)))
+#pattern=sorted(list(set(set(Green_minutes).intersection(Red_minutes))))
+if len(pattern)==0:
+   print("No time matches today!")
+   sys.exit()
+
     
 '''loop through each telescope dir and copy time matched events to Matched directory'''
 
@@ -286,23 +322,14 @@ for root, subdirs, filename in os.walk(blue_path):
                     #print(filename[i])
                     break
 
-print("Time matched in --- %s seconds ---" % (time.time() - start_time))
-print('')
+
 
 '''------------------------------------millisecond MATCHING--------------------------------'''
 print("Matching in milliseconds...")
-#milisec_list=[minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{9})_", file)]
+
 milsec_match=[[]]
 
-#for k in pattern:
-#    milsecond_couple=[milsec for file in sorted(os.listdir(matched_dir)) if k in file for milsec in re.findall("_(\d{9})_", file)]
-#    for i in range(len(milsecond_couple)):
-#        milsecond_couple[i]=float('.'+milsecond_couple[i])
-#    for a, b in itertools.combinations(milsecond_couple, 2): #compare RA dec coordinates of each event 
-#        if isclose(a, b,  abs_tol=0.2):
-#            milsec_match.append(k) #array of matching coords
-#            #print(a,' - ',b)
-#del(milsec_match[0]) #delete first row of zeroes
+
 
 for k in pattern:
     milsecond_couple=[]
@@ -313,9 +340,7 @@ for k in pattern:
                 milsecond_couple.append(float('.'+ minute))
     for a, b in itertools.combinations(milsecond_couple, 2):  
         if isclose(a, b,  abs_tol=milisec_tol):
-#            matched_ab.append(a)
-#            matched_ab.append(b)
-#            matched_ab=list(np.unique(matched_ab,axis=0))  
+ 
             milsec_match.append([a,b]) 
         
 del(milsec_match[0]) #delete first row of zeroes
@@ -332,34 +357,24 @@ for matchedTXT in matched_dir.iterdir():
         else:
             print("The file does not exist")
 
-
-#for k in range(len(pattern)):
-#    for file in sorted(os.listdir(matched_dir)):
-#        
-#        if pattern[k] in file:
-#            print(file)
-#            for milis in milsec_match[k]:
-#               
-#                if milsec_match[k]!=[]:
-#                    
-#                        if str(milis) not in file:
-#                            if os.path.exists(matched_dir.joinpath(file)):
-#                                #os.unlink(matched_dir.joinpath(file)) 
-#                                print("deleted ",file)
-                
-                    
-                    
-                
-    
-
+print("Time matched in --- %s seconds ---" % (time.time() - start_time))
+print('')
 
 '''---------------------------------------Coordinates Calculation-----------------------------------------'''
 
+if not os.path.exists(green_path.joinpath('solution_failure')):
+    os.mkdir(green_path.joinpath('solution_failure')) #a folder for fields that didn't get astrnet solution
+
+solution_failure=green_path.joinpath('solution_failure')
+    
 start_time = time.time()
 
 telescope_tuple=[['REDBIRD',red_path], #for looping convinience
                  ['GREENBIRD',green_path],
                  ['BLUEBIRD',blue_path]]
+
+#telescope_tuple=[['REDBIRD',red_path], #for looping convinience
+#                 ['GREENBIRD',green_path]]
 
 for i in range(len(telescope_tuple)):
 
@@ -382,7 +397,11 @@ for i in range(len(telescope_tuple)):
         #get corresponding WCS transformation
         date = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
     
-        transform = getTransform(date)
+        try: 
+            transform = getTransform(date)
+        except TimeoutError:
+            shutil.move(str(filepath), str(solution_failure)) 
+            break
         
         #get star coords in RA/dec
         star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
@@ -420,7 +439,7 @@ for times in time_keys:
         star_dec.append(dec)
         star_radec=list(zip(star_ra,star_dec)) #array of Ra and dec
     for a, b in itertools.combinations(star_radec, 2): #compare RA dec coordinates of each event 
-        if isclose(a[0], b[0],  abs_tol=coord_tol) and isclose(a[1], b[1],  abs_tol=coord_tol):
+        if isclose(a[0], b[0],  abs_tol=coord_tol/((math.cos(np.radians(a[1]))+math.cos(np.radians(a[1])))/2)) and isclose(a[1], b[1],  abs_tol=coord_tol):
             coords_match.append([a,b]) #array of matching coords
             #print(a,' - ',b)
 del(coords_match[0]) #delete first row of zeroes
@@ -446,8 +465,6 @@ for matchedTXT in matched_dir.iterdir(): #Read RA and dec from files and compare
             #print("moved away ",matchedTXT)
         else:
             print("The file does not exist")
-    else:
-        print("WE HAVE A MATCH!")
     
 print("Coordinates matched in --- %s seconds ---" % (time.time() - start_time))
 print('')
@@ -458,15 +475,6 @@ print("Matching in milliseconds again...")
 matched_pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
 milsec_match=[[]]
 
-#for k in pattern:
-#    milsecond_couple=[milsec for file in sorted(os.listdir(matched_dir)) if k in file for milsec in re.findall("_(\d{9})_", file)]
-#    for i in range(len(milsecond_couple)):
-#        milsecond_couple[i]=float('.'+milsecond_couple[i])
-#    for a, b in itertools.combinations(milsecond_couple, 2): #compare RA dec coordinates of each event 
-#        if isclose(a, b,  abs_tol=0.2):
-#            milsec_match.append(k) #array of matching coords
-#            #print(a,' - ',b)
-#del(milsec_match[0]) #delete first row of zeroes
 
 for k in matched_pattern:
     milsecond_couple=[]
@@ -477,9 +485,7 @@ for k in matched_pattern:
                 milsecond_couple.append(float('.'+ minute))
     for a, b in itertools.combinations(milsecond_couple, 2):  
         if isclose(a, b,  abs_tol=milisec_tol):
-#            matched_ab.append(a)
-#            matched_ab.append(b)
-#            matched_ab=list(np.unique(matched_ab,axis=0))  
+ 
             milsec_match.append([a,b]) 
         
 del(milsec_match[0]) #delete first row of zeroes
@@ -492,18 +498,86 @@ for matchedTXT in matched_dir.iterdir():
         if os.path.exists(matchedTXT):
             #os.unlink(matchedTXT)
             shutil.move(str(matchedTXT), str(milisec_unmatched)) 
-            print("moved away ",matchedTXT)
+            #print("moved away ",matchedTXT)
         else:
             print("The file does not exist")
          
+print("done")
+
+'''-------------------------------CREATING A LIST TO DELETE DATA WITHOUT EVENTS-------------------------'''    
+    
+green_minutesdir=Path('/','D:','/ColibriData',str(night_dir).replace('-', ''))
+blue_minutesdir=Path('/','B:',str(night_dir).replace('-', ''))
+#blue_minutesdir=Path('/','C:','/Users','GreenBird','AppData','Roaming','Microsoft','Windows','Network Shortcuts','ColibriData (BLUEBIRD)',str(obs_date).replace('-', ''))
+red_minutesdir=Path('/','R:',str(night_dir).replace('-', ''))
+telescope_dirs=[[green_minutesdir,'GREENBIRD'], [red_minutesdir,'REDBIRD'], [blue_minutesdir,'BLUEBIRD']]
+
+format_data="%H.%M.%S.%f"
+format_mins="%H%M%S"
+
+    
+detections = [f for f in matched_dir.iterdir() ] #list of detections by one telescope
+ 
+detection_minutes=[] #list of detected files minutes
+for det in detections:
+    time=det.name.split('_')[2]
+    detection_minutes.append(datetime.strptime(time, format_mins))
+detection_minutes=np.unique(detection_minutes)
+
+for night_dir in telescope_dirs:
+    
+    print(night_dir)
+
+    #subdirectories of minute-long datasets (~2400 images per directory)
+    minute_dirs = [f for f in night_dir[0].iterdir() if f.is_dir()]  
+    
+    
+    #remove bias directory from list of image directories and sort
+    minute_dirs = [f for f in minute_dirs if 'Bias' not in f.name]
+    
+    minute_dirs.sort() #list of minute folders
     
     
     
+    minute_names=[] #list of minutes in minute folders names
+    
+    for dirs in minute_dirs:
+        # minute_names.append(dirs.name.split('_')[1])
+        minute_names.append(datetime.strptime(dirs.name.split('_')[1],format_data))
+   
+
+    
+        #print(ReadTime(det))
+    savefile=night_dir[0].joinpath('to_be_saved.txt') 
+    
+    
+    
+    with open(savefile, 'w') as filehandle:
+        for det_time in detection_minutes:
+            
+            for i in range(len(minute_names)):
+       
+                if det_time<=minute_names[i]:
+                
+                
+            
+                    filehandle.write('%s\n' %(minute_names[i]))
+                    
+                    #print(minute_names[i]) 
+                    try:
+                        # print(minute_names[i-1])
+                        filehandle.write('%s\n' %(minute_names[i-1]))
+                    except IndexError:
+                        break
+                    break
+    
+    
+                
+print('DONE!')
             
         
             
     
-
 
 
 
