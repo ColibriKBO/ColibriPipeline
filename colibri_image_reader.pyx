@@ -21,7 +21,7 @@ import datetime
 cimport numpy as np
 np.import_array()
 
-# OS-Specific Typing Definitions 
+# Compile Typing Definitions 
 ctypedef np.uint16_t UI16
 ctypedef np.float64_t F64
 
@@ -140,7 +140,7 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
 def importFramesRCD(image_paths,
                     int  start_frame=0, 
                     int  num_frames=1,
-                    np.ndarray[UI16, ndim=2] bias=np.zeros((1,1),dtype=np.uint16)):
+                    np.ndarray[F64, ndim=2] bias=np.zeros((1,1),dtype=np.float64)):
     """
     Reads in frames from .rcd files starting at a specific frame
     
@@ -176,7 +176,7 @@ def importFramesRCD(image_paths,
         # Load in the image data and header timestamp and subtract the bias
         data,timestamp = readRCD(fname)
         image = split_images(conv_12to16(data), IMG_DIM, IMG_DIM)
-        image = np.subtract(image, bias)
+        image = np.subtract(image, bias, dtype=np.float64)
         
         # Roll over the time if it exceeded 24h
         hour = timestamp.split('T')[1].split(':')[0]
@@ -187,7 +187,7 @@ def importFramesRCD(image_paths,
         img_array[frame] = image
         img_times.append(timestamp)
     
-    # Check if we ran out of frames
+    ## Check if we ran out of frames
     if num_frames != frame + 1:
         img_array = img_array[:frame+1]
         print("We ran out of frames! Contracting array...")
@@ -429,7 +429,7 @@ def stackImages(folder,
                 save_path, 
                 int  start_frame, 
                 int  num_frames, 
-                np.ndarray bias,
+                np.ndarray[F64, ndim=2] bias,
                 *, 
                 bint RCDfiles=True,
                 bint gain_high=True):
