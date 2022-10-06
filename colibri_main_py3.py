@@ -178,7 +178,7 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     #will throw error if try to normalize (sum of kernel too close to 0)
     conv = convolve_fft(light_curve, kernel, normalize_kernel=False)    #convolution of light curve with Ricker wavelet
     minLoc = np.argmin(conv)    #index of minimum value of convolution
-    minVal = min(conv)          #minimum of convolution
+    minVal = np.min(conv)          #minimum of convolution
     #TODO: The problems with Rocker wavelet smoothing, as currently implemented, are that:
     #1.The wavelet-smoothed light curve has correlated data points, so the original statistics are lost. 
     #In reality, the scatter has been diminished by about the square root of the number  of data points in the width of the wavelet 
