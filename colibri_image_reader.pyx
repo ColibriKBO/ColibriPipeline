@@ -424,7 +424,7 @@ def chooseBias(obs_folder, masterbias_list, obs_date):
 ## Stack Images
 ##############################
 
-#TODO: combine this function with getBiases
+#TODO: combine this function with makeMasterBias
 def stackImages(folder,
                 save_path, 
                 int  start_frame, 
