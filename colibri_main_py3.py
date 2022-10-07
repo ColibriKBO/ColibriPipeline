@@ -536,6 +536,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     """
 
     global telescope
+    global MasterBiasList
     
     print (datetime.datetime.now(), "Opening:", minuteDir)
     
@@ -547,10 +548,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     if not savefolder.exists():
         savefolder.mkdir()      
 
-        
     '''load in appropriate master bias image from pre-made set'''
-    
-    bias = cir.chooseBias(minuteDir, MasterBiasList)
+    bias = cir.chooseBias(minuteDir, MasterBiasList, obs_date)
 
 
     ''' adjustable parameters '''
@@ -921,7 +920,7 @@ if len(sys.argv) == 4:
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     sigma_threshold=float(sys.argv[3]) #usually 3.75
 
-elif sys.argv[1] == "Test": # default 
+elif len(sys.argv) == 2 and sys.argv[1] == "Test": # default 
    base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')  #path to main directory
    obs_date = datetime.date(2022, 8, 12)    #date observations
    sigma_threshold=3.75
@@ -961,7 +960,7 @@ if __name__ == '__main__':
     NumBiasImages = 9       #number of bias images to combine in median bias images
 
     #get 2d numpy array with bias datetimes and master bias filepaths
-    MasterBiasList = cir.makeBiasSet(bias_dir, NumBiasImages)
+    MasterBiasList = cir.makeBiasSet(bias_dir, base_path, obs_date, NumBiasImages)
     
 
     ''' prepare RickerWavelet/Mexican hat kernel to convolve with light curves'''

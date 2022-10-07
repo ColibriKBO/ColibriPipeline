@@ -137,7 +137,11 @@ def importFramesRCD(image_paths,
     img_times = []
     
     ## Loop which iteratively reads in the files and processes them
-    for i,fname in enumerate(image_paths, start=start_frame):
+    for i,fname in enumerate(image_paths):
+        # Check if we are below start_frame
+        if i < start_frame:
+            continue
+        
         # Check if we exceed the requested frames
         frame = i - start_frame
         if frame >= num_frames:
@@ -156,9 +160,12 @@ def importFramesRCD(image_paths,
         # Add corrected image and time data to appropriate array/list
         img_array[frame] = image
         img_times.append(timestamp)
+        
+    else:
+        frame += 1
     
     ## Check if we ran out of frames
-    if num_frames != frame + 1:
+    if num_frames != frame:
         img_array = img_array[:frame+1]
         print("We ran out of frames! Contracting array...")
     
@@ -272,7 +279,6 @@ def makeMasterBias(dirpath,
     """
     
     ## Type definitions
-    cdef list RCD_bias_list
     cdef np.ndarray RCD_biases,bias_median
     
     ## Read in num_biases frames from the directory and median combine them
@@ -301,7 +307,8 @@ def makeBiasSet(dirpath,
     
         Parameters:
             dirpath (Path): Filepath to bias image directory
-            base_path (Path): pathlib.Path object to data directory
+            base_path (Path): pathlib.Path object to directory containing data
+                              and archive directories
             obs_date (datetime/str): The observing date
             num_biases (int): Number of bias images to combine for master
             
@@ -310,7 +317,7 @@ def makeBiasSet(dirpath,
     """
 
     ## Type definitions
-    cdef list bias_dirs,bias_list,bias_filepath
+    cdef list bias_dirs,bias_list
     cdef np.ndarray masterbias_img,bias_arr
 
     ## Make list of bias folders
@@ -355,7 +362,7 @@ def makeBiasSet(dirpath,
     return bias_arr
 
 
-def chooseBias(obs_folder, masterbias_list, obs_date):
+def chooseBias(obs_folder,masterbias_list, obs_date):
     """
     Choose correct master bias by comparing time to the observation time
     
@@ -376,7 +383,7 @@ def chooseBias(obs_folder, masterbias_list, obs_date):
     print(f"current date: {dir_datetime}")
     
     ## Make array of time differences between current obs_folder and biases
-    diff_time      = np.array(abs(masterbias_list - dir_datetime))
+    diff_time      = np.array(abs(masterbias_list[:,0] - dir_datetime))
     best_bias_indx = np.argmin(diff_time)
     
     ## Select best master bias to use
