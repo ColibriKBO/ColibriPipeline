@@ -1028,6 +1028,6 @@ if __name__ == '__main__':
             gc.collect()
 
             end_time = timer.time()
-            print('Ran for %s seconds' % (end_time - start_time))
+            print('Ran for %s seconds' % (end_time - start_time), file=sys.stderr)
 
       
