@@ -414,7 +414,11 @@ def refineCentroid(imageData, time, coords, sigma):
     '''initial x, y positions'''
     x_initial = [pos[0] for pos in coords]
     y_initial = [pos[1] for pos in coords]
-    
+
+    '''Flatten imageData to 2D array'''
+    if imageData.ndim == 3:
+        imageData = imageData[0]
+
     '''use an iterative 'windowed' method from sep to get new position'''
     new_pos = np.array(sep.winpos(imageData, x_initial, y_initial, sigma, subpix=5))[0:2, :]
     x = new_pos[:][0].tolist()
@@ -536,7 +540,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     """
 
     global telescope
-    global MasterBiasList
     
     print (datetime.datetime.now(), "Opening:", minuteDir)
     
@@ -613,15 +616,15 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         
         #create median combined image for star finding
         stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
-        
+
         #make list of star coords and half light radii
         star_find_results = tuple(initialFind(stacked, detect_thresh))
-        
+
         #remove stars where centre is too close to edge of frame
         edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
         star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
         star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
-        
+
         #increase start image counter
         i += 1
             
@@ -642,7 +645,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     star_find_results = np.array(star_find_results)
     radii = star_find_results[:,-1]
     initial_positions = star_find_results[:,:-1]
-    
+
     num_stars = len(initial_positions)      #number of stars in image
     
     #print(datetime.datetime.now(), 'Done star finding. Number of stars found: ', num_stars) 
@@ -654,14 +657,14 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         first_frame = cir.importFramesRCD(imagePaths, 0, 1, bias)   #import first image
         headerTimes = [first_frame[1]] #list of image header times
         last_frame = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
-    
+
     else:
         first_frame = importFramesFITS(imagePaths, 0, 1, bias)      #data and time from 1st image
         headerTimes = [first_frame[1]]  #list of image header times
         last_frame = importFramesFITS(imagePaths, len(imagePaths)-1, 1, bias) #data and time from last image
-    
+
     drift = False     # variable to check whether stars have drifted since last frame
-    
+
     drift_pos = np.empty([2, num_stars], dtype = (np.float64, 2))  #array to hold first and last positions
     drift_times = []   #list to hold times for each set of drifted coords
     GaussSigma = np.mean(radii * 2. / 2.35)  # calculate gaussian sigma for each star's light profile
@@ -675,10 +678,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     last_drift = refineCentroid(*last_frame, drift_pos[0], GaussSigma)
     drift_pos[1] = last_drift[0]
     drift_times.append(last_drift[1])
-    
+
     #get median drift rate [px/s] in x and y over the minute
     x_drift, y_drift = averageDrift(drift_pos, drift_times)
-    
+
     #check drift rates
     driftTolerance = 2.5e-2   #px per s
     
@@ -691,14 +694,14 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     if abs(np.median(x_drift)) > driftErrorThresh or abs(np.median(y_drift)) > driftErrorThresh:
         print (datetime.datetime.now(), "Significant drift, skipping ", minuteDir) 
         return -1
-    
-       
+
     ''' flux and time calculations with optional time evolution '''
     
     #image data (2d array with dimensions: # of images x # of stars)
     starData = np.empty([num_images, num_stars], dtype=(np.float64, 4))
     
     #get first image data from initial star positions
+    print(first_frame[0].shape,initial_positions.shape)
     starData[0] = tuple(zip(initial_positions[:,0], 
                         initial_positions[:,1], 
                         #sumFlux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
@@ -755,7 +758,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
 
     #print (datetime.datetime.now(), 'Photometry done.')
-   
 
     ''' Dip detection '''
    
@@ -766,7 +768,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     #loop through each detected object
     for starNum in range(0, num_stars):
         dipResults.append(dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold))
-        
+
     #transform into a multidimensional array
     dipResults = np.array(dipResults)
    
@@ -800,7 +802,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     save_bkg_mean=Bkg_mean[np.where(event_frames > 0)]      #save background mean of convolved lightcurve
     save_minVal=conv_min[np.where(event_frames > 0)]        #save minimum value of the convolution
     save_sigma=significance[np.where(event_frames > 0)]     #save significance of each event
-    
+
     #loop through each detected event
     j=0
     for f in save_frames:
@@ -1020,6 +1022,7 @@ if __name__ == '__main__':
             start_time = timer.time()
 
             print('Running sequentially...')
+            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
             firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
             
             gc.collect()

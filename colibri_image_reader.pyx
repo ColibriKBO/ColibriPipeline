@@ -164,10 +164,14 @@ def importFramesRCD(image_paths,
     else:
         frame += 1
     
+    ## Check if only one frame was called: if so, ndim=3 -> ndim=2
+    if num_frames == 1:
+        img_array = img_array[0]
     ## Check if we ran out of frames
-    if num_frames != frame:
-        img_array = img_array[:frame+1]
+    elif num_frames != frame:
+        img_array = img_array[:frame]
         print("We ran out of frames! Contracting array...")
+    
     
     return img_array,img_times
     
@@ -376,22 +380,24 @@ def chooseBias(obs_folder,masterbias_list, obs_date):
     """
     
     ## Type definitions
-    cdef np.ndarray diff_time,best_bias_indx,best_bias_time,best_bias_file
+    cdef np.ndarray diff_time
+    cdef int best_bias_indx
     
     ## Get current datetime of observations
     dir_datetime = getDateTime(obs_folder, obs_date)
     print(f"current date: {dir_datetime}")
     
     ## Make array of time differences between current obs_folder and biases
-    diff_time      = np.array(abs(masterbias_list[:,0] - dir_datetime))
-    best_bias_indx = np.argmin(diff_time)
-    
+    diff_time     = np.array(abs(masterbias_list[:,0] - dir_datetime))
+
     ## Select best master bias to use
+    best_bias_indx = np.argmin(diff_time)
     best_bias_time = masterbias_list[best_bias_indx][0] 
     best_bias_file = masterbias_list[best_bias_indx][1]
     
     ## Load in new master bias image
     best_bias = fits.getdata(best_bias_file)
+    best_bias = best_bias.astype(np.float64)
     print(f"using bias from: {best_bias_time}")
     
     return best_bias
@@ -428,7 +434,7 @@ def stackImages(folder,
             imageMed (arr): Median combined, bias-subtracted image for star
                             detection
     """
-    
+
     ## Type definitions
     cdef list RCD_file_list
     cdef np.ndarray RCD_imgs,median_img
