@@ -30,6 +30,11 @@ import sys
 # Custom Script Imports
 import colibri_image_reader as cir
 
+# Disable Warnings
+import warnings
+warnings.filterwarnings("ignore",category=DeprecationWarning)
+#warnings.filterwarnings("ignore",category=VisibleDeprecationWarning)
+
 
 ##############################
 ## Function Definitions
@@ -770,7 +775,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         dipResults.append(dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold))
 
     #transform into a multidimensional array
-    dipResults = np.array(dipResults)
+    dipResults = np.array(dipResults,dtype=object)
    
     # event_frames = dipResults[:,0]         #array of event frames (-1 if no event detected, -2 if incomplete data)
     # light_curves = dipResults[:,1]         #array of light curves (empty if no event detected)
@@ -987,8 +992,12 @@ if __name__ == '__main__':
         pool.join()
 
         end_time = timer.time()
-        print('Ran for %s seconds' % (end_time - start_time))
-        
+        print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
+
+#       with open("logs/timing.log","a") as f:
+#           f.write(f"Ran for {end_time - start_time} seconds\n\n")
+
+
     #running in sequence
     else:
         
@@ -1028,6 +1037,7 @@ if __name__ == '__main__':
             gc.collect()
 
             end_time = timer.time()
-            print('Ran for %s seconds' % (end_time - start_time), file=sys.stderr)
+#            with open("logs/timing.log","a") as f:
+#                f.write(f"Ran for {end_time - start_time} seconds\n\n")
 
-      
+            print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
