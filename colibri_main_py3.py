@@ -706,7 +706,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     starData = np.empty([num_images, num_stars], dtype=(np.float64, 4))
     
     #get first image data from initial star positions
-    print(first_frame[0].shape,initial_positions.shape)
     starData[0] = tuple(zip(initial_positions[:,0], 
                         initial_positions[:,1], 
                         #sumFlux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
