@@ -42,17 +42,21 @@ def getLocalSolution(image_file, save_file, order):
     try:
         # -D to specify write directory, -o to specify output base name, -N new-fits-filename
         print(image_file)
-        print(save_file.split(".")[0])
+        # print(save_file.split(".")[0])
+        print(save_file.split(".fits")[0])
 
         cwd = os.getcwd()
         os.chdir('d:\\')
 
-        p = subprocess.run('wsl time solve-field --no-plots -D /mnt/d/tmp -O -o ' + save_file.split(".")[0] + ' -N ' + save_file + ' -t ' + str(order) + ' --scale-units arcsecperpix --scale-low 2.2 --scale-high 2.6 ' + image_file)
+        #p = subprocess.run('wsl time solve-field --no-plots -D /mnt/d/tmp -O -o ' + save_file.split(".")[0] + ' -N ' + save_file + ' -t ' + str(order) + ' --scale-units arcsecperpix --scale-low 2.2 --scale-high 2.6 ' + image_file)
+        p = subprocess.run('wsl time solve-field --no-plots -D /mnt/d/tmp -O -o ' + save_file.split(".fits")[0] + ' -N ' + save_file + ' -t ' + str(order) + ' --scale-units arcsecperpix --scale-low 2.2 --scale-high 2.6 ' + image_file)
         
         os.chdir(cwd)
         print(os.getcwd())
 
-        wcs_header = Header.fromtextfile('d:\\tmp\\' + save_file.split('.')[0] + '.wcs')
+        #wcs_header = Header.fromtextfile('d:\\tmp\\' + save_file.split('.')[0] + '.wcs')
+
+        wcs_header = Header.fromfile('d:\\tmp\\' + save_file.split(".fits")[0] + '.wcs')
 
     except:
         pass
