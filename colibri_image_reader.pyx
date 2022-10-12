@@ -170,7 +170,8 @@ def importFramesRCD(image_paths,
     ## Check if we ran out of frames
     elif num_frames != frame:
         img_array = img_array[:frame]
-        print("We ran out of frames! Contracting array...")
+        print(f"We ran out of frames! Only {frame} of {num_frames}.")
+        print(f"Contracting array...")
     
     
     return img_array,img_times
