@@ -288,7 +288,7 @@ def makeMasterBias(dirpath,
     
     ## Read in num_biases frames from the directory and median combine them
     if RCD_files:
-        RCD_bias_list = dirpath.glob("*.rcd")
+        RCD_bias_list = sorted(dirpath.glob("*.rcd"))
         RCD_biases = importFramesRCD(RCD_bias_list,num_frames=num_biases)[0]
         bias_median = np.median(RCD_biases, axis=0)
     
