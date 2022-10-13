@@ -120,7 +120,7 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     light_curve = np.trim_zeros(fluxProfile)
     
     if len(light_curve) == 0:
-        print('empty profile: ', num)
+        print(f"Empty profile: {num}")
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  # reject empty profiles
    
     
@@ -132,18 +132,18 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     
     # reject stars that go out of frame to rapidly
     if len(light_curve) < minLightcurveLen:
-        print('Light curve too short: star', num)
+        print(f"Light curve too short: star {num}")
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
     
     #TODO: what should the limits actually be?
     # reject tracking failures
     if abs(np.mean(light_curve[:FramesperMin]) - np.mean(light_curve[-FramesperMin:])) > np.std(light_curve[:FramesperMin]):
-        print('Tracking failure: star ', num)
+        print(f"Tracking failure: star {num}")
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan 
     
     # reject stars with SNR too low
     if np.median(light_curve)/np.std(light_curve) < minSNR:
-        print('Signal to Noise too low: star', num)
+        print(f"Signal to Noise too low: star {num}")
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
 
     #uncomment to save light curve of each star (doesn't look for dips)
@@ -189,7 +189,7 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
         #dipdetection = 3.75  #dip detection threshold ; Sep 2022 now it's an input parameter - Roman A.
         
     else:
-        print('event cutoff star: ', num)
+        print(f"Event cutoff star: {num}")
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  # reject events that are cut off at the start/end of time series
 
     #if minimum < background - 3.75*sigma
@@ -216,7 +216,7 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     if significance>=sigma_threshold:
         #get frame number of dip
         critFrame = np.where(fluxProfile == light_curve[minLoc])[0]
-        print('found significant dip in star: ', num, ' at frame: ', critFrame[0])
+        print(f"Found significant dip in star: {num} at frame: {critFrame[0]}")
         
         return critFrame[0], light_curve, conv, lightcurve_std, np.mean(light_curve), np.std(bkgZone),conv_bkg_mean,minVal,significance
         
@@ -436,7 +436,6 @@ def refineCentroid(imageData, time, coords, sigma):
 def runParallel(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold):
     firstOccSearch(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
     gc.collect()
-    #runParallel should be scrapped
     
 
 def sumFlux(data, x_coords, y_coords, l):
@@ -546,7 +545,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     global telescope
     
-    print (datetime.datetime.now(), "Opening:", minuteDir)
+    print (f"{datetime.datetime.now()} Opening: {minuteDir}",file=sys.stderr)
     
 
     ''' create folder for results '''
@@ -635,8 +634,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             
         #check if we've reached the end of the minute, return error if so
         if (1 + i + 9) >= num_images:
-            print('no good images in minute: ', minuteDir)
-            print (datetime.datetime.now(), "Closing:", minuteDir)
+            print(f"no good images in minute: {minuteDir}")
+            print (f"{datetime.datetime.now()} Closing: {minuteDir}")
             print ("\n")
             return -1
 
@@ -714,7 +713,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     if drift:  # time evolve moving stars
     
-        print('drifted - applying drift to photometry', x_drift, y_drift)
+        print(f"Drifted - applying drift to photometry {x_drift} {y_drift}")
         
         #loop through each image in the minute-long dataset
         for i in range(1, num_images):
@@ -738,7 +737,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             
     else:  # if there is not significant drift, don't account for drift  in photometry
         
-        print('no drift')
+        print('No drift')
         
         #loop through each image in the minute-long dataset
         for i in range(1, num_images):
@@ -1009,7 +1008,7 @@ if __name__ == '__main__':
                     #check if conversion indicator file is present
                     if not minute_dirs[f].joinpath('converted.txt').is_file():
                         
-                        print('converting to .fits')
+                        print('Converting to .fits')
                         
                         #make conversion indicator file
                         with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
@@ -1025,7 +1024,7 @@ if __name__ == '__main__':
                         print('Already converted raw files to fits format.')
                         print('Remove file converted.txt if you want to overwrite.')
 
-            print('running on... ', minute_dirs[f])
+            print(f"Running on... {minute_dirs[f]}")
 
             start_time = timer.time()
 
