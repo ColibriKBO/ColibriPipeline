@@ -1,5 +1,17 @@
-
+# ignore __pycache__ files
+**/__pycache__
 __pycache__/astrometrynet_funcs.cpython-37.pyc
 __pycache__/getRAdec.cpython-37.pyc
 __pycache__/VizieR_query.cpython-37.pyc
 __pycache__/lightcurve_maker.cpython-37.pyc
+
+# ignore compiled files
+**/build
+*.so
+*.pyd
+
+# ignore cython annotation
+colibri_image_reader.html
+
+# ignore logs directory
+**/logs
