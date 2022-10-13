@@ -1,0 +1,593 @@
+folders ['20220812_03.45.50.098', '20220812_05.04.11.349']
+Calculating median bias...
+Calculating median bias...
+Calculating median bias...
+bias times:  [datetime.datetime(2022, 8, 12, 3, 40, 16)
+ datetime.datetime(2022, 8, 12, 4, 47, 17)
+ datetime.datetime(2022, 8, 12, 5, 5, 13)]
+Running in parallel...
+2022-10-11 10:38:48.974204 Opening: /home/pquigley/ColibriRepos/ColibriData/20220812/20220812_05.04.11.349
+current date:  2022-08-12 05:04:11
+current bias time:  2022-08-12 05:05:13
+2022-10-11 10:38:48.989629 Imported 2399 frames
+2022-10-11 10:38:48.989647 field1 starfinding...
+no drift
+Light curve too short: star 0
+Light curve too short: star 1
+Light curve too short: star 2
+found significant dip in star:  6  at frame:  1085
+Signal to Noise too low: star 24
+Signal to Noise too low: star 29
+Signal to Noise too low: star 35
+Signal to Noise too low: star 43
+event cutoff star:  45
+Signal to Noise too low: star 46
+Signal to Noise too low: star 61
+Light curve too short: star 64
+Signal to Noise too low: star 66
+Signal to Noise too low: star 71
+Signal to Noise too low: star 72
+Signal to Noise too low: star 74
+Signal to Noise too low: star 75
+Signal to Noise too low: star 76
+Signal to Noise too low: star 77
+Signal to Noise too low: star 78
+Signal to Noise too low: star 79
+Signal to Noise too low: star 89
+Signal to Noise too low: star 91
+Signal to Noise too low: star 92
+Signal to Noise too low: star 97
+Signal to Noise too low: star 102
+Signal to Noise too low: star 106
+found significant dip in star:  107  at frame:  1122
+Signal to Noise too low: star 109
+Signal to Noise too low: star 111
+Signal to Noise too low: star 116
+Signal to Noise too low: star 117
+Signal to Noise too low: star 121
+found significant dip in star:  122  at frame:  469
+Signal to Noise too low: star 126
+Signal to Noise too low: star 127
+Signal to Noise too low: star 130
+Signal to Noise too low: star 135
+Light curve too short: star 137
+Signal to Noise too low: star 139
+Signal to Noise too low: star 141
+Light curve too short: star 149
+event cutoff star:  151
+Signal to Noise too low: star 153
+Signal to Noise too low: star 156
+Signal to Noise too low: star 158
+Signal to Noise too low: star 160
+Signal to Noise too low: star 161
+found significant dip in star:  164  at frame:  2307
+Signal to Noise too low: star 170
+Light curve too short: star 172
+Signal to Noise too low: star 176
+Signal to Noise too low: star 180
+Signal to Noise too low: star 181
+event cutoff star:  185
+Signal to Noise too low: star 188
+found significant dip in star:  189  at frame:  2049
+Signal to Noise too low: star 193
+Signal to Noise too low: star 199
+Signal to Noise too low: star 205
+Signal to Noise too low: star 211
+Signal to Noise too low: star 217
+Signal to Noise too low: star 219
+event cutoff star:  222
+event cutoff star:  225
+Signal to Noise too low: star 233
+found significant dip in star:  234  at frame:  645
+Signal to Noise too low: star 238
+Signal to Noise too low: star 243
+Signal to Noise too low: star 245
+Signal to Noise too low: star 248
+Signal to Noise too low: star 250
+Signal to Noise too low: star 251
+Signal to Noise too low: star 253
+Signal to Noise too low: star 254
+Signal to Noise too low: star 256
+Signal to Noise too low: star 257
+event cutoff star:  265
+Signal to Noise too low: star 266
+Signal to Noise too low: star 272
+Signal to Noise too low: star 273
+Signal to Noise too low: star 275
+Signal to Noise too low: star 276
+Signal to Noise too low: star 278
+Signal to Noise too low: star 280
+Signal to Noise too low: star 288
+Light curve too short: star 289
+Signal to Noise too low: star 291
+found significant dip in star:  299  at frame:  662
+found significant dip in star:  302  at frame:  739
+Signal to Noise too low: star 303
+Signal to Noise too low: star 310
+Signal to Noise too low: star 322
+Signal to Noise too low: star 324
+Signal to Noise too low: star 328
+Signal to Noise too low: star 329
+Signal to Noise too low: star 334
+Signal to Noise too low: star 338
+Signal to Noise too low: star 354
+Signal to Noise too low: star 355
+Signal to Noise too low: star 357
+Signal to Noise too low: star 361
+found significant dip in star:  370  at frame:  268
+Signal to Noise too low: star 372
+Signal to Noise too low: star 375
+Signal to Noise too low: star 377
+Signal to Noise too low: star 381
+Signal to Noise too low: star 385
+Signal to Noise too low: star 387
+Signal to Noise too low: star 389
+Signal to Noise too low: star 390
+Signal to Noise too low: star 394
+Signal to Noise too low: star 396
+Signal to Noise too low: star 399
+found significant dip in star:  402  at frame:  467
+Light curve too short: star 406
+found significant dip in star:  408  at frame:  289
+found significant dip in star:  411  at frame:  2273
+Signal to Noise too low: star 413
+Signal to Noise too low: star 415
+Signal to Noise too low: star 416
+Signal to Noise too low: star 418
+found significant dip in star:  424  at frame:  119
+event cutoff star:  426
+Signal to Noise too low: star 427
+Signal to Noise too low: star 428
+Signal to Noise too low: star 429
+Signal to Noise too low: star 430
+Signal to Noise too low: star 434
+Light curve too short: star 442
+Signal to Noise too low: star 443
+Signal to Noise too low: star 445
+Signal to Noise too low: star 448
+Signal to Noise too low: star 450
+Signal to Noise too low: star 452
+Signal to Noise too low: star 457
+found significant dip in star:  458  at frame:  1037
+Signal to Noise too low: star 463
+Signal to Noise too low: star 464
+event cutoff star:  466
+Signal to Noise too low: star 467
+found significant dip in star:  468  at frame:  1312
+Signal to Noise too low: star 471
+Signal to Noise too low: star 473
+Signal to Noise too low: star 475
+Signal to Noise too low: star 477
+event cutoff star:  482
+found significant dip in star:  488  at frame:  1711
+Signal to Noise too low: star 490
+Signal to Noise too low: star 493
+Signal to Noise too low: star 496
+Signal to Noise too low: star 501
+Signal to Noise too low: star 506
+Signal to Noise too low: star 507
+Signal to Noise too low: star 509
+Signal to Noise too low: star 510
+Signal to Noise too low: star 515
+Signal to Noise too low: star 517
+Signal to Noise too low: star 518
+Signal to Noise too low: star 522
+Signal to Noise too low: star 523
+Signal to Noise too low: star 526
+Signal to Noise too low: star 529
+event cutoff star:  530
+Signal to Noise too low: star 531
+Signal to Noise too low: star 534
+Signal to Noise too low: star 536
+event cutoff star:  537
+Signal to Noise too low: star 538
+Signal to Noise too low: star 543
+Signal to Noise too low: star 545
+Signal to Noise too low: star 548
+Signal to Noise too low: star 552
+Signal to Noise too low: star 557
+Signal to Noise too low: star 558
+event cutoff star:  560
+Signal to Noise too low: star 562
+event cutoff star:  564
+Signal to Noise too low: star 565
+Signal to Noise too low: star 566
+event cutoff star:  569
+Signal to Noise too low: star 570
+Signal to Noise too low: star 571
+Signal to Noise too low: star 580
+found significant dip in star:  581  at frame:  496
+Signal to Noise too low: star 583
+Signal to Noise too low: star 584
+found significant dip in star:  590  at frame:  994
+Signal to Noise too low: star 591
+Signal to Noise too low: star 592
+event cutoff star:  594
+Signal to Noise too low: star 597
+Signal to Noise too low: star 598
+Signal to Noise too low: star 602
+Signal to Noise too low: star 608
+Signal to Noise too low: star 611
+Signal to Noise too low: star 613
+Signal to Noise too low: star 615
+Signal to Noise too low: star 620
+Signal to Noise too low: star 622
+Signal to Noise too low: star 623
+Signal to Noise too low: star 626
+Signal to Noise too low: star 628
+Signal to Noise too low: star 629
+event cutoff star:  630
+found significant dip in star:  631  at frame:  1524
+Signal to Noise too low: star 636
+Signal to Noise too low: star 637
+Signal to Noise too low: star 639
+Signal to Noise too low: star 641
+found significant dip in star:  643  at frame:  52
+found significant dip in star:  648  at frame:  604
+found significant dip in star:  649  at frame:  1738
+Signal to Noise too low: star 653
+Signal to Noise too low: star 655
+Signal to Noise too low: star 657
+Signal to Noise too low: star 661
+Light curve too short: star 669
+Signal to Noise too low: star 670
+found significant dip in star:  671  at frame:  924
+Signal to Noise too low: star 673
+Signal to Noise too low: star 675
+found significant dip in star:  681  at frame:  1557
+Signal to Noise too low: star 682
+event cutoff star:  685
+Signal to Noise too low: star 6862022-10-11 10:38:48.974199 Opening: /home/pquigley/ColibriRepos/ColibriData/20220812/20220812_03.45.50.098
+current date:  2022-08-12 03:45:50
+current bias time:  2022-08-12 03:40:16
+2022-10-11 10:38:48.989505 Imported 2398 frames
+2022-10-11 10:38:48.989528 field1 starfinding...
+no drift
+Light curve too short: star 0
+Light curve too short: star 1
+Light curve too short: star 2
+Light curve too short: star 3
+Light curve too short: star 4
+Light curve too short: star 5
+Signal to Noise too low: star 8
+found significant dip in star:  14  at frame:  777
+found significant dip in star:  22  at frame:  913
+found significant dip in star:  26  at frame:  1656
+Signal to Noise too low: star 27
+found significant dip in star:  30  at frame:  1282
+Signal to Noise too low: star 34
+found significant dip in star:  46  at frame:  380
+event cutoff star:  53
+Signal to Noise too low: star 56
+found significant dip in star:  63  at frame:  2348
+event cutoff star:  68
+Signal to Noise too low: star 69
+event cutoff star:  74
+event cutoff star:  79
+Signal to Noise too low: star 80
+found significant dip in star:  82  at frame:  1389
+Signal to Noise too low: star 94
+found significant dip in star:  96  at frame:  1088
+Signal to Noise too low: star 100
+found significant dip in star:  103  at frame:  1140
+Signal to Noise too low: star 120
+found significant dip in star:  130  at frame:  1048
+found significant dip in star:  133  at frame:  2050
+Signal to Noise too low: star 135
+event cutoff star:  138
+Signal to Noise too low: star 139
+Signal to Noise too low: star 140
+Signal to Noise too low: star 151
+event cutoff star:  152
+found significant dip in star:  170  at frame:  631
+Signal to Noise too low: star 180
+event cutoff star:  198
+Signal to Noise too low: star 202
+Signal to Noise too low: star 205
+Signal to Noise too low: star 207
+Signal to Noise too low: star 208
+Signal to Noise too low: star 228
+Signal to Noise too low: star 231
+Signal to Noise too low: star 238
+found significant dip in star:  242  at frame:  1851
+Signal to Noise too low: star 248
+found significant dip in star:  249  at frame:  1416
+Signal to Noise too low: star 253
+found significant dip in star:  254  at frame:  1380
+found significant dip in star:  257  at frame:  385
+found significant dip in star:  259  at frame:  1388
+found significant dip in star:  260  at frame:  1543
+Signal to Noise too low: star 263
+Signal to Noise too low: star 267
+Signal to Noise too low: star 271
+Signal to Noise too low: star 273
+Light curve too short: star 278
+Signal to Noise too low: star 282
+Signal to Noise too low: star 288
+Signal to Noise too low: star 289
+event cutoff star:  291
+Light curve too short: star 295
+Signal to Noise too low: star 296
+Signal to Noise too low: star 297
+event cutoff star:  317
+Light curve too short: star 322
+Signal to Noise too low: star 325
+found significant dip in star:  327  at frame:  761
+Signal to Noise too low: star 328
+found significant dip in star:  330  at frame:  1266
+Signal to Noise too low: star 333
+Signal to Noise too low: star 334
+Signal to Noise too low: star 349
+found significant dip in star:  358  at frame:  1670
+Signal to Noise too low: star 362
+Signal to Noise too low: star 368
+Signal to Noise too low: star 381
+found significant dip in star:  391  at frame:  1647
+Signal to Noise too low: star 394
+Signal to Noise too low: star 395
+event cutoff star:  415
+Signal to Noise too low: star 420
+Signal to Noise too low: star 438
+Signal to Noise too low: star 448
+found significant dip in star:  454  at frame:  1414
+Signal to Noise too low: star 457
+Signal to Noise too low: star 462
+Signal to Noise too low: star 465
+Signal to Noise too low: star 476
+Signal to Noise too low: star 479
+Signal to Noise too low: star 481
+Light curve too short: star 500
+Signal to Noise too low: star 502
+Signal to Noise too low: star 506
+Signal to Noise too low: star 511
+event cutoff star:  515
+Signal to Noise too low: star 516
+Signal to Noise too low: star 518
+Signal to Noise too low: star 521
+Signal to Noise too low: star 529
+Signal to Noise too low: star 532
+Signal to Noise too low: star 533
+found significant dip in star:  548  at frame:  1324
+Signal to Noise too low: star 550
+Signal to Noise too low: star 554
+found significant dip in star:  555  at frame:  517
+Signal to Noise too low: star 567
+found significant dip in star:  568  at frame:  598
+Signal to Noise too low: star 573
+found significant dip in star:  575  at frame:  173
+found significant dip in star:  577  at frame:  399
+event cutoff star:  578
+Signal to Noise too low: star 585
+found significant dip in star:  588  at frame:  1642
+Signal to Noise too low: star 595
+Signal to Noise too low: star 603
+event cutoff star:  606
+event cutoff star:  632
+event cutoff star:  633
+Signal to Noise too low: star 642
+Signal to Noise too low: star 647
+Signal to Noise too low: star 648
+Signal to Noise too low: star 651
+Signal to Noise too low: star 655
+Signal to Noise too low: star 660
+Signal to Noise too low: star 661
+event cutoff star:  662
+found significant dip in star:  668  at frame:  393
+Signal to Noise too low: star 669
+event cutoff star:  670
+found significant dip in star:  674  at frame:  1499
+Signal to Noise too low: star 675
+Signal to Noise too low: star 676
+Signal to Noise too low: star 680
+Signal to Noise too low: star 686
+event cutoff star:  687
+Signal to Noise too low: star 691
+Signal to Noise too low: star 696
+Signal to Noise too low: star 698
+Signal to Noise too low: star 700
+found significant dip in star:  703  at frame:  2052
+Signal to Noise too low: star 706
+found significant dip in star:  712  at frame:  782
+found significant dip in star:  722  at frame:  61
+Signal to Noise too low: star 723
+found significant dip in star:  726  at frame:  1248
+event cutoff star:  728
+Light curve too short: star 732
+found significant dip in star:  736  at frame:  363
+Signal to Noise too low: star 739
+Signal to Noise too low: star 742
+Signal to Noise too low: star 747
+Signal to Noise too low: star 755
+Signal to Noise too low: star 767
+Signal to Noise too low: star 775
+Signal to Noise too low: star 777
+Signal to Noise too low: star 785
+Signal to Noise too low: star 791
+event cutoff star:  794
+Light curve too short: star 798
+found significant dip in star:  802  at frame:  1644
+Signal to Noise too low: star 810
+Signal to Noise too low: star 812
+Signal to Noise too low: star 814
+Signal to Noise too low: star 818
+event cutoff star:  827
+event cutoff star:  840
+Signal to Noise too low: star 842
+Signal to Noise too low: star 843
+Signal to Noise too low: star 859
+Signal to Noise too low: star 862
+Signal to Noise too low: star 864
+Signal to Noise too low: star 870
+found significant dip in star:  876  at frame:  1077
+Signal to Noise too low: star 882
+found significant dip in star:  890  at frame:  1567
+Signal to Noise too low: star 904
+Signal to Noise too low: star 909
+Light curve too short: star 915
+Signal to Noise too low: star 920
+Signal to Noise too low: star 928
+found significant dip in star:  932  at frame:  1324
+found significant dip in star:  937  at frame:  158
+Signal to Noise too low: star 939
+Signal to Noise too low: star 950
+found significant dip in star:  953  at frame:  393
+event cutoff star:  956
+found significant dip in star:  958  at frame:  2276
+Signal to Noise too low: star 975
+Signal to Noise too low: star 980
+found significant dip in star:  981  at frame:  658
+found significant dip in star:  982  at frame:  1345
+Signal to Noise too low: star 992
+Signal to Noise too low: star 993
+found significant dip in star:  1002  at frame:  465
+Signal to Noise too low: star 1003
+Signal to Noise too low: star 1012
+found significant dip in star:  1020  at frame:  1416
+Signal to Noise too low: star 1022
+Signal to Noise too low: star 1031
+found significant dip in star:  1032  at frame:  1979
+event cutoff star:  1036
+event cutoff star:  1038
+found significant dip in star:  1049  at frame:  1573
+event cutoff star:  1050
+Signal to Noise too low: star 1053
+Signal to Noise too low: star 1054
+Signal to Noise too low: star 1055
+Signal to Noise too low: star 1056
+found significant dip in star:  1057  at frame:  1643
+event cutoff star:  1061
+Signal to Noise too low: star 1073
+Signal to Noise too low: star 1084
+Signal to Noise too low: star 1085
+Signal to Noise too low: star 1088
+Signal to Noise too low: star 1096
+found significant dip in star:  1114  at frame:  335
+Signal to Noise too low: star 1124
+Light curve too short: star 1129
+event cutoff star:  1131
+event cutoff star:  1135
+Light curve too short: star 1147
+Light curve too short: star 1148
+Light curve too short: star 1149
+Light curve too short: star 1150
+Light curve too short: star 1151
+Light curve too short: star 1152
+2022-10-11 10:42:09.779462 Rejected Stars:  95.58 %
+2022-10-11 10:42:09.779496 Total stars in field: 1153
+2022-10-11 10:42:09.779499 Candidate events in this minute: 51
+2022-10-11 10:42:09.779501 Closing: /home/pquigley/ColibriRepos/ColibriData/20220812/20220812_03.45.50.098
+
+
+
+Signal to Noise too low: star 688
+event cutoff star:  691
+found significant dip in star:  692  at frame:  157
+Signal to Noise too low: star 693
+Signal to Noise too low: star 696
+found significant dip in star:  699  at frame:  1705
+event cutoff star:  704
+found significant dip in star:  706  at frame:  1097
+found significant dip in star:  707  at frame:  370
+found significant dip in star:  710  at frame:  1349
+Signal to Noise too low: star 716
+Signal to Noise too low: star 717
+found significant dip in star:  718  at frame:  1593
+Signal to Noise too low: star 719
+Signal to Noise too low: star 724
+Signal to Noise too low: star 726
+Signal to Noise too low: star 728
+Signal to Noise too low: star 729
+Signal to Noise too low: star 738
+Signal to Noise too low: star 739
+Signal to Noise too low: star 743
+Signal to Noise too low: star 744
+found significant dip in star:  745  at frame:  502
+Light curve too short: star 749
+Signal to Noise too low: star 754
+Signal to Noise too low: star 757
+event cutoff star:  759
+event cutoff star:  761
+Light curve too short: star 764
+Signal to Noise too low: star 766
+found significant dip in star:  768  at frame:  909
+Signal to Noise too low: star 771
+Light curve too short: star 772
+Light curve too short: star 773
+Light curve too short: star 780
+Signal to Noise too low: star 783
+Signal to Noise too low: star 791
+Signal to Noise too low: star 795
+event cutoff star:  799
+found significant dip in star:  801  at frame:  944
+Signal to Noise too low: star 803
+event cutoff star:  808
+Signal to Noise too low: star 814
+Signal to Noise too low: star 818
+Signal to Noise too low: star 823
+Signal to Noise too low: star 827
+Signal to Noise too low: star 830
+Signal to Noise too low: star 832
+Signal to Noise too low: star 833
+Signal to Noise too low: star 834
+Signal to Noise too low: star 841
+Signal to Noise too low: star 842
+Light curve too short: star 851
+Signal to Noise too low: star 852
+Signal to Noise too low: star 860
+Signal to Noise too low: star 861
+found significant dip in star:  864  at frame:  469
+Signal to Noise too low: star 866
+Signal to Noise too low: star 868
+Signal to Noise too low: star 869
+Signal to Noise too low: star 870
+Signal to Noise too low: star 872
+found significant dip in star:  873  at frame:  1527
+Signal to Noise too low: star 879
+Light curve too short: star 886
+found significant dip in star:  887  at frame:  494
+Signal to Noise too low: star 896
+Signal to Noise too low: star 898
+Signal to Noise too low: star 903
+Signal to Noise too low: star 907
+Signal to Noise too low: star 909
+event cutoff star:  910
+found significant dip in star:  913  at frame:  855
+Signal to Noise too low: star 925
+Signal to Noise too low: star 930
+Signal to Noise too low: star 934
+Signal to Noise too low: star 937
+Signal to Noise too low: star 938
+Signal to Noise too low: star 941
+Signal to Noise too low: star 942
+Signal to Noise too low: star 945
+Signal to Noise too low: star 948
+Signal to Noise too low: star 949
+Signal to Noise too low: star 950
+found significant dip in star:  952  at frame:  1215
+Signal to Noise too low: star 957
+Signal to Noise too low: star 959
+Signal to Noise too low: star 961
+found significant dip in star:  962  at frame:  909
+Signal to Noise too low: star 963
+Signal to Noise too low: star 968
+found significant dip in star:  974  at frame:  358
+Signal to Noise too low: star 975
+found significant dip in star:  977  at frame:  2338
+Light curve too short: star 985
+Light curve too short: star 986
+Light curve too short: star 987
+Light curve too short: star 988
+Light curve too short: star 989
+Light curve too short: star 990
+Light curve too short: star 991
+Light curve too short: star 992
+Light curve too short: star 993
+Light curve too short: star 994
+Light curve too short: star 995
+2022-10-11 10:42:08.246008 Rejected Stars:  95.88 %
+2022-10-11 10:42:08.246026 Total stars in field: 996
+2022-10-11 10:42:08.246029 Candidate events in this minute: 41
+2022-10-11 10:42:08.246031 Closing: /home/pquigley/ColibriRepos/ColibriData/20220812/20220812_05.04.11.349
+
+
+Ran for 200.86520719528198 seconds
