@@ -271,7 +271,14 @@ start_time = time.time()#09-21 Roman A. commented out bad coding
 #     pattern.append(str(total_match[i,1]))
 # pattern=list(np.unique(pattern,axis=0))
 
-pattern=sorted(list(set(set(Green_minutes).intersection(Red_minutes)).intersection(Blue_minutes)))
+GR=set(Green_minutes).intersection(Red_minutes)
+#print(GR)
+RB=set(Red_minutes).intersection(Blue_minutes)
+#print(RB)
+BG=set(Blue_minutes).intersection(Green_minutes)
+#print(BG)
+
+pattern=sorted(GR | RB | BG)
 #pattern=sorted(list(set(set(Green_minutes).intersection(Red_minutes))))
 if len(pattern)==0:
    print("No time matches today!")
