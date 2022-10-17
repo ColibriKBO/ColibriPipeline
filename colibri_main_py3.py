@@ -28,9 +28,6 @@ import gc
 import time as timer
 import sys
 
-import warnings
-warnings.filterwarnings("ignore",category=DeprecationWarning)
-
 
 ##############################
 ## Function Definitions
@@ -983,6 +980,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     ''' create star positional data from median combined stack'''
     
     print (datetime.datetime.now(), field_name, 'starfinding...',)
+    start_time = timer.time()
+    
     
     #name of .npy file to save star positions in 
     star_pos_file = base_path.joinpath('ColibriArchive', str(day_stamp), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
@@ -1041,8 +1040,12 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
     #print(datetime.datetime.now(), 'Done star finding. Number of stars found: ', num_stars) 
     
+    end_time = timer.time()
+    print('STAR FINDING DONE IN %s seconds' % (end_time - start_time))
     
     ''' Drift calculations '''
+    
+    
 
     if RCDfiles == True: # Choose to open rcd or fits - MJM
         first_frame = importFramesRCD(imagePaths, 0, 1, bias)   #import first image
@@ -1088,7 +1091,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
        
     ''' flux and time calculations with optional time evolution '''
-    
+    start_time = timer.time()
     #image data (2d array with dimensions: # of images x # of stars)
     starData = np.empty([num_images, num_stars], dtype=(np.float64, 4))
     
@@ -1098,6 +1101,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                         #sumFlux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
                         (sep.sum_circle(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(), 
                         np.ones(np.shape(np.array(initial_positions))[0]) * (Time(first_frame[1], precision=9).unix)))
+    end_time = timer.time()
+    print('ZIPPING DONE IN %s seconds' % (end_time - start_time))
+    start_time = timer.time()
 
     if drift:  # time evolve moving stars
     
@@ -1150,8 +1156,12 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     #print (datetime.datetime.now(), 'Photometry done.')
    
+    end_time = timer.time()
+    print('FLUX CALCULATION DONE IN %s seconds' % (end_time - start_time))
 
     ''' Dip detection '''
+    
+    start_time = timer.time()
    
     #perform dip detection for all stars
     
@@ -1162,7 +1172,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         dipResults.append(dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold))
         
     #transform into a multidimensional array
-    dipResults = np.array(dipResults,dtype=object)
+    dipResults = np.array(dipResults)
    
     # event_frames = dipResults[:,0]         #array of event frames (-1 if no event detected, -2 if incomplete data)
     # light_curves = dipResults[:,1]         #array of light curves (empty if no event detected)
@@ -1178,8 +1188,13 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     Bkg_mean= dipResults[:,6]               #mean of convolved flux background
     conv_min= dipResults[:,7]               #minimum value of the convolution
     significance=dipResults[:,8]          #significance of the event x*sigma
+    
+    end_time = timer.time()
+    print('DIP DETECTION DONE IN %s seconds' % (end_time - start_time))
 
     ''' data archival '''
+    
+    start_time = timer.time()
     
     secondsToSave =  1.0    #number of seconds on either side of event to save 
     save_frames = event_frames[np.where(event_frames > 0)]  #frame numbers for each event to be saved
@@ -1292,6 +1307,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print (datetime.datetime.now(), "Total stars in field:", num_stars)
     print (datetime.datetime.now(), "Candidate events in this minute:", len(save_frames))
     print (datetime.datetime.now(), "Closing:", minuteDir)
+    end_time = timer.time()
+    print('DATA ARCHIVAL DONE IN %s seconds' % (end_time - start_time))
     print ("\n")
 
 
@@ -1314,14 +1331,14 @@ if len(sys.argv) == 4:
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     sigma_threshold=float(sys.argv[3]) #usually 3.75
 
-elif sys.argv[1] == "Test": # default 
-   base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')  #path to main directory
-   obs_date = datetime.date(2022, 8, 12)    #date observations
-   sigma_threshold=3.75
+# elif sys.argv[1] == "Test": # default 
+#    base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')  #path to main directory
+#    obs_date = datetime.date(2022, 8, 12)    #date observations
+#    sigma_threshold=3.75
 
 else:
     base_path = pathlib.Path('/', 'E:','/Colibri', 'Green')  #path to main directory
-    obs_date = datetime.date(2022, 9, 8)    #date observations
+    obs_date = datetime.date(2022, 10, 5)    #date observations
     sigma_threshold=3.75
 
 
@@ -1374,16 +1391,23 @@ if __name__ == '__main__':
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold) for f in range(0,len(minute_dirs)))
-        pool.starmap(runParallel,args)
+        try:
+            pool.starmap(runParallel,args)
+        except:
+            print("failed to parallelise")
+        
+        # pool.starmap(runParallel,args)
+        
         pool.close()
         pool.join()
-
+        
         end_time = timer.time()
-        print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
-
-#       with open("logs/timing.log","a") as f:
-#           f.write(f"Ran for {end_time - start_time} seconds\n\n")
-
+        print('Ran for %s seconds' % (end_time - start_time))
+        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date),telescope+'_done.txt')
+        f = open(finish_txt, 'w')
+        f.write('Done 1st pipeline')
+        f.close()
+        
     #running in sequence
     else:
         
@@ -1422,10 +1446,6 @@ if __name__ == '__main__':
             gc.collect()
 
             end_time = timer.time()
-            print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
-
-#           with open("logs/timing.log","a") as f:
-#               f.write(f"Ran for {end_time - start_time} seconds\n\n")
-
+            print('Ran for %s seconds' % (end_time - start_time))
 
       
