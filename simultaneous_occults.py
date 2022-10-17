@@ -121,6 +121,47 @@ def readFile(filepath):                                      #redifinition from 
     return (starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std)
     #return starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std
     
+# def getTransform(date):                                     #redifinition from Colibri Pipeline's function
+#     '''get astrometry.net transform for a given minute'''
+
+#     #if transformation has already been calculated, get from dictionary
+#     if date in transformations:
+#         return transformations[date]
+    
+#     #calculate new transformation from astrometry.net
+#     else:
+#         #get median combined image
+#         median_image = [f for f in median_combos if date in f.name][0]
+#         median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/') #10-12 Roman A.
+#         median_str=median_str.lower()
+        
+#         #get name of transformation header file to save
+#         transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
+        
+#         transform_str=str(transform_file).split('\\')[-1] #10-12 Roman A.
+        
+#         #check if the tranformation has already been calculated and saved
+#         if transform_file.exists():
+            
+#             #open file and get transformation
+#             wcs_header = fits.open(transform_file)
+#             transform = wcs.WCS(wcs_header[0])
+
+#         #calculate new transformation
+#         else:
+#             #get WCS header from astrometry.net plate solution
+#             soln_order = 4
+            
+#             wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
+        
+#             #calculate coordinate transformation
+#             transform = wcs.WCS(wcs_header)
+        
+#         #add to dictionary
+#         transformations[date] = transform
+        
+#         return transform
+
 def getTransform(date):                                     #redifinition from Colibri Pipeline's function
     '''get astrometry.net transform for a given minute'''
 
