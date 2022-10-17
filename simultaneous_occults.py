@@ -25,7 +25,7 @@ import fnmatch
 import math
 import argparse
 #import datetime
-from datetime import datetime
+import datetime
 
 def ReadTime(filepath):#added 09-21 Roman A.
     '''read in a .txt detection file and get information from it'''
