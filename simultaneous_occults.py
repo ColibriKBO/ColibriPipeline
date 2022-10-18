@@ -25,7 +25,7 @@ import fnmatch
 import math
 import argparse
 #import datetime
-from datetime import datetime
+from datetime import datetime 
 
 def ReadTime(filepath):#added 09-21 Roman A.
     '''read in a .txt detection file and get information from it'''
@@ -121,6 +121,47 @@ def readFile(filepath):                                      #redifinition from 
     return (starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std)
     #return starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std
     
+# def getTransform(date):                                     #redifinition from Colibri Pipeline's function
+#     '''get astrometry.net transform for a given minute'''
+
+#     #if transformation has already been calculated, get from dictionary
+#     if date in transformations:
+#         return transformations[date]
+    
+#     #calculate new transformation from astrometry.net
+#     else:
+#         #get median combined image
+#         median_image = [f for f in median_combos if date in f.name][0]
+#         median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/') #10-12 Roman A.
+#         median_str=median_str.lower()
+        
+#         #get name of transformation header file to save
+#         transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
+        
+#         transform_str=str(transform_file).split('\\')[-1] #10-12 Roman A.
+        
+#         #check if the tranformation has already been calculated and saved
+#         if transform_file.exists():
+            
+#             #open file and get transformation
+#             wcs_header = fits.open(transform_file)
+#             transform = wcs.WCS(wcs_header[0])
+
+#         #calculate new transformation
+#         else:
+#             #get WCS header from astrometry.net plate solution
+#             soln_order = 4
+            
+#             wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
+        
+#             #calculate coordinate transformation
+#             transform = wcs.WCS(wcs_header)
+        
+#         #add to dictionary
+#         transformations[date] = transform
+        
+#         return transform
+
 def getTransform(date):                                     #redifinition from Colibri Pipeline's function
     '''get astrometry.net transform for a given minute'''
 
@@ -178,7 +219,7 @@ if len(sys.argv) == 2:
     obsYYYYMMDD = cml_args.date
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 else:
-    obs_date='2022-09-30'
+    obs_date='2022-10-05'
 
 night_dir=str(obs_date)
 green_path=Path('/','D:','/ColibriArchive',night_dir) #path for Green pipeline results
@@ -276,7 +317,14 @@ start_time = time.time()#09-21 Roman A. commented out bad coding
 #     pattern.append(str(total_match[i,1]))
 # pattern=list(np.unique(pattern,axis=0))
 
-pattern=sorted(list(set(set(Green_minutes).intersection(Red_minutes)).intersection(Blue_minutes)))
+GR=set(Green_minutes).intersection(Red_minutes)
+#print(GR)
+RB=set(Red_minutes).intersection(Blue_minutes)
+#print(RB)
+BG=set(Blue_minutes).intersection(Green_minutes)
+#print(BG)
+
+pattern=sorted(GR | RB | BG)
 #pattern=sorted(list(set(set(Green_minutes).intersection(Red_minutes))))
 if len(pattern)==0:
    print("No time matches today!")
@@ -424,6 +472,8 @@ print("Coordinates calculated in --- %s seconds ---" % (time.time() - start_time
 print('')
 
 '''---------------------------------------Coordinates Matching-----------------------------------------'''
+
+pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
 
 start_time = time.time()
 print("Matching coordinates...")
