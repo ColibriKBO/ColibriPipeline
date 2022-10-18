@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 import shutil
 
-if len(sys.argv) == 2:
+if len(sys.argv) == 3:
     arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
         Usage:
     
