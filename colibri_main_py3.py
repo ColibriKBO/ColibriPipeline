@@ -2484,5 +2484,3 @@ if __name__ == '__main__':
 #               f.write(f"Ran for {end_time - start_time} seconds\n\n")
 
 
-      
->>>>>>> aed7c221d623e05f75bf3e7f89480acbdfa6511e
