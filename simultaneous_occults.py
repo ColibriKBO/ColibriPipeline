@@ -25,7 +25,8 @@ import fnmatch
 import math
 import argparse
 #import datetime
-from datetime import datetime 
+from datetime import datetime,date
+
 
 def ReadTime(filepath):#added 09-21 Roman A.
     '''read in a .txt detection file and get information from it'''
@@ -212,7 +213,7 @@ if len(sys.argv) == 2:
     # arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
     cml_args = arg_parser.parse_args()
     obsYYYYMMDD = cml_args.date
-    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+    obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 else:
     obs_date='2022-10-05'
 
