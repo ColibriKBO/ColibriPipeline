@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 """
 Created 2018 by Emily Pass
 
@@ -1047,7 +1047,7 @@ if __name__ == '__main__':
 #           with open("logs/timing.log","a") as f:
 #               f.write(f"Ran for {end_time - start_time} seconds\n\n")
 
-=======
+
 """
 Created 2018 by Emily Pass
 
