@@ -979,18 +979,26 @@ if __name__ == '__main__':
     ''''run pipeline for each folder of data'''
     
     #running in parallel (minute directories are split up between cores)
-    if runPar == True:
+	if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold) for f in range(0,len(minute_dirs)))
-        pool.starmap(runParallel,args)
+        try:
+            pool.starmap(runParallel,args)
+        except:
+            print("failed to parallelise")
         pool.close()
         pool.join()
 
         end_time = timer.time()
         print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
+        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date),telescope+'_done.txt')
+        f = open(finish_txt, 'w')
+        f.write(f'Ran for {end_time - start_time} seconds')
+        f.close()
+
 
 #       with open("logs/timing.log","a") as f:
 #           f.write(f"Ran for {end_time - start_time} seconds\n\n")
@@ -1039,4 +1047,5 @@ if __name__ == '__main__':
 
 #           with open("logs/timing.log","a") as f:
 #               f.write(f"Ran for {end_time - start_time} seconds\n\n")
+
 
