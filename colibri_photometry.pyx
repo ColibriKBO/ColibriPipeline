@@ -77,7 +77,7 @@ def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
 def refineCentroid(np.ndarray[F64, ndim=2] img_data,
                    str time, #TODO: remove this
                    list star_coords,
-                   float sigma)
+                   float sigma):
     """
     Refines the centroid for each star for an image based on previous coords
     
@@ -108,7 +108,7 @@ def refineCentroid(np.ndarray[F64, ndim=2] img_data,
     #y = new_pos[:][1].tolist()
     #return tuple(zip(x,y)), time
     
-    return newpos[:][:2],time
+    return new_pos[:][:2],time
 
 
 ##############################
@@ -136,9 +136,9 @@ def sumFlux(np.ndarray[F64, ndim=2] img_data,
     cdef list star_flux_list,star_fluxes
     
     ## Extract flux data for each detected star flagged by star_coords
-    star_flux_list = [[data[y][x]
+    star_flux_list = [[img_data[y][x]
                        for x in range(int(star_coords[star,0] - l),
-                                      int(star_coords[star,0] + l + 1)),
+                                      int(star_coords[star,0] + l + 1))
                        for y in range(int(star_coords[star,1] - l),
                                       int(star_coords[star,1] + l + 1))]
                        for star in range(0,len(star_coords))]
@@ -164,17 +164,17 @@ def clipCutStars(np.ndarray[F64, ndim=1] x,
         y_length (int/float): Length of image in the y-direction
 
     Returns:
-        ind (arr): Indices of stars deemed too near to the image edge
+        bad_ind (arr): Indices of stars deemed too near to the image edge
     """
     
     ## Get list of indices where the stars are too near to the edge
     cdef int pixel_buffer = 20
-    cdef np.ndarray ind   = np.append(np.where((x < edgeThresh) | \
-                                               (x > x_length - edgeThresh))[0], \
-                                      np.where((y < edgeThresh) | \
-                                               (y > y_length - edgeThresh))[0])
+    cdef np.ndarray bad_ind = np.append(np.where((x < pixel_buffer) | \
+                                                 (x > x_length - pixel_buffer))[0], \
+                                        np.where((y < pixel_buffer) | \
+                                                 (y > y_length - pixel_buffer))[0])
         
-    return ind
+    return bad_ind
 
 
 ##############################
@@ -248,7 +248,7 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     
     ## Calculate time between prev_img and curr_img
     curr_time  = Time(img_time,precision=9).unix
-    drift_time = frame_time - prev_img[1,3]
+    drift_time = curr_time - prev_img[1,3]
     
     ## Incorporate drift into each star's coords based on time since last frame
     x = np.array([prev_img[ind, 0] + pix_drift[0]*drift_time for ind in range(0, num_stars)])

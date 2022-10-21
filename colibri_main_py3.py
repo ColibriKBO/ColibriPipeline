@@ -29,7 +29,7 @@ import sys
 
 # Custom Script Imports
 import colibri_image_reader as cir
-import colibri_primary_filter as cpf
+import colibri_photometry as cp
 
 # Disable Warnings
 import warnings
@@ -255,7 +255,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
 
         #make list of star coords and half light radii
-        star_find_results = tuple(cpf.initialFind(stacked, detect_thresh))
+        star_find_results = tuple(cp.initialFind(stacked, detect_thresh))
 
         #remove stars where centre is too close to edge of frame
         edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
@@ -307,17 +307,17 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     GaussSigma = np.mean(radii * 2. / 2.35)  # calculate gaussian sigma for each star's light profile
 
     #refined star positions and times for first image
-    first_drift = cpf.refineCentroid(*first_frame, initial_positions, GaussSigma)
+    first_drift = cp.refineCentroid(*first_frame, initial_positions, GaussSigma)
     drift_pos[0] = first_drift[0]
     drift_times.append(first_drift[1])
 
     #refined star positions and times for last image
-    last_drift = cpf.refineCentroid(*last_frame, drift_pos[0], GaussSigma)
+    last_drift = cp.refineCentroid(*last_frame, drift_pos[0], GaussSigma)
     drift_pos[1] = last_drift[0]
     drift_times.append(last_drift[1])
 
     #get median drift rate [px/s] in x and y over the minute
-    x_drift, y_drift = cpf.averageDrift(drift_pos[0],drift_pos[1], drift_times)
+    x_drift, y_drift = cp.averageDrift(drift_pos[0],drift_pos[1], drift_times)
 
     #check drift rates
     driftTolerance = 2.5e-2   #px per s
@@ -364,7 +364,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 headerTimes.append(imageTime)  #add header time to list
 
             #calculate star fluxes from image
-            starData[i] = cpf.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime,
+            starData[i] = cp.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime,
                                          ap_r, num_stars, (x_length, y_length), (x_drift, y_drift))
     
             
@@ -388,7 +388,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 headerTimes.append(imageTime)  #add header time to list
             
             #calculate star fluxes from image
-            starData[i] = cpf.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime,
+            starData[i] = cp.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime,
                                          ap_r, num_stars, (x_length, y_length))
 
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
@@ -403,7 +403,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
     #loop through each detected object
     for starNum in range(0, num_stars):
-        dipResults.append(cpf.dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold))
+        dipResults.append(cp.dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold))
 
     #transform into a multidimensional array
     dipResults = np.array(dipResults,dtype=object)
