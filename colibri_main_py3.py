@@ -421,7 +421,7 @@ def refineCentroid(imageData, time, coords, sigma):
     y_initial = [pos[1] for pos in coords]
 
     '''Flatten imageData to 2D array'''
-    if imageData.ndim == 3:
+    if imageData.ndim == 3: #TODO: incorporate into main instead of here
         imageData = imageData[0]
 
     '''use an iterative 'windowed' method from sep to get new position'''
