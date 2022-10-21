@@ -26,6 +26,7 @@ import os
 import gc
 import time as timer
 import sys
+import logging
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -33,7 +34,7 @@ import colibri_photometry as cp
 
 # Disable Warnings
 import warnings
-warnings.filterwarnings("ignore",category=DeprecationWarning)
+#warnings.filterwarnings("ignore",category=DeprecationWarning)
 #warnings.filterwarnings("ignore",category=VisibleDeprecationWarning)
 
 
@@ -177,7 +178,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     """
 
     global telescope
-    
+
     print (f"{datetime.datetime.now()} Opening: {minuteDir}",file=sys.stderr)
     
 
@@ -208,7 +209,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     del imagePaths[0]
     
     field_name = imagePaths[0].name.split('_')[0]  #which of 11 fields are observed
-    
     
     ''' get 2d shape of images, number of image in directory'''
     
@@ -243,7 +243,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     i = 0                   #counter used if several images are poor
     min_stars = 30          #minimum stars in an image
     star_find_results = []  #to store results of star finding
-        
+    
     #run until the minimum number of stars is found
     while len(star_find_results) < min_stars:
         
@@ -287,18 +287,17 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
     #print(datetime.datetime.now(), 'Done star finding. Number of stars found: ', num_stars) 
     
-    
     ''' Drift calculations '''
 
     if RCDfiles == True: # Choose to open rcd or fits - MJM
-        first_frame = cir.importFramesRCD(imagePaths, 0, 1, bias)   #import first image
-        headerTimes = [first_frame[1]] #list of image header times
-        last_frame = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
+        fframe_data,fframe_time = cir.importFramesRCD(imagePaths, 0, 1, bias)   #import first image
+        headerTimes = [fframe_time] #list of image header times
+        lframe_data,lframe_time = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
 
     else:
-        first_frame = importFramesFITS(imagePaths, 0, 1, bias)      #data and time from 1st image
-        headerTimes = [first_frame[1]]  #list of image header times
-        last_frame = importFramesFITS(imagePaths, len(imagePaths)-1, 1, bias) #data and time from last image
+        fframe_data,fframe_time = importFramesFITS(imagePaths, 0, 1, bias)      #data and time from 1st image
+        headerTimes = [fframe_time]  #list of image header times
+        lframe_data,lframe_time = importFramesFITS(imagePaths, len(imagePaths)-1, 1, bias) #data and time from last image
 
     drift = False     # variable to check whether stars have drifted since last frame
 
@@ -307,17 +306,18 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     GaussSigma = np.mean(radii * 2. / 2.35)  # calculate gaussian sigma for each star's light profile
 
     #refined star positions and times for first image
-    first_drift = cp.refineCentroid(*first_frame, initial_positions, GaussSigma)
+    first_drift = cp.refineCentroid(fframe_data,fframe_time[0], initial_positions, GaussSigma)
     drift_pos[0] = first_drift[0]
     drift_times.append(first_drift[1])
 
     #refined star positions and times for last image
-    last_drift = cp.refineCentroid(*last_frame, drift_pos[0], GaussSigma)
+    last_drift = cp.refineCentroid(lframe_data,lframe_time[0], drift_pos[0], GaussSigma)
     drift_pos[1] = last_drift[0]
     drift_times.append(last_drift[1])
+    drift_times = Time(drift_times, precision=9).unix
 
     #get median drift rate [px/s] in x and y over the minute
-    x_drift, y_drift = cp.averageDrift(drift_pos[0],drift_pos[1], drift_times)
+    x_drift, y_drift = cp.averageDrift(drift_pos[0],drift_pos[1], drift_times[0],drift_times[1])
 
     #check drift rates
     driftTolerance = 2.5e-2   #px per s
@@ -333,7 +333,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         return -1
 
     ''' flux and time calculations with optional time evolution '''
-    
     #image data (2d array with dimensions: # of images x # of stars)
     starData = np.empty([num_images, num_stars], dtype=(np.float64, 4))
     
@@ -341,8 +340,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     starData[0] = tuple(zip(initial_positions[:,0], 
                         initial_positions[:,1], 
                         #sumFlux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
-                        (sep.sum_circle(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(), 
-                        np.ones(np.shape(np.array(initial_positions))[0]) * (Time(first_frame[1], precision=9).unix)))
+                        (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(), 
+                        np.ones(np.shape(np.array(initial_positions))[0]) * (Time(fframe_time, precision=9).unix)))
 
     if drift:  # time evolve moving stars
     
@@ -350,7 +349,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         
         #loop through each image in the minute-long dataset
         for i in range(1, num_images):
-            
             #import .rcd image data
             if RCDfiles == True:
                 #image file contains both image array and header time
@@ -364,7 +362,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 headerTimes.append(imageTime)  #add header time to list
 
             #calculate star fluxes from image
-            starData[i] = cp.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime,
+            starData[i] = cp.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime[0],
                                          ap_r, num_stars, (x_length, y_length), (x_drift, y_drift))
     
             
@@ -388,7 +386,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 headerTimes.append(imageTime)  #add header time to list
             
             #calculate star fluxes from image
-            starData[i] = cp.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime,
+            starData[i] = cp.timeEvolve(imageFile, deepcopy(starData[i - 1]), imageTime[0],
                                          ap_r, num_stars, (x_length, y_length))
 
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
@@ -618,10 +616,11 @@ if __name__ == '__main__':
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold) for f in range(0,len(minute_dirs)))
+        #pool.starmap(runParallel,args)
         try:
             pool.starmap(runParallel,args)
         except:
-            print("failed to parallelise")
+            logging.exception("failed to parallelize")
         pool.close()
         pool.join()
 

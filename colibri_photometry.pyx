@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Filename:   colibri_primary_filter
 Author(s):  Peter Quigley
@@ -18,6 +16,7 @@ import cython as cy
 import sep
 import pathlib
 import datetime
+from copy import deepcopy
 from astropy.io import fits
 from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
@@ -53,11 +52,11 @@ def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
 
     ## Type definitions
     cdef float thresh
-    cdef np.ndarray img_copy,img_bkg,stars,stars_profile
+    cdef np.ndarray img_copy,stars,stars_profile
     cdef tuple star_chars
 
     ## Extract the background from the initial time slice and subtract it
-    img_copy = img_data.copy()
+    img_copy = deepcopy(img_data)
     img_bkg  = sep.Background(img_copy)
     img_bkg.subfrom(img_copy)
     
@@ -69,14 +68,14 @@ def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     stars_profile = np.sqrt(stars['npix'] / np.pi) / 2
     
     ## Create tuple of (x,y,r) positions of each star
-    star_chars = zip(stars['x'],stars['y'],stars_profile)
+    star_chars = tuple(zip(stars['x'],stars['y'],stars_profile))
     
     return star_chars
 
 
 def refineCentroid(np.ndarray[F64, ndim=2] img_data,
                    str time, #TODO: remove this
-                   list star_coords,
+                   np.ndarray[F64, ndim=2] star_coords,
                    float sigma):
     """
     Refines the centroid for each star for an image based on previous coords
@@ -84,11 +83,11 @@ def refineCentroid(np.ndarray[F64, ndim=2] img_data,
     Parameters:
         img_data (arr): 2D array of flux data for a single image
         time (str): Header time of image
-        coords (list): Coordinates of stars in previous image
+        star_coords (list): Coordinates of stars in previous image
         sigma (float): Guassian sigma weighting
             
     Return:
-        Coords (tuple): two zipped lists of star coordinates
+        coords (arr): 2D array of star coordinates (column1=x,column2=y)
         time (str): Header time of image
     """
     
@@ -108,7 +107,7 @@ def refineCentroid(np.ndarray[F64, ndim=2] img_data,
     #y = new_pos[:][1].tolist()
     #return tuple(zip(x,y)), time
     
-    return new_pos[:][:2],time
+    return new_pos.transpose(),time
 
 
 ##############################
@@ -183,7 +182,8 @@ def clipCutStars(np.ndarray[F64, ndim=1] x,
 
 def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
                  np.ndarray[F64, ndim=2] star_coords2,
-                 list times):
+                 F64 time1,
+                 F64 time2):
     """
     Determines the median x/y drift rates of all stars in a minute (first to
     last image)
@@ -203,8 +203,7 @@ def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
     cdef np.ndarray x_drifts,y_drifts
     
     ## Find the time difference between the two frames
-    times = Time(times, precision=9).unix
-    time_interval = np.subtract(times[1],times[0],dtype=np.float64)
+    time_interval = np.subtract(time2,time1)
     
     ## Determine the x- and y-drift of each star between frames (in px)
     x_drifts = np.subtract(star_coords2[:,0], star_coords1[:,0])
@@ -214,12 +213,12 @@ def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
     x_drift_rate = np.median(x_drifts/time_interval)
     y_drift_rate = np.median(y_drifts/time_interval)
     
-    return x_drifts
+    return x_drift_rate,y_drift_rate
 
 
 def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
                np.ndarray[F64, ndim=2] prev_img,
-               float img_time,
+               str img_time,
                int r,
                int num_stars,
                tuple pix_length,
