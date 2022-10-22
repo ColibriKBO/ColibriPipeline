@@ -416,61 +416,61 @@ print('')
 
 '''---------------------------------------Coordinates Calculation-----------------------------------------'''
 
-if not os.path.exists(green_path.joinpath('solution_failure')):
-    os.mkdir(green_path.joinpath('solution_failure')) #a folder for fields that didn't get astrnet solution
+# if not os.path.exists(green_path.joinpath('solution_failure')):
+#     os.mkdir(green_path.joinpath('solution_failure')) #a folder for fields that didn't get astrnet solution
 
-solution_failure=green_path.joinpath('solution_failure')
+# solution_failure=green_path.joinpath('solution_failure')
     
-start_time = time.time()
+# start_time = time.time()
 
-telescope_tuple=[['REDBIRD',red_path], #for looping convinience
-                 ['GREENBIRD',green_path],
-                 ['BLUEBIRD',blue_path]]
+# telescope_tuple=[['REDBIRD',red_path], #for looping convinience
+#                  ['GREENBIRD',green_path],
+#                  ['BLUEBIRD',blue_path]]
 
-#telescope_tuple=[['REDBIRD',red_path], #for looping convinience
-#                 ['GREENBIRD',green_path]]
+# #telescope_tuple=[['REDBIRD',red_path], #for looping convinience
+# #                 ['GREENBIRD',green_path]]
 
-for i in range(len(telescope_tuple)):
+# for i in range(len(telescope_tuple)):
 
-    detect_files = [f for f in matched_dir.iterdir() if str(telescope_tuple[i][0]) in f.name] #list of time matches
+#     detect_files = [f for f in matched_dir.iterdir() if str(telescope_tuple[i][0]) in f.name] #list of time matches
     
-    ''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
-    median_combos = [f for f in telescope_tuple[i][1].iterdir() if 'medstacked' in f.name]
+#     ''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
+#     median_combos = [f for f in telescope_tuple[i][1].iterdir() if 'medstacked' in f.name]
     
-    #dictionary to hold WCS transformations for each transform file
-    transformations = {}
+#     #dictionary to hold WCS transformations for each transform file
+#     transformations = {}
     
-    for filepath in detect_files:
+#     for filepath in detect_files:
         
         
     
         
-        #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
-        eventData = readFile(filepath)
+#         #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
+#         eventData = readFile(filepath)
     
-        #get corresponding WCS transformation
-        date = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
+#         #get corresponding WCS transformation
+#         date = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
     
-        try: 
-            transform = getTransform(date)
-        except TimeoutError:
-            shutil.move(str(filepath), str(solution_failure)) 
-            break
+#         try: 
+#             transform = getTransform(date)
+#         except TimeoutError:
+#             shutil.move(str(filepath), str(solution_failure)) 
+#             break
         
-        #get star coords in RA/dec
-        star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
-        star_RA = star_wcs[0]
-        star_DEC = star_wcs[1]
+#         #get star coords in RA/dec
+#         star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
+#         star_RA = star_wcs[0]
+#         star_DEC = star_wcs[1]
         
-        #write a line with RA dec in each file
-        with open(filepath, 'r') as filehandle:
-            lines = filehandle.readlines()
-            lines[6] = '#    RA Dec Coords: %f %f\n' %(star_RA, star_DEC)
-        with open(filepath, 'w') as filehandle:
-            filehandle.writelines( lines )
+#         #write a line with RA dec in each file
+#         with open(filepath, 'r') as filehandle:
+#             lines = filehandle.readlines()
+#             lines[6] = '#    RA Dec Coords: %f %f\n' %(star_RA, star_DEC)
+#         with open(filepath, 'w') as filehandle:
+#             filehandle.writelines( lines )
             
-print("Coordinates calculated in --- %s seconds ---" % (time.time() - start_time))
-print('')
+# print("Coordinates calculated in --- %s seconds ---" % (time.time() - start_time))
+# print('')
 
 '''---------------------------------------Coordinates Matching-----------------------------------------'''
 
