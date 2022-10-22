@@ -979,7 +979,7 @@ if __name__ == '__main__':
     ''''run pipeline for each folder of data'''
     
     #running in parallel (minute directories are split up between cores)
-	if runPar == True:
+    if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
         pool_size = multiprocessing.cpu_count() - 2
