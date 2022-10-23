@@ -104,7 +104,7 @@ def readFile(filepath):                                      #redifinition from 
     return (starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std)
 
 
-if len(sys.argv) > 2:
+if len(sys.argv) >= 2:
     arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
         Usage:
     

@@ -198,19 +198,19 @@ print('setting up')
 #time and date of observations/processing
 #MODIFY LINES BELOW BEFORE RUNNING
 obs_date = datetime.date(2022, 8, 12)           #date of observation
-obs_time = datetime.time(3, 42, 31)             #time of observation (to the second)
+obs_time = datetime.time(3, 42, 28)             #time of observation (to the second)
 image_index = '2'                               #index of image to use (if uploading to astrometry.net manually)
 polynom_order = '4th'                           #order of astrometry.net plate solution polynomial
 ap_r = 3                                        #radius of aperture for photometry
 gain = 'high'                                   #which gain to take from rcd files ('low' or 'high')
-telescope = 'Blue'                               #telescope identifier
+telescope = 'Red'                               #telescope identifier
 field_name = 'field1'                           #name of field observed
 detect_thresh = 4.                              #detection threshold
 
 #paths to required files
 #MODIFY BASE PATH BEFORE RUNNING
 #base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  
-base_path = pathlib.Path('D:')                            #path to main directory
+base_path = pathlib.Path('D:\\')                            #path to main directory
 data_path = base_path.joinpath('ColibriData2', str(obs_date).replace('-', ''))    #path to data
 
 #get exact name of desired minute directory
