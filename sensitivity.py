@@ -24,6 +24,8 @@ import lightcurve_looker
 import read_npy
 import VizieR_query
 import astrometrynet_funcs
+import sys, os, time
+import argparse
 
 
 def match_RADec(data, gdata, SR):
@@ -181,45 +183,81 @@ def RAdec_diffPlot(matched):
     plt.xlim(-7*2.4, 7*2.4)
     plt.ylim(-7*2.4, 7*2.4)
 
-    plt.title(polynom_order + ' order, ' + telescope + ', ' + field_name + ', ' + str(obs_date) + ', ' + str(obs_time), fontsize = 20)
+    plt.title(polynom_order + ' order, ' + telescope + ', ' + str(field_centre) + ', ' + str(obs_date) + ', ' + str(obs_time), fontsize = 20)
     plt.xlabel('(SEP Measured RA - Gaia RA) [arcsec]', fontsize = 18)
     plt.ylabel('(SEP Measured Dec - Gaia Dec) [arcsec]', fontsize = 18)
     plt.yticks(fontsize = 15)
     plt.xticks(fontsize = 15)
     plt.gca().set_aspect('equal', adjustable='box')
 
-    plt.savefig(save_path.joinpath('RA-dec_diff_' + gain + '_' + str(detect_thresh) + 'sig_' +  telescope + '_' + field_name + '_' + str(obs_date) + '_' + str(obs_time).replace(':','.') + '.png'))
-    plt.show()
-    plt.close()
+    plt.savefig(save_path.joinpath('RA-dec_diff_' + gain + '_' + str(detect_thresh) + 'sig_' +  telescope + '_' + str(field_centre) + '_' + str(obs_date) + '_' + str(obs_time).replace(':','.') + '.png'))
+    
 '''---------------------------------SCRIPT STARTS HERE--------------------------------------------'''
 
 '''------------set up--------------------'''
 print('setting up')
 #time and date of observations/processing
 #MODIFY LINES BELOW BEFORE RUNNING
-obs_date = datetime.date(2022, 8, 12)           #date of observation
-obs_time = datetime.time(3, 42, 28)             #time of observation (to the second)
-image_index = '2'                               #index of image to use (if uploading to astrometry.net manually)
+arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
+    Usage:
+
+    """,
+    formatter_class=argparse.RawTextHelpFormatter)
+
+arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+arg_parser.add_argument('-t', '--threshold', help='Star detection threshold.', default='10')
+arg_parser.add_argument('-m', '--minute', help='hh.mm.ss to process.')
+arg_parser.add_argument('-l', '--lightcurve', help='Star detection threshold.', default=True)
+
+cml_args = arg_parser.parse_args()
+obsYYYYMMDD = cml_args.date
+obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+
+cml_args = arg_parser.parse_args()
+
+base_path = pathlib.Path(cml_args.basedir)
+data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''))    #path to data
+
+
+minute_dirs=[f.name for f in data_path.iterdir() if str(obs_date).replace('-', '') in f.name]
+
+
+
+
+if not cml_args.minute:
+    obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
+else:
+    obs_time = str(cml_args.minute)
+
+cml_args = arg_parser.parse_args()
+detect_thresh = int(cml_args.threshold)
+
+
+# obs_date = datetime.date(2022, 8, 12)           #date of observation
+# obs_time = datetime.time(3, 42, 28)             #time of observation (to the second)
+#image_index = '2'                               #index of image to use (if uploading to astrometry.net manually)
 polynom_order = '4th'                           #order of astrometry.net plate solution polynomial
 ap_r = 3                                        #radius of aperture for photometry
 gain = 'high'                                   #which gain to take from rcd files ('low' or 'high')
-telescope = 'Red'                               #telescope identifier
-field_name = 'field1'                           #name of field observed
-detect_thresh = 4.                              #detection threshold
+global telescope
+telescope = os.environ['COMPUTERNAME']       #identifier for telescope                              #telescope identifier
+#field_name = 'field1'                           #name of field observed
+                             #detection threshold
 
 #paths to required files
 #MODIFY BASE PATH BEFORE RUNNING
 #base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  
-base_path = pathlib.Path('D:\\')                            #path to main directory
-data_path = base_path.joinpath('ColibriData2', str(obs_date).replace('-', ''))    #path to data
+# base_path = pathlib.Path('D:\\')                            #path to main directory
+
 
 #get exact name of desired minute directory
-subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory (comment out if setting minutedir explicitly)
-minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]    #minute we're interested in
+#subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory (comment out if setting minutedir explicitly)
+minute_dir = [f for f in minute_dirs if obs_time in f][0]    #minute we're interested in
 #minute_dir = '20220518_05.40.22.844'                                           #minute label (if don't have data)
 
 #path to output files
-save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
 #save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
 
 
@@ -230,8 +268,9 @@ save_path.mkdir(parents=True, exist_ok=True)
 
 
 '''-------------make light curves of data----------------------'''
-print('making light curve .txt files')
-#lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
+if cml_args.lightcurve==True:
+    print('making light curve .txt files')
+    lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
 
 #save .png plots of lightcurves
 print('saving plots of light curves')
@@ -239,7 +278,10 @@ print('saving plots of light curves')
 
 '''--------upload image to astrometry.net for plate solution------'''
 median_image = save_path.joinpath('high_medstacked.fits')     #path to median combined file for astrometry solution
+median_str="/mnt/d/"+str(median_image).replace('d:', '').replace('\\', '/') #10-12 Roman A.
+median_str=median_str.lower()
 transform_file = save_path.joinpath(minute_dir + '_' + polynom_order + '_wcs.fits') #path to save WCS header file in
+transform_str=str(transform_file).split('\\')[-1]
 
 #check if the tranformation has already been calculated and saved
 if transform_file.exists():
@@ -250,7 +292,7 @@ if transform_file.exists():
 
 else:
     #get solution from astrometry.net
-    wcs_header = astrometrynet_funcs.getSolution(median_image, transform_file, int(polynom_order[0]))
+    wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, int(polynom_order[0]))
         
     #calculate coordinate transformation
     transform = wcs.WCS(wcs_header)
@@ -330,7 +372,7 @@ print('making mag vs snr plot')
 plt.scatter(final['GMAG'], final['SNR'], s = 5, label = 'Airmass: %.2f\nAlt, Az: (%.2f, %.2f)' % (airmass, altitude, azimuth))
 
 #plt.ylim(0, 16)
-plt.title('ap r = ' + str(ap_r) + ', ' + field_name + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
+plt.title('ap r = ' + str(ap_r) + ', ' + str(field_centre) + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
 #plt.title('Sensitivity limits for "%s" telescope at airmass %.1f' %(telescope, airmass))
 plt.xlabel('Gaia g-band magnitude')
 #plt.ylabel('Star signal-to-noise ratio')
@@ -340,22 +382,19 @@ plt.grid()
 plt.legend()
 plt.savefig(save_path.joinpath('magvSNR_' + gain  + '_' + minute_dir + '_' + str(detect_thresh) +'.png'), bbox_inches = 'tight')#, dpi = 3000)
 
-plt.show()
-plt.close()
+
 
 '''----------------------make plot of mag vs mean value-----------'''
 print('making mag vs mean plot')
 plt.scatter(final['GMAG'], -2.5*np.log(final['med']), s = 10, label = 'Airmass: %.2f\nAlt, Az: (%.2f, %.2f)' % (airmass, altitude, azimuth))
 
-plt.title('ap r = ' + str(ap_r) + ', ' + field_name + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
+plt.title('ap r = ' + str(ap_r) + ', ' + str(field_centre) + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
 plt.xlabel('Gaia g-band magnitude')
 plt.ylabel('-2.5*log(median)')
 
 plt.grid()
 plt.legend()
 plt.savefig(save_path.joinpath('magvmed_' + gain + '_' + minute_dir + '_' + str(detect_thresh) + '.png'), bbox_inches = 'tight')
-plt.show()
-plt.close()
 
 '''----------------Print Statements-----------------'''
 #get number of stars with SNR greater than 10
