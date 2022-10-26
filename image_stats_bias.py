@@ -241,210 +241,216 @@ if __name__ == '__main__':
 #    telescope = 'Blue'                             #telescope identifier
 #    gain = 'high'           #keyword for gain - 'high' or 'low'
     
-    #2022.09.12 Roman A. --- modifications for automation
-    arg_parser = argparse.ArgumentParser(description=""" Run image stats script.
-		Usage:
+    try:
+        #2022.09.12 Roman A. --- modifications for automation
+        arg_parser = argparse.ArgumentParser(description=""" Run image stats script.
+    		Usage:
 
-		""",formatter_class=argparse.RawTextHelpFormatter)
+    		""",formatter_class=argparse.RawTextHelpFormatter)
 
-    arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
-    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+        arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+        arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
 
-    cml_args = arg_parser.parse_args()
+        cml_args = arg_parser.parse_args()
 
-    base_path = pathlib.Path(cml_args.basedir)
-    obsYYYYMMDD = cml_args.date
-    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    
-    '''------------set up paths to directories------------------'''
-    #base_path = pathlib.Path('/', 'D:/')      
-    data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
-    save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
-    
-    save_path.mkdir(parents=True, exist_ok=True)        #make save directory if it doesn't already exist
-
-    save_filepath = save_path.joinpath(str(obs_date) + '_stats.txt')        #.txt file to save results to
-    
-    minutedirs = [f for f in data_path.iterdir() if f.is_dir()]          #all minutes in night bias directory
-
-    #create file and make header
-    with open(save_filepath, 'a') as filehandle:
-                filehandle.write('filename    time    med    mean    mode    RMS      sensorTemp    baseTemp    FPGAtemp\n')  
-                
-    readnoise_filepath = save_path.joinpath(str(obs_date) + '_readnoise.txt') # 08-15 Roman A. file for read noise data
-    with open(readnoise_filepath, 'a') as filehandle:
-            filehandle.write('minute    readnoise\n')
-
-    print('number of subdirectories: ', len(minutedirs))
-    
-    '''----------loop through each minute and each image, calculate stats------------------'''
-    Average_readnoises=[]
-    for minute in minutedirs:
-        print('------------------------------------')
-        print('working on: ', minute.name)
-        images = sorted(minute.glob('*.rcd'))   #list of images
-        biasFileList=images
-        pairs=0 #number of pairs that will be iterrated
-        ReadNoise=[] 
+        base_path = pathlib.Path(cml_args.basedir)
+        obsYYYYMMDD = cml_args.date
+        obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
         
-         
-        Average_stds=[]
+        '''------------set up paths to directories------------------'''
+        #base_path = pathlib.Path('/', 'D:/')      
+        data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
+        save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
+        
+        save_path.mkdir(parents=True, exist_ok=True)        #make save directory if it doesn't already exist
 
-        '''----------------------------READ OUT NOISE SECTION------------------------------------'''    
-        #17-07-2022 Roman A.
+        save_filepath = save_path.joinpath(str(obs_date) + '_stats.txt')        #.txt file to save results to
         
-        if len(biasFileList)% 2 == 0: #check for even or odd number of images in the directory
-        
-            for i in range(0,len(biasFileList),2): #iterrate through all pairs of subsequent bias images without dublicates
-    
-        
-       
-            #getting images for .rcd files - RAB 06212022:
-                FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
-                SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
-    
-            #get list of readnoises 
-                ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
-                pairs+=1
-            print(pairs," pairs iterrated")
-            AverageRN=np.average(ReadNoise) 
-            StdRn=np.std(ReadNoise)         #standard deviation of read noise
-            
-            Average_readnoises.append(AverageRN)
-            Average_stds.append(StdRn)
-            
-        else:
-            
-            for i in range(0,len(biasFileList)-1,2):
-    
-        
-                FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
-                SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
-    
-        
-                ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
-                pairs+=1
-            print(pairs," pairs iterrated")
-            AverageRN=np.average(ReadNoise)
-            StdRn=np.std(ReadNoise) 
-            
-            Average_readnoises.append(AverageRN)
-            Average_stds.append(StdRn)
-        
+        minutedirs = [f for f in data_path.iterdir() if f.is_dir()]          #all minutes in night bias directory
+
+        #create file and make header
+        with open(save_filepath, 'w') as filehandle:
+                    filehandle.write('filename    time    med    mean    mode    RMS      sensorTemp    baseTemp    FPGAtemp\n')  
+                    
+        readnoise_filepath = save_path.joinpath(str(obs_date) + '_readnoise.txt') # 08-15 Roman A. file for read noise data
         with open(readnoise_filepath, 'a') as filehandle:
-                filehandle.write('%s %f\n' %(minute, AverageRN))
-        print("READ NOISE: ",'{:.4}'.format(AverageRN)+'+/-'+'{:.2}'.format(StdRn))
+                filehandle.write('minute    readnoise\n')
+
+        print('number of subdirectories: ', len(minutedirs))
         
-        
-        '''----------------------------READ OUT NOISE SECTION END------------------------------------'''
-        
-        #loop through each image in minute directory
-        for image in images:
+        '''----------loop through each minute and each image, calculate stats------------------'''
+        Average_readnoises=[]
+        for minute in minutedirs:
+            print('------------------------------------')
+            print('working on: ', minute.name)
+            images = sorted(minute.glob('*.rcd'))   #list of images
+            biasFileList=images
+            pairs=0 #number of pairs that will be iterrated
+            ReadNoise=[] 
             
-            #import image
-            data, time, temps = importFramesRCD(minute, [image], 0, 1, np.zeros((2048,2048)), gain)
+             
+            Average_stds=[]
+
+            '''----------------------------READ OUT NOISE SECTION------------------------------------'''    
+            #17-07-2022 Roman A.
             
-            #flatten 2D array into 1D array for easier computation
-            data_flat = data.flatten()
+            if len(biasFileList)% 2 == 0: #check for even or odd number of images in the directory
             
-            #image statistics
-            med = np.median(data_flat)                              #median pixel value of image
-            mean = np.mean(data_flat)                               #mean pixel value of image
-            mode = scipy.stats.mode(data_flat, axis = None)[0][0]   #mode pixel value of image
-            
-            RMS = np.sqrt(np.mean(np.square(data_flat)))            #RMS of entire image
-                        
-            #append image stats to file
-            with open(save_filepath, 'a') as filehandle:
-                filehandle.write('%s %s %f %f %f %f %f %f %f\n' %(image, time[0], med, mean, mode, RMS, temps[0], temps[1], temps[2]))
+                for i in range(0,len(biasFileList),2): #iterrate through all pairs of subsequent bias images without dublicates
         
-    with open(readnoise_filepath, 'a') as filehandle: #write read noise data in txt file
-                filehandle.write('Total average Read Noise: %f\n' %(np.average(Average_readnoises)))
-    print(" Total READ NOISE: ",'{:.4}'.format(np.average(Average_readnoises))+'+/-'+'{:.2}'.format(np.average(Average_stds)))
-    
-    '''-----------------------------Building graphs-------------------------------------'''
-    
-        #%%
-    #one night version
-    
-    
-    scope = telescope
-    #night = '2022-08-06'
-    
-    data_file=save_path
-    #data = pd.read_csv('./meanTests/' + night + '_mean_' + scope + '.txt', delim_whitespace = True, nrows = 16764)
-    data = pd.read_csv(data_file.joinpath(str(obs_date)+'_stats.txt'), delim_whitespace = True)
-    #data = pd.read_csv(('D:/ColibriArchive/20220731_diagnostics/Bias_Stats/2022-07-31_stats.txt'), delim_whitespace = True)
-    data[['day','hour']] = data['time'].str.split('T', expand = True)
-    
-    #find time breaks in data (when a new folder was created)
-    
-    #get list of different bias folders, the indices of where these start in the data frame
-    folders = data['filename'].str.split('\\', expand = True)[1]
-    minutes = data['hour'].str.split(':', expand = True)[1]
-    #folders, index = np.unique(folders, return_index = True)
-    folders, index = np.unique(minutes, return_index = True)
-    labels = data['hour'][index]
-    labels = labels.str.split('.', expand = True)[0]
-    
-        #%%
-    #plot with single nights data with temperature
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True, figsize = (16,8), gridspec_kw=dict(hspace = 0.05))
-    
-    #minimum and maximum value in one night
-    lower_m = -3 #data['mean'].min()
-    upper_m = 3 #data['mean'].max()
-    
-    ax1.scatter(data['hour'], np.mean(data['mean']) - data['mean'], label = 'mean', s = 2)
-    
-    ax1.set_title(scope + ' Bias Levels - ' + data.loc[0]['day'])
-    ax1.set_ylabel('(Overall mean) - (mean bias pixel value)')
-    ax1.vlines(index, lower_m, upper_m, color = 'black', linewidth = 1)
-    ax1.set_xticks([])
-    ax1.set_xticklabels([])
-    ax1.set_ylim(np.min(np.mean(data['mean']) - data['mean'])-0.5,np.amax(np.mean(data['mean']) - data['mean'])+0.5) #modified to see whole Graph
-    
-    #ax1.legend()
-    
-    lower_t = -3 #48
-    upper_t = 3 #52
-    #ax2.scatter(data['hour'], data['baseTemp'], label = 'Base temp', s = 2)
-    ax2.scatter(data['hour'], np.mean(data['FPGAtemp']) - data['FPGAtemp'], label = 'FGPA temp', s = 2)
-    
-    ax2.vlines(index, np.min(np.mean(data['FPGAtemp']) - data['FPGAtemp']), np.amax(np.mean(data['FPGAtemp']) - data['FPGAtemp']), color = 'black', linewidth = 1)
-    ax2.set_xlabel('Time')
-    ax2.set_ylabel('(mean temperature) - temperature (C)')
-    ax2.set_xticks(index)
-    ax2.set_xticklabels(labels,rotation=90)
-    ax2.set_ylim(np.min(np.mean(data['FPGAtemp']) - data['FPGAtemp'])-0.5, np.amax(np.mean(data['FPGAtemp']) - data['FPGAtemp'])+0.5) #modified to see whole Graph
-    
-    #ax2.legend()
-    
-    plt.savefig(data_file.joinpath( str(obs_date) + 'meanofmean_bias_stats_' + scope + '.png'),bbox_inches = "tight",dpi=300)
-#    plt.show()
-    plt.close()
+            
+           
+                #getting images for .rcd files - RAB 06212022:
+                    FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                    SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
         
-    
-        #%%
-    lower = 70
-    upper = 78
-    #plot with single nights data of mean and median
-    plt.scatter(data['hour'], data['med'], label = 'median', s = 2)
-    plt.scatter(data['hour'], data['mean'], label = 'mean', s = 2)
-    #plt.scatter(data['hour'], data['mode'], label = 'mode', s = 2)
-    
-    
-    
-    plt.title(scope + ' biases - ' + data.loc[0]['day'])
-    plt.ylabel('image pixel value')
-    plt.vlines(index, np.min(data['med'])-0.5, np.amax(data['med'])+0.5, color = 'black', linewidth = 1) #modified to see whole Graph
-    plt.xlabel('time')
-    plt.xticks(index, labels,rotation=20,fontsize=7)
-    #plt.ylim(lower-0.2, upper+0.2)
-    
-    plt.legend()
-    
-    
-    plt.savefig(data_file.joinpath(scope + '.png'),dpi=300)
-#    plt.show()
-    plt.close()
+                #get list of readnoises 
+                    ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+                    pairs+=1
+                print(pairs," pairs iterrated")
+                AverageRN=np.average(ReadNoise) 
+                StdRn=np.std(ReadNoise)         #standard deviation of read noise
+                
+                Average_readnoises.append(AverageRN)
+                Average_stds.append(StdRn)
+                
+            else:
+                
+                for i in range(0,len(biasFileList)-1,2):
+        
+            
+                    FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                    SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+        
+            
+                    ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+                    pairs+=1
+                print(pairs," pairs iterrated")
+                AverageRN=np.average(ReadNoise)
+                StdRn=np.std(ReadNoise) 
+                
+                Average_readnoises.append(AverageRN)
+                Average_stds.append(StdRn)
+            
+            with open(readnoise_filepath, 'a') as filehandle:
+                    filehandle.write('%s %f\n' %(minute, AverageRN))
+            print("READ NOISE: ",'{:.4}'.format(AverageRN)+'+/-'+'{:.2}'.format(StdRn))
+            
+            
+            '''----------------------------READ OUT NOISE SECTION END------------------------------------'''
+            
+            #loop through each image in minute directory
+            for image in images:
+                
+                #import image
+                data, time, temps = importFramesRCD(minute, [image], 0, 1, np.zeros((2048,2048)), gain)
+                
+                #flatten 2D array into 1D array for easier computation
+                data_flat = data.flatten()
+                
+                #image statistics
+                med = np.median(data_flat)                              #median pixel value of image
+                mean = np.mean(data_flat)                               #mean pixel value of image
+                mode = scipy.stats.mode(data_flat, axis = None)[0][0]   #mode pixel value of image
+                
+                RMS = np.sqrt(np.mean(np.square(data_flat)))            #RMS of entire image
+                            
+                #append image stats to file
+                with open(save_filepath, 'a') as filehandle:
+                    filehandle.write('%s %s %f %f %f %f %f %f %f\n' %(image, time[0], med, mean, mode, RMS, temps[0], temps[1], temps[2]))
+            
+        with open(readnoise_filepath, 'a') as filehandle: #write read noise data in txt file
+                    filehandle.write('Total average Read Noise: %f\n' %(np.average(Average_readnoises)))
+        print(" Total READ NOISE: ",'{:.4}'.format(np.average(Average_readnoises))+'+/-'+'{:.2}'.format(np.average(Average_stds)))
+        
+        '''-----------------------------Building graphs-------------------------------------'''
+        
+            #%%
+        #one night version
+        
+        
+        scope = telescope
+        #night = '2022-08-06'
+        
+        print(save_filepath)
+        data_file=save_path
+        #data = pd.read_csv('./meanTests/' + night + '_mean_' + scope + '.txt', delim_whitespace = True, nrows = 16764)
+        data = pd.read_csv(data_file.joinpath(str(obs_date)+'_stats.txt'), delim_whitespace = True)
+        #data = pd.read_csv(('D:/ColibriArchive/20220731_diagnostics/Bias_Stats/2022-07-31_stats.txt'), delim_whitespace = True)
+        data[['day','hour']] = data['time'].str.split('T', expand = True)
+
+        #find time breaks in data (when a new folder was created)
+        
+        #get list of different bias folders, the indices of where these start in the data frame
+        folders = data['filename'].str.split('\\', expand = True)[1]
+        minutes = data['hour'].str.split(':', expand = True)[1]
+        #folders, index = np.unique(folders, return_index = True)
+        folders, index = np.unique(minutes, return_index = True)
+        labels = data['hour'][index]
+        labels = labels.str.split('.', expand = True)[0]
+        
+            #%%
+        #plot with single nights data with temperature
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True, figsize = (16,8), gridspec_kw=dict(hspace = 0.05))
+        
+        #minimum and maximum value in one night
+        lower_m = -3 #data['mean'].min()
+        upper_m = 3 #data['mean'].max()
+        
+        ax1.scatter(data['hour'], np.mean(data['mean']) - data['mean'], label = 'mean', s = 2)
+        
+        ax1.set_title(scope + ' Bias Levels - ' + data.loc[0]['day'])
+        ax1.set_ylabel('(Overall mean) - (mean bias pixel value)')
+        ax1.vlines(index, lower_m, upper_m, color = 'black', linewidth = 1)
+        ax1.set_xticks([])
+        ax1.set_xticklabels([])
+        ax1.set_ylim(np.min(np.mean(data['mean']) - data['mean'])-0.5,np.amax(np.mean(data['mean']) - data['mean'])+0.5) #modified to see whole Graph
+        
+        #ax1.legend()
+        
+        lower_t = -3 #48
+        upper_t = 3 #52
+        #ax2.scatter(data['hour'], data['baseTemp'], label = 'Base temp', s = 2)
+        ax2.scatter(data['hour'], np.mean(data['FPGAtemp']) - data['FPGAtemp'], label = 'FGPA temp', s = 2)
+        
+        ax2.vlines(index, np.min(np.mean(data['FPGAtemp']) - data['FPGAtemp']), np.amax(np.mean(data['FPGAtemp']) - data['FPGAtemp']), color = 'black', linewidth = 1)
+        ax2.set_xlabel('Time')
+        ax2.set_ylabel('(mean temperature) - temperature (C)')
+        ax2.set_xticks(index)
+        ax2.set_xticklabels(labels,rotation=90)
+        ax2.set_ylim(np.min(np.mean(data['FPGAtemp']) - data['FPGAtemp'])-0.5, np.amax(np.mean(data['FPGAtemp']) - data['FPGAtemp'])+0.5) #modified to see whole Graph
+        
+        #ax2.legend()
+        
+        plt.savefig(data_file.joinpath( str(obs_date) + 'meanofmean_bias_stats_' + scope + '.png'),bbox_inches = "tight",dpi=300)
+    #    plt.show()
+        plt.close()
+            
+        
+            #%%
+        lower = 70
+        upper = 78
+        #plot with single nights data of mean and median
+        plt.scatter(data['hour'], data['med'], label = 'median', s = 2)
+        plt.scatter(data['hour'], data['mean'], label = 'mean', s = 2)
+        #plt.scatter(data['hour'], data['mode'], label = 'mode', s = 2)
+        
+        
+        
+        plt.title(scope + ' biases - ' + data.loc[0]['day'])
+        plt.ylabel('image pixel value')
+        plt.vlines(index, np.min(data['med'])-0.5, np.amax(data['med'])+0.5, color = 'black', linewidth = 1) #modified to see whole Graph
+        plt.xlabel('time')
+        plt.xticks(index, labels,rotation=20,fontsize=7)
+        #plt.ylim(lower-0.2, upper+0.2)
+        
+        plt.legend()
+        
+        
+        plt.savefig(data_file.joinpath(scope + '.png'),dpi=300)
+    #    plt.show()
+        plt.close()
+
+
+    except TypeError:
+        print("TypeError: Check your data structure. There may be a repeating header in the file.")
