@@ -1,7 +1,14 @@
 # ColibriPipeline
 Tools for Colibri data reduction and management
 
-### KernelGeneratorGUI_RAB032322
+### Init/
+Directory containing the bash and batch files used to automate the compiling of all cython modules.
+
+### PlotsAndPDFs/
+Directory containing any and all figures and PDFs to be kept in this project.
+These include, but are not limited to: pipeline flowcharts, usage manuals, and boilerplate Colibri presentations.
+
+### KernelGeneratorGUI_RAB032322/
 Copied from Rishi's KernelGeneratorGUI repository. Generates a set of occultation kernels to compare data to. 
 Includes changes to fresnelModeler.py which saves the parameters of each kernel. Also includes a script to generate plots of all kerenls generated. 
 This is necessary to run ColibriSecondary.py.

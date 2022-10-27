@@ -6,7 +6,6 @@ Created:    Fri Oct 21 09:23:04 2022
 Updated:    Fri Oct 21 09:23:04 2022
     
 Usage: import colibri_primary_filter as cpf
-Includes: dipDetection, timeEvolve
 """
 
 # Module imports
