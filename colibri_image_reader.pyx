@@ -11,7 +11,6 @@ Usage: import colibri_image_reader as cir
 # Module Imports
 import cython as cy
 import numpy as np
-import numba as nb
 from astropy.io import fits
 import pathlib
 import os
