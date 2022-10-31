@@ -588,7 +588,7 @@ if __name__ == '__main__':
     minute_dirs = [f for f in minute_dirs if 'Bias' not in f.name]
     minute_dirs.sort()
     
-    print ('folders', [f.name for f in minute_dirs])
+    print (f"num folders: {len(minute_dirs)}")
          
     
     '''get median bias image to subtract from all frames'''
