@@ -116,20 +116,14 @@ def readFile(filepath):                                      #redifinition from 
 
 #-----------------------------------main--------------------------------------#
 
-if len(sys.argv) >= 2:
-    arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
-        Usage:
-    
-        """,
-        formatter_class=argparse.RawTextHelpFormatter)
-    
-    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
-    # arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
-    cml_args = arg_parser.parse_args()
-    obsYYYYMMDD = cml_args.date
-    obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-else:
-    obs_date='2022-09-30'
+arg_parser = argparse.ArgumentParser(description="Run secondary Colibri processing",
+                                     formatter_class=argparse.RawTextHelpFormatter)
+arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.',default='2022/09/30')
+# arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
+
+cml_args = arg_parser.parse_args()
+obsYYYYMMDD = cml_args.date
+obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     
 print(obs_date)
 data_path=Path('/','D:','/ColibriArchive',str(obs_date))

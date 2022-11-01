@@ -146,9 +146,13 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
     return imagesData, imagesTimes
 
 
-def runParallel(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold):
-    firstOccSearch(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
-    gc.collect()
+# =============================================================================
+# def runParallel(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold):
+#     star_minutes = firstOccSearch(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
+#     gc.collect()
+#     
+#     return star_minutes
+# =============================================================================
 
 
 #############
@@ -528,9 +532,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                         filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
                     
 
-    #update starhours
-    global starhours
-    starhours += num_stars*num_images
+
 
     ''' printout statements'''
     print (datetime.datetime.now(), "Rejected Stars: ", round(((num_stars - len(save_frames)) / num_stars)*100, 2), "%")
@@ -539,7 +541,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print (datetime.datetime.now(), "Closing:", minuteDir)
     print ("\n")
 
-
+    #update star-minutes
+    gc.collect()
+    return num_stars*num_images
+    
 
 #------------------------------------main-------------------------------------#
 
@@ -592,7 +597,7 @@ if __name__ == '__main__':
     minute_dirs = [f for f in minute_dirs if 'Bias' not in f.name]
     minute_dirs.sort()
     
-    print ('folders', [f.name for f in minute_dirs])
+    print ('Folders to be processed:', len(minute_dirs))
          
     
     '''get median bias image to subtract from all frames'''
@@ -617,23 +622,25 @@ if __name__ == '__main__':
     if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
-        starhours = 0
         
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold) for f in range(0,len(minute_dirs)))
-        #pool.starmap(runParallel,args)
+        
         try:
-            pool.starmap(runParallel,args)
+            star_minutes = pool.starmap(firstOccSearch,args)
         except:
             logging.exception("failed to parallelize")
         pool.close()
         pool.join()
 
         end_time = timer.time()
+        starhours = sum(star_minutes)/(2399*60.0)
+        print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
         print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
-        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date),telescope+'_done.txt')
+        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), telescope+'_done.txt')
         with open(finish_txt, 'w') as f:
+            f.write(f'Calculated {starhours} star-hours\n')
             f.write(f'Ran for {end_time - start_time} seconds')
 
 
