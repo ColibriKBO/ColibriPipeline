@@ -1,23 +1,32 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Oct 20 16:58:29 2022
-
-@author: Roman A.
+Filename:   coordsfinder.py
+Author(s):  Roman Akhmetshyn
+Contact:    roman_akhmetshyn@univ.kiev.ua
+Created:    Thu Oct 20 16:58:29 2022
+Updated:    Thu Oct 20 16:58:29 2022
+    
+Usage: python coordsfinder.py [-d]
 """
 
-
-
-from pathlib import Path
+# Module Imports
+import sys
+import argparse
 import pandas as pd
+from pathlib import Path
 from astropy import wcs
 from astropy.io import fits
+from datetime import date
+
+# Custom Script Imports
 import astrometrynet_funcs
 import getRAdec
-import sys
-from datetime import date
-import argparse
 
-def getTransform(date):                                     #redifinition from Colibri Pipeline's function
+
+
+#--------------------------------functions------------------------------------#
+
+def getTransform(date):
     '''get astrometry.net transform for a given minute'''
 
     #if transformation has already been calculated, get from dictionary
@@ -103,6 +112,9 @@ def readFile(filepath):                                      #redifinition from 
     #return all event data from file as a tuple    
     return (starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std)
 
+
+
+#-----------------------------------main--------------------------------------#
 
 if len(sys.argv) >= 2:
     arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing

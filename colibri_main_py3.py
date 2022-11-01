@@ -38,9 +38,8 @@ import warnings
 #warnings.filterwarnings("ignore",category=VisibleDeprecationWarning)
 
 
-##############################
-## Function Definitions
-##############################
+
+#--------------------------------functions------------------------------------#
 
 def getSizeFITS(imagePaths):
     """
@@ -179,7 +178,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     global telescope
 
-    print (f"{datetime.datetime.now()} Opening: {minuteDir}",file=sys.stderr)
+    print (f"{datetime.datetime.now()} Opening: {minuteDir}")
     
 
     ''' create folder for results '''
@@ -299,8 +298,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         headerTimes = [fframe_time]  #list of image header times
         lframe_data,lframe_time = importFramesFITS(imagePaths, len(imagePaths)-1, 1, bias) #data and time from last image
 
-    drift = False     # variable to check whether stars have drifted since last frame
-
     drift_pos = np.empty([2, num_stars], dtype = (np.float64, 2))  #array to hold first and last positions
     drift_times = []   #list to hold times for each set of drifted coords
     GaussSigma = np.mean(radii * 2. / 2.35)  # calculate gaussian sigma for each star's light profile
@@ -323,7 +320,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     driftTolerance = 2.5e-2   #px per s
     
     if abs(x_drift) > driftTolerance or abs(y_drift) > driftTolerance:
-        drift = True
+        drift = True # variable to check whether stars have drifted since last frame
+    else:
+        drift = False
 
     driftErrorThresh = 1        #threshold for drift that is manageable
     
@@ -529,6 +528,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                         filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
                     
 
+    #update starhours
+    global starhours
+    starhours += num_stars*num_images
+
     ''' printout statements'''
     print (datetime.datetime.now(), "Rejected Stars: ", round(((num_stars - len(save_frames)) / num_stars)*100, 2), "%")
     print (datetime.datetime.now(), "Total stars in field:", num_stars)
@@ -537,9 +540,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print ("\n")
 
 
-"""---------------------------------SCRIPT STARTS HERE-------------------------------------------"""
-'''set parameters for running code'''
 
+#------------------------------------main-------------------------------------#
+
+'''set parameters for running code'''
 RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
 runPar = True          #True if you want to run directories in parallel
 gain_high = True           #gain level for .rcd files ('low' == False or 'high' == True)
@@ -613,6 +617,8 @@ if __name__ == '__main__':
     if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
+        starhours = 0
+        
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold) for f in range(0,len(minute_dirs)))
@@ -627,9 +633,8 @@ if __name__ == '__main__':
         end_time = timer.time()
         print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
         finish_txt=base_path.joinpath('ColibriArchive', str(obs_date),telescope+'_done.txt')
-        f = open(finish_txt, 'w')
-        f.write(f'Ran for {end_time - start_time} seconds')
-        f.close()
+        with open(finish_txt, 'w') as f:
+            f.write(f'Ran for {end_time - start_time} seconds')
 
 
 #       with open("logs/timing.log","a") as f:
