@@ -1,8 +1,8 @@
 # ColibriPipeline
 Tools for Colibri data reduction and management
 
-### Init/
-Directory containing the bash and batch files used to automate the compiling of all cython modules.
+### Deprecated/
+Directory containing old scripts which are no longer in use, but that contain functions which may be useful in the future.
 
 ### PlotsAndPDFs/
 Directory containing any and all figures and PDFs to be kept in this project.

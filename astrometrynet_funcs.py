@@ -59,11 +59,10 @@ def getLocalSolution(image_file, save_file, order):
         wcs_header = Header.fromfile('d:\\tmp\\' + save_file.split(".fits")[0] + '.wcs')
 
     except:
-        pass
+        getSolution(image_file, save_file, order)
 
     return wcs_header
 
-    # return wcs_header
 
 if __name__ == '__main__':
     wcs = getLocalSolution('/mnt/d/testmedstack.fits', 'test-newer.fits', 3)

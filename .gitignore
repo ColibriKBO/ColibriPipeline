@@ -9,6 +9,7 @@ __pycache__/lightcurve_maker.cpython-37.pyc
 **/build
 *.so
 *.pyd
+*.pyc
 
 # ignore cython annotation
 colibri_image_reader.html
