@@ -12,21 +12,20 @@ KBO occultation events
 """
 
 # Module Imports
+import os,sys
+import argparse
+import pathlib
+import multiprocessing
+import datetime
+import gc
 import sep
 import numpy as np
+import time as timer
 from astropy.io import fits
 from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
 from copy import deepcopy
 from multiprocessing import Pool
-import pathlib
-import multiprocessing
-import datetime
-import os
-import gc
-import time as timer
-import sys
-import logging
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -34,6 +33,7 @@ import colibri_photometry as cp
 
 # Disable Warnings
 import warnings
+import logging
 #warnings.filterwarnings("ignore",category=DeprecationWarning)
 #warnings.filterwarnings("ignore",category=VisibleDeprecationWarning)
 
@@ -548,39 +548,65 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
 #------------------------------------main-------------------------------------#
 
-'''set parameters for running code'''
-RCDfiles = True         #True for reading .rcd files directly. Otherwise, fits conversion will take place.
-runPar = True          #True if you want to run directories in parallel
-gain_high = True           #gain level for .rcd files ('low' == False or 'high' == True)
-try: # get name of telescope
-    telescope = os.environ['COMPUTERNAME']
-except KeyError:
-    telescope = "TEST"
-
-'''get arguments'''
-if len(sys.argv) == 4:
-    base_path = pathlib.Path(sys.argv[1]) # path to data directory
-    obsYYYYMMDD = sys.argv[2] # date to be analyzed formatted as "YYYY/MM/DD"
-    obsdatesplit = obsYYYYMMDD.split('/')
-    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    sigma_threshold=float(sys.argv[3]) #usually 3.75
-
-elif len(sys.argv) == 2 and sys.argv[1] == "Test": # default 
-   base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')  #path to main directory
-   obs_date = datetime.date(2022, 8, 12)    #date observations
-   sigma_threshold=3.75
-
-else:
-    base_path = pathlib.Path('/', 'E:','/Colibri', 'Green')  #path to main directory
-    obs_date = datetime.date(2022, 9, 8)    #date observations
-    sigma_threshold=3.75
-
-
-
-
 
 if __name__ == '__main__':
     
+    
+###########################
+## Argument Parser Setup
+###########################
+    
+    ## Generate argument parser
+    arg_parser = argparse.ArgumentParser(description="First-level data analysis for the Colibri telescopes",
+                                         formatter_class=argparse.RawTextHelpFormatter)
+    
+    ## Available argument functionality
+    arg_parser.add_argument('path', help='Path to base directory')
+    arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed')
+    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=6.0,type=float)
+    arg_parser.add_argument('-R','--RCD', help='Read RCD files directly (otherwise convert to .fits)', action='store_false')
+    arg_parser.add_argument('-p', '--noparallel', help='Disable parallelism, run in sequence instead', action='store_false')
+    arg_parser.add_argument('-g', '--lowgain', help='Analyze low-gain images', action='store_false')
+    arg_parser.add_argument('-t', '--test', help='Test functionality for Peter Quigley', action='store_true')
+    
+    ## Process argparse list as useful variables
+    cml_args = arg_parser.parse_args()
+    
+    if cml_args.test:
+        # Processing parameters
+        RCDfiles = True
+        runPar = True
+        gain_high = True
+        sigma_threshold = cml_args.sigma
+        
+        # Target data
+        base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')
+        obs_date = datetime.date(2022, 8, 12)
+        
+    else:
+        # Processing parameters
+        RCDfiles = cml_args.RCD
+        runPar = cml_args.noparallel
+        gain_high = cml_args.lowgain
+        sigma_threshold = cml_args.sigma
+        
+        # Target data
+        base_path = pathlib.Path(cml_args.path) # path to data directory
+        obsYYYYMMDD = cml_args.date # date to be analyzed formatted as "YYYY/MM/DD"
+        obsdatesplit = obsYYYYMMDD.split('/')
+        obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+        
+
+    ## Get name of telescope
+    try:
+        telescope = os.environ['COMPUTERNAME']
+    except KeyError:
+        telescope = "TEST"
+        
+    
+###########################
+## Pre-Analysis Preparation
+###########################
     
     '''get filepaths'''
  
@@ -617,7 +643,12 @@ if __name__ == '__main__':
 
 
     ''''run pipeline for each folder of data'''
-    
+ 
+
+###########################
+## Run in Parallel
+###########################   
+ 
     #running in parallel (minute directories are split up between cores)
     if runPar == True:
         print('Running in parallel...')
@@ -644,11 +675,10 @@ if __name__ == '__main__':
             f.write(f'Ran for {end_time - start_time} seconds')
 
 
-#       with open("logs/timing.log","a") as f:
-#           f.write(f"Ran for {end_time - start_time} seconds\n\n")
+###########################
+## Run in Sequence
+###########################  
 
-
-    #running in sequence
     else:
         
         for f in range(0, len(minute_dirs)):
