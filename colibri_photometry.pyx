@@ -11,6 +11,7 @@ Usage: import colibri_primary_filter as cpf
 # Module imports
 import os, sys
 import numpy as np
+import numpy.ma as ma
 import cython as cy
 import sep
 import pathlib
@@ -147,19 +148,49 @@ def sumFlux(np.ndarray[F64, ndim=2] img_data,
     return star_fluxes
 
 
+@cython.wraparound(False)
 def clipCutStars(np.ndarray[F64, ndim=1] x, 
                  np.ndarray[F64, ndim=1] y,
                  int x_length,
                  int y_length):
     """
     Sets flux measurements too close to the field of view boundary to zero in
-    order to prevent fadeout
+    order to prevent fadeout. To be used for a single image.
     
     Parameters:
         x (arr): 1D array containing the x-coordinates of stars
         y (arr): 1D array containing the y-coordinates of stars
-        x_length (int/float): Length of image in the x-direction
-        y_length (int/float): Length of image in the y-direction
+        x_length (int): Length of image in the x-direction
+        y_length (int): Length of image in the y-direction
+
+    Returns:
+        bad_ind (arr): Indices of stars deemed too near to the image edge
+    """
+    
+    ## Get list of indices where the stars are too near to the edge
+    cdef int pixel_buffer = 20
+    cdef np.ndarray bad_ind = np.append(np.where((x < pixel_buffer) | \
+                                                 (x > x_length - pixel_buffer))[0], \
+                                        np.where((y < pixel_buffer) | \
+                                                 (y > y_length - pixel_buffer))[0])
+        
+    return bad_ind
+
+
+@cython.wraparound(False)
+def clipCutStars3D(np.ndarray[F64, ndim=2] x, 
+                   np.ndarray[F64, ndim=2] y,
+                   int x_length,
+                   int y_length):
+    """
+    Sets flux measurements too close to the field of view boundary to zero in
+    order to prevent fadeout. To be used with stacked arrays.
+    
+    Parameters:
+        x (arr): 2D array containing the x-coordinates of stars
+        y (arr): 2D array containing the y-coordinates of stars
+        x_length (int): Length of image in the x-direction
+        y_length (int): Length of image in the y-direction
 
     Returns:
         bad_ind (arr): Indices of stars deemed too near to the image edge
@@ -215,6 +246,7 @@ def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
     return x_drift_rate,y_drift_rate
 
 
+@cython.wraparound(False)
 def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
                np.ndarray[F64, ndim=2] prev_img,
                str img_time,
@@ -270,6 +302,68 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
     star_data = tuple(zip(x, y, fluxes, np.full(len(fluxes), curr_time)))
     return star_data
+
+
+@cython.wraparound(False)
+def timeEvolve3D(np.ndarray[F64, ndim=3] img_stack,
+                 np.ndarray[F64, ndim=2] first_img,
+                 list img_times,
+                 str first_time
+                 int r,
+                 int num_stars,
+                 tuple pix_length,
+                 tuple pix_drift=(0,0)):
+    """
+    Adjusts aperture based on star drift and calculates flux in aperture
+    
+        Parameters:
+            img_stack (arr): 3D image flux array of stacked minute directory
+            img_times (list): List of header image times (not formatted)
+            r (int): Aperture radius to sum flux (in pixels)
+            numStars (int): Number of stars in image
+            pix_length (tuple): Image pixel length as (x_length,y_length)
+            pix_drift (tuple): Image drift rate as (x_drift,y_drift) (in px/s)
+            
+        Returns:
+            star_data (tuple): New star coordinates, image flux, time as tuple
+     """
+    
+    ## Type definitions
+    cdef int num_frames,ind,frame,pixel_buffer
+    cdef float t0_unix
+    cdef list fluxes
+    cdef tuple star_data
+    cdef np.ndarray unix_time,drift_time,x,y,stars,x_clipped,y_clipped
+    cdef np.ndarray xmask,ymask,xymask
+    
+    ## Calculate time between subsequent frames
+    num_frames = len(img_times)
+    t0_unix = Time(first_time,precision=9).unix
+    unix_time  = Time(img_times,precision=9).unix
+    drift_time = unix_time -  t0_unix
+    
+    ## Incorporate drift into each star's coords based on time since last frame
+    ## Returns a 2D array with each 0-axis slice being a frame
+    x = np.array([[first_img[ind, 0] + pix_drift[0]*drift_time[frame] for ind in range(0, num_stars)]
+                   for frame in range(0,num_frames)])
+    y = np.array([[first_img[ind, 1] + pix_drift[1]*drift_time[frame] for ind in range(0, num_stars)]
+                   for frame in range(0,num_frames)])
+    
+    ## Mask the out-of-bounds stars
+    pixel_buffer = 20
+    xmask  = ma.masked_outside(x, pixel_buffer,pix_length[0]-pixel_buffer)[1]
+    ymask  = ma.masked_outside(y, pixel_buffer,pix_length[1]-pixel_buffer)[1]
+    xymask = ma.array(xmask, mask=ymask)[1]
+    
+    ## Generate fluxes for each star and then mask the invalid ones
+    fluxes = np.array([[sep.sum_cricle(img_stack[frame],x,y,r,bkgann = (r + 6., r + 11.))][0]
+                        for frame in range(0,num_frames)])
+    fluxes = ma.array(fluxes, mask=xymask)
+    
+    ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
+    star_data = tuple(zip(x, y, fluxes, np.full((num_frames,num_stars), np.vstack(curr_time))))
+    return star_data
+    
 
 
 ##############################

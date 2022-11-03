@@ -60,6 +60,8 @@ def getDateTime(folder, obs_date):
 ## Retreive Data
 ##############################
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def readRCD(filename):
     """
     Reads .rcd file
@@ -106,12 +108,14 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
     pass
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def importFramesRCD(image_paths,
                     int  start_frame=0, 
                     int  num_frames=1,
                     np.ndarray[F64, ndim=2] bias=np.zeros((1,1),dtype=np.float64)):
     """
-    Reads in frames from .rcd files starting at a specific frame
+    Reads in frames from .rcd files starting at a specific frame.
     
         Parameters:
             image_paths (Path): pathlib object of image paths to read in
@@ -151,6 +155,7 @@ def importFramesRCD(image_paths,
         image = split_images(conv_12to16(data), IMG_DIM, IMG_DIM)
         image = np.subtract(image, bias, dtype=np.float64)
         
+        # Timestamp formatted as YYYY-MM-DDThh:mm:ss.dddddddddZ
         # Roll over the time if it exceeded 24h
         hour = timestamp.split('T')[1].split(':')[0]
         if int(hour) > 23:
