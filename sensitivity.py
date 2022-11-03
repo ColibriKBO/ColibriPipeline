@@ -365,7 +365,7 @@ final = match_XY(rd_mag, stars, SR)      #dataframe of Colibri detections with S
 #final = final.drop(final[(final.X > 1750)].index)    
 final_sort = final.sort_values('GMAG')
 #save text file version of this table for later reference
-final.to_csv(save_path.joinpath('starTable_' + minute_dir + '_' + gain + '_' + polynom_order + '_' + telescope + '_' + str(detect_thresh) + 'sig.txt'), sep = ' ', na_rep = 'nan')
+final.to_csv(save_path.joinpath('starTable_' + minute_dir + '_' + gain + '_' + polynom_order + '_' + telescope + '_' + str(detect_thresh) +'_'+airmass+'_' + 'sig.txt'), sep = ' ', na_rep = 'nan')
 
 '''---------------------make plot of mag vs snr-----------------'''
 print('making mag vs snr plot')
