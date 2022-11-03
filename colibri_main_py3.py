@@ -557,6 +557,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print ("\n")
 
     #print("Drift calcs",c3)
+    print(num_images,starData.shape)
+    
     #update star-minutes
     gc.collect()
     return num_stars*num_images
