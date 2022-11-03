@@ -10,7 +10,7 @@ Usage: python coordsfinder.py [-d]
 """
 
 # Module Imports
-import sys
+
 import argparse
 import pandas as pd
 from pathlib import Path
@@ -27,7 +27,22 @@ import getRAdec
 #--------------------------------functions------------------------------------#
 
 def getTransform(date):
-    '''get astrometry.net transform for a given minute'''
+    """
+    Finds median image that best fits for the time of the detection and uses it to get Astrometry solution.
+    Required to have a list of median-combined images (median_combos)
+
+    Parameters
+    ----------
+    date : str
+        Time of the detection file HH.MM.SS.ms
+
+    Returns
+    -------
+    transform : file headers
+        Headers of the WCS file that contain transformation info.
+
+    """
+    
 
     #if transformation has already been calculated, get from dictionary
     if date in transformations:
@@ -67,8 +82,36 @@ def getTransform(date):
         
         return transform
 
-def readFile(filepath):                                      #redifinition from Colibri Pipeline's function
-    '''read in a .txt detection file and get information from it'''
+def readFile(filepath):
+    """
+    read in a .txt detection file and get information from it
+
+    Parameters
+    ----------
+    filepath : path-like obj.
+        Path of the detection .txt.
+
+    Returns
+    -------
+    starData : dataframe
+        Dataframe containing image name, time, and star flux value for the star.
+    event_frame : TYPE
+        DESCRIPTION.
+    star_x : float
+        Star coordinates in XY.
+    star_y : float
+        Star coordinates in XY.
+    event_time : str
+        Time of the dip event.
+    event_type : str
+        Significance of the event?.
+    star_med : float
+        Median of the lightcurve.
+    star_std : float
+        Std of the lightcurve.
+
+    """
+    
     
     #make dataframe containing image name, time, and star flux value for the star
     starData = pd.read_csv(filepath, delim_whitespace = True, 
