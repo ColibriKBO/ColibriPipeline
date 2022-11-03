@@ -37,6 +37,8 @@ ctypedef np.float64_t F64
 ## Star Depection and Location
 ##############################
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     """
     Locates the stars in an image using the sep module and completes
@@ -73,6 +75,7 @@ def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     return star_chars
 
 
+@cython.wraparound(False)
 def refineCentroid(np.ndarray[F64, ndim=2] img_data,
                    str time, #TODO: remove this
                    np.ndarray[F64, ndim=2] star_coords,
@@ -210,6 +213,7 @@ def clipCutStars3D(np.ndarray[F64, ndim=2] x,
 ## Correct Star Drift
 ##############################
 
+@cython.wraparound(False)
 def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
                  np.ndarray[F64, ndim=2] star_coords2,
                  F64 time1,

@@ -178,15 +178,14 @@ def importFramesRCD(image_paths,
         print(f"Contracting array...")
     
     
-    return img_array,img_times
-    
-        
+    return img_array,img_times        
 
 
 ##############################
 ## Image Analysis
 ##############################
 
+@cython.wraparound(False)
 def split_images(np.ndarray[UI16, ndim=1] data,
                  int X_PIX,
                  int Y_PIX,
