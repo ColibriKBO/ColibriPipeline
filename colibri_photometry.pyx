@@ -12,7 +12,7 @@ Usage: import colibri_primary_filter as cpf
 import os, sys
 import numpy as np
 import numpy.ma as ma
-import cython as cy
+import cython
 import sep
 import pathlib
 import datetime
@@ -308,13 +308,13 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
 def timeEvolve3D(np.ndarray[F64, ndim=3] img_stack,
                  np.ndarray[F64, ndim=2] first_img,
                  list img_times,
-                 str first_time
                  int r,
                  int num_stars,
                  tuple pix_length,
                  tuple pix_drift=(0,0)):
     """
-    Adjusts aperture based on star drift and calculates flux in aperture
+    Adjusts aperture based on star drift and calculates flux in aperture.
+    !!!Currently does not work!!!
     
         Parameters:
             img_stack (arr): 3D image flux array of stacked minute directory
@@ -328,41 +328,64 @@ def timeEvolve3D(np.ndarray[F64, ndim=3] img_stack,
             star_data (tuple): New star coordinates, image flux, time as tuple
      """
     
-    ## Type definitions
-    cdef int num_frames,ind,frame,pixel_buffer
-    cdef float t0_unix
-    cdef list fluxes
-    cdef tuple star_data
-    cdef np.ndarray unix_time,drift_time,x,y,stars,x_clipped,y_clipped
-    cdef np.ndarray xmask,ymask,xymask
-    
-    ## Calculate time between subsequent frames
-    num_frames = len(img_times)
-    t0_unix = Time(first_time,precision=9).unix
-    unix_time  = Time(img_times,precision=9).unix
-    drift_time = unix_time -  t0_unix
-    
-    ## Incorporate drift into each star's coords based on time since last frame
-    ## Returns a 2D array with each 0-axis slice being a frame
-    x = np.array([[first_img[ind, 0] + pix_drift[0]*drift_time[frame] for ind in range(0, num_stars)]
-                   for frame in range(0,num_frames)])
-    y = np.array([[first_img[ind, 1] + pix_drift[1]*drift_time[frame] for ind in range(0, num_stars)]
-                   for frame in range(0,num_frames)])
-    
-    ## Mask the out-of-bounds stars
-    pixel_buffer = 20
-    xmask  = ma.masked_outside(x, pixel_buffer,pix_length[0]-pixel_buffer)[1]
-    ymask  = ma.masked_outside(y, pixel_buffer,pix_length[1]-pixel_buffer)[1]
-    xymask = ma.array(xmask, mask=ymask)[1]
-    
-    ## Generate fluxes for each star and then mask the invalid ones
-    fluxes = np.array([[sep.sum_cricle(img_stack[frame],x,y,r,bkgann = (r + 6., r + 11.))][0]
-                        for frame in range(0,num_frames)])
-    fluxes = ma.array(fluxes, mask=xymask)
-    
-    ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
-    star_data = tuple(zip(x, y, fluxes, np.full((num_frames,num_stars), np.vstack(curr_time))))
-    return star_data
+# =============================================================================
+#     ## Type definitions
+#     cdef int num_frames,ind,frame,pixel_buffer
+#     cdef list fluxes
+#     cdef tuple star_data
+#     cdef np.ndarray unix_time,drift_time,x,y,stars,x_clipped,y_clipped
+#     cdef np.ndarray xmask,ymask,xymask,fluxarr
+#     
+#     ## Calculate time between subsequent frames
+#     num_frames = len(img_times)
+#     unix_time  = Time(img_times,precision=9).unix
+#     drift_time = unix_time -  first_img[1,3]
+#     
+#     ## Incorporate drift into each star's coords based on time since last frame
+#     ## Returns a 2D array with each 0-axis slice being a frame
+#     x = np.array([[first_img[ind, 0] + pix_drift[0]*drift_time[frame] for ind in range(0, num_stars)]
+#                    for frame in range(0,num_frames)])
+#     y = np.array([[first_img[ind, 1] + pix_drift[1]*drift_time[frame] for ind in range(0, num_stars)]
+#                    for frame in range(0,num_frames)])
+#     
+#     ## Eliminate stars too near the field of view boundary
+#     edge_stars = clipCutStars(x, y, *pix_length)
+#     edge_stars = np.sort(np.unique(edge_stars))
+#     x_clipped  = np.delete(x,edge_stars)
+#     y_clipped  = np.delete(y,edge_stars)
+#     
+#     ## Assign integrated flux to each star, and then insert 0 for edge stars
+#     #TODO: be clever about doing this with numpy arrays
+#     fluxes = (sep.sum_circle(curr_img, 
+#                              x_clipped, y_clipped, 
+#                              r, 
+#                              bkgann = (r + 6., r + 11.))[0]).tolist()
+#     for i in edge_stars:
+#         fluxes.insert(i,0)
+#         
+#     ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
+#     star_data = tuple(zip(x, y, fluxes, np.full(len(fluxes), curr_time)))
+#     return star_data
+#     
+#     ## Mask the out-of-bounds stars
+#     pixel_buffer = 20
+#     xmask  = ma.masked_outside(x, pixel_buffer,pix_length[0]-pixel_buffer)[1]
+#     ymask  = ma.masked_outside(y, pixel_buffer,pix_length[1]-pixel_buffer)[1]
+#     xymask = ma.array(xmask, mask=ymask)[1]
+#     
+#     ## Generate fluxes for each star and then mask the invalid ones
+#     fluxes  = [sep.sum_circle(img_stack[frame],x[frame],y[frame],r,bkgann = (r + 6., r + 11.))[0]
+#                for frame in range(0,num_frames)]
+#     fluxarr = ma.array(fluxes, mask=xymask, fill_value=0.0)
+#     
+#     ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
+#     star_data = tuple(zip(x, y, fluxes, np.full((num_frames,num_stars), np.vstack(unix_time))))
+#     return np.transpose(star_data,axes=[0,2,1]) # rotate axes to get correct shape
+# =============================================================================
+
+    #TODO: finish this method
+    raise NotImplementedError("Do not use this method! It is not working correctly.")
+    pass
     
 
 
