@@ -9,12 +9,12 @@ Usage: import colibri_image_reader as cir
 """
 
 # Module Imports
-import cython as cy
-import numpy as np
-from astropy.io import fits
 import pathlib
 import os
 import datetime
+import cython
+import numpy as np
+from astropy.io import fits
 
 # Custom Script Imports
 from bitconverter import conv_12to16
