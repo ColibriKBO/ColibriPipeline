@@ -347,7 +347,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         print(f"Drifted - applying drift to photometry {x_drift} {y_drift}")
         
         # Loop through each image in the minute-long dataset in chunks
-        chunk_size = 10
+        chunk_size = 20
         residual   = (num_images-1)%chunk_size
         for i in range((num_images-1)//chunk_size):
             imageFile,imageTime = cir.importFramesRCD(imagePaths,chunk_size*i+1, chunk_size, bias)
@@ -360,6 +360,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                            num_stars,
                                                            (x_length, y_length),
                                                            (x_drift, y_drift))
+                
+                gc.collect()
             
         # Process remaining chunks
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
@@ -376,7 +378,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                    (x_length, y_length),
                                                    (x_drift, y_drift))        
             
-            
+        gc.collect()
     
             
     else:  # if there is not significant drift, don't account for drift  in photometry
@@ -389,13 +391,14 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         for i in range((num_images-1)//chunk_size):
             imageFile,imageTime = cir.importFramesRCD(imagePaths,chunk_size*i+1, chunk_size, bias)
             headerTimes = headerTimes + imageTime
-            for j in range(chunk_size):
-                starData[chunk_size*i+j+1] = cp.timeEvolve(imageFile[j],
-                                                           deepcopy(starData[chunk_size*i+j]),
-                                                           imageTime[j],
-                                                           ap_r,
-                                                           num_stars,
-                                                           (x_length, y_length))
+            starData[chunk_size*i+1:chunk_size*(i+1)+1] = cp.getStationaryFlux(imageFile,
+                                                                               deepcopy(starData[chunk_size*i]),
+                                                                               imageTime,
+                                                                               ap_r,
+                                                                               num_stars,
+                                                                               (x_length, y_length))
+                
+            gc.collect()
             
         # Process remaining chunks
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
@@ -403,13 +406,14 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                   (num_images-1)%chunk_size,
                                                   bias)
         headerTimes = headerTimes + imageTime
-        for i in range(residual, 0, -1):
-            starData[num_images-i] = cp.timeEvolve(imageFile[residual-i],
-                                                   deepcopy(starData[num_images-i-1]),
-                                                   imageTime[residual-i],
-                                                   ap_r,
-                                                   num_stars,
-                                                   (x_length, y_length))   
+        starData[num_images-residual:] = cp.getStationaryFlux(imageFile,
+                                                              deepcopy(starData[num_images-residual-1]),
+                                                              imageTime,
+                                                              ap_r,
+                                                              num_stars,
+                                                              (x_length, y_length))
+            
+        gc.collect()
 
 
     #d3 = timer.time() - c3

@@ -392,6 +392,66 @@ def timeEvolve3D(np.ndarray[F64, ndim=3] img_stack,
     pass
     
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
+                      np.ndarray[F64, ndim=2] prev_img,
+                      list img_times,
+                      int r,
+                      int num_stars,
+                      tuple pix_length):
+    """
+    Gets the position of each star and finds the star flux at each frame,
+    assuming no drift of the centroid.
+    
+        Parameters:
+            img_stack (arr): 3D image flux array of stacked minute directory
+            img_times (list): List of header image times (not formatted)
+            r (int): Aperture radius to sum flux (in pixels)
+            numStars (int): Number of stars in image
+            pix_length (tuple): Image pixel length as (x_length,y_length)
+            pix_drift (tuple): Image drift rate as (x_drift,y_drift) (in px/s)
+            
+        Returns:
+            star_data (tuple): New star coordinates, image flux, time as tuple
+     """
+    
+    ## Type definitions
+    cdef np.ndarray unix_time,x,y,
+    cdef np.ndarray edge_stars,x_clipped,y_clipped
+    cdef np.ndarray fluxes,star_data
+    
+    ## Calculate time between prev_img and curr_img
+    unix_time  = Time(img_times,precision=9).unix
+    
+    ## Incorporate drift into each star's coords based on time since last frame
+    x = np.array([prev_img[ind, 0] for ind in range(0, num_stars)])
+    y = np.array([prev_img[ind, 1] for ind in range(0, num_stars)])
+    
+    ## Eliminate stars too near the field of view boundary
+    edge_stars = clipCutStars(x, y, *pix_length)
+    edge_stars = np.sort(np.unique(edge_stars))
+    x_clipped  = np.delete(x,edge_stars)
+    y_clipped  = np.delete(y,edge_stars)
+    
+    ## Assign integrated flux to each star, and then insert 0 for edge stars
+    #TODO: be clever about doing this with numpy arrays
+    
+    fluxes = np.array([sep.sum_circle(img_stack[frame],
+                                      x_clipped,y_clipped,
+                                      r, 
+                                      bkgann=(r + 6., r + 11.))[0]
+                       for frame in range(len(img_stack))])
+
+    for bad_ind in edge_stars:
+        fluxes = np.insert(fluxes, bad_ind, 0, axis=1)
+        
+        
+    ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
+    star_data = np.array([np.stack((x, y, fluxes[frame], np.full(len(x), unix_time[frame])),axis=1)
+                          for frame in range(len(img_stack))])
+    return star_data
+
 
 ##############################
 ## Dip Detection
