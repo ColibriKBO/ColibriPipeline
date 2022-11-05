@@ -159,7 +159,7 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
 # Former main
 #############
 
-def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_threshold,telescope='TEST'):
+def firstOccSearch(minuteDir, MasterBiasList, obs_date, kernel, exposure_time, sigma_threshold,telescope='TEST'):
     """ 
     Formerly 'main'.
     Detect possible occultation events in selected file and archive results 
@@ -675,7 +675,7 @@ if __name__ == '__main__':
         
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
-        args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,telescope) for f in range(0,len(minute_dirs)))
+        args = ((minute_dirs[f], MasterBiasList, obs_date, ricker_kernel, exposure_time, sigma_threshold,telescope) for f in range(0,len(minute_dirs)))
         
         try:
             star_minutes = pool.starmap(firstOccSearch,args)
@@ -730,8 +730,8 @@ if __name__ == '__main__':
             start_time = timer.time()
 
             print('Running sequentially...')
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
+            firstOccSearch(minute_dirs[f], MasterBiasList, obs_date,ricker_kernel, exposure_time, sigma_threshold)
+            firstOccSearch(minute_dirs[f], MasterBiasList, obs_date,ricker_kernel, exposure_time, sigma_threshold)
             
             gc.collect()
 
