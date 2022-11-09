@@ -72,7 +72,10 @@ def getTransform(date):
             #get WCS header from astrometry.net plate solution
             soln_order = 4
             
-            wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
+            try:
+                wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
+            except:
+                wcs_header = astrometrynet_funcs.getSolution(median_image, transform_file, soln_order)
         
             #calculate coordinate transformation
             transform = wcs.WCS(wcs_header)
