@@ -89,6 +89,42 @@ def readRCD(filename):
 
     return table, timestamp
 
+@cython.wraparound(False)
+def fluxFromBits(filename,
+                 list star_ind,
+                 int box_dim=7,
+                 bool timestamp=True,
+                 bool gain_high=True):
+    """
+    Read specific stars from their pixel coordinates and returns an integrated
+    flux calculated using a box method. Only works with RCD files.
+
+    Args:
+        filename (str/Path): Path or pathlib object to the frame to be analyzed.
+        star_ind (list): Pixel coordinates of the stars to be analyzed.
+        box_dim (int, optional): Width of integration box (in px). Must be odd
+                                 to be symmetric.
+        timestamp (bool, optional): Return the image timestamp. Defaults to True.
+        gain_high (bool, optional): Analyze high gain image over the low gain
+                                    image. Defaults to True.
+
+    Returns:
+        flux (arr): Flux corresponding to the star_ind stars integrated over a
+                    square area.
+        img_time (str, optional): Image timestamp. Returned if timestamp=True.
+        
+    """
+    
+    ## Type definitions
+    cdef np.ndarray flux
+    
+    ## Assert that the integration box be symmetric
+    #assert box_dim%2 == 1
+    
+    ## Loop to read in and sum the pixel box
+    for star in star_ind:
+        if star[1]%2 == 0:
+
 
 def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
     """
