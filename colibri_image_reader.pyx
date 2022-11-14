@@ -93,11 +93,11 @@ def readRCD(filename):
 def fluxFromBits(filename,
                  list star_ind,
                  int box_dim=7,
-                 bool timestamp=True,
-                 bool gain_high=True):
+                 bint timestamp=True,
+                 bint gain_high=True):
     """
     Read specific stars from their pixel coordinates and returns an integrated
-    flux calculated using a box method. Only works with RCD files.
+    flux calculated using a box method. Only works with 2048x2048 RCD images.
 
     Args:
         filename (str/Path): Path or pathlib object to the frame to be analyzed.
@@ -116,14 +116,74 @@ def fluxFromBits(filename,
     """
     
     ## Type definitions
-    cdef np.ndarray flux
+    cdef int half_box,ints_to_read,bits_to_read
+    cdef str img_time
+    cdef int i,j
+    cdef np.ndarray bit_buffer, flux
     
     ## Assert that the integration box be symmetric
     #assert box_dim%2 == 1
     
-    ## Loop to read in and sum the pixel box
-    for star in star_ind:
-        if star[1]%2 == 0:
+    ## Integration variables
+    half_box = box_dim//2
+    ints_to_read = (box_dim + 1)*(3/2)
+    bits_to_read = ints_to_read*8
+    
+    bit_buffer = np.empty((box_dim, ints_to_read),dtype=np.uint8)
+    flux = np.zeros(len(star_ind))
+    
+    
+    ## Loop to read in and sum the pixel box.
+    ## Uses two cases for half-box being even and odd
+    if half_box%2 == 0: # even half-box case
+        with open(filename, 'rb') as fid:
+            for i,star in enumerate(star_ind):
+                if star[1]%2 == 0: # even pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[:box_dim-1])
+                
+                else: # odd pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[1:])
+                    
+            if timestamp:
+                fid.seek(152,0)
+                img_time = fid.read(29).decode('utf-8')
+                return flux,img_time
+            else:
+                return flux
+                    
+                    
+    else: # odd half-box case
+        with open(filename, 'rb') as fid:
+            for i,star in enumerate(star_ind):
+                if star[1]%2 == 1: # odd pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[:box_dim-1])
+                
+                else: # even pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[1:])
+                    
+            if timestamp:
+                fid.seek(152,0)
+                img_time = fid.read(29).decode('utf-8')
+                return flux,img_time
+            else:
+                return flux
+            
 
 
 def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):

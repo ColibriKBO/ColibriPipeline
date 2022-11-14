@@ -16,3 +16,6 @@ colibri_photometry.html
 
 # ignore logs directory
 **/logs
+
+# ignore jupyter notebook used for testing
+Testing.ipynb
