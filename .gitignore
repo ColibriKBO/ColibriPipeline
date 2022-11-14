@@ -19,3 +19,4 @@ colibri_photometry.html
 
 # ignore jupyter notebook used for testing
 Testing.ipynb
+**/.ipynb_checkpoints
