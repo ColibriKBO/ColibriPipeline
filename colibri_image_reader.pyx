@@ -108,7 +108,7 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
     pass
 
 
-@cython.boundscheck(False)
+#@cython.boundscheck(False)
 @cython.wraparound(False)
 def importFramesRCD(image_paths,
                     int  start_frame=0, 
@@ -147,6 +147,7 @@ def importFramesRCD(image_paths,
         
         # Check if we exceed the requested frames
         frame = i - start_frame
+        #print(i,frame)
         if frame >= num_frames:
             break
         
