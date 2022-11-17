@@ -42,3 +42,4 @@ def conv_12to16(data_chunk):
         out[i*2+1] = ((mid_uint8 % 16) << 8) + lst_uint8
 
     return out
+

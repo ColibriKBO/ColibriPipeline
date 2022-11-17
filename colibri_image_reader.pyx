@@ -58,37 +58,137 @@ def getDateTime(folder, obs_date):
 
 
 ##############################
-## Retreive Data
+## Bitreading Functions
 ##############################
 
-@cython.boundscheck(False)
 @cython.wraparound(False)
-def readRCD(filename):
+def noDriftMask(np.ndarray[UI16, ndim=2] star_ind,
+                int box_dim=7,
+                bint gain_high=True):
     """
-    Reads .rcd file
+    Create an array for reading in relevant bits (containing stars) for this
+    minute directory. Must pre-eliminate stars too close to the edge
+
+    Args:
+        star_ind (list): Pixel coordinates of the star centrodis to be analyzed.
+        box_dim (int, optional): Width of integration box (in px). Must be odd
+        gain_high (bool, optional): Analyze high gain image over the low gain
+                                    image. Defaults to True.
+
+    Returns:
+        seek_ind (arr): Array of bits to seek from the RCD file.
+        
+    """
     
-        Parameters:
-            filename (Path): Path to .rcd file
+    ## Specific container definitions
+    cdef int half_box = box_dim//2
+    cdef np.ndarray seek_ind = np.empty((len(clipped_ind)*box_dim,2))
+
+    ## Index definitions
+    cdef int i,j
+    cdef np.ndarray star
+
+
+    ## Loop to read in and sum the pixel box.
+    ## Uses two cases for half-box being even and odd
+    if half_box%2 == 0: # even half-box case
+        for i,star in enumerate(star_ind):
+            if star[1]%2 == 0: # even pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box)
+                    seek_ind[i*box_dim + j,1] = i
+                    
+            else: # odd pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1)
+                    seek_ind[i*box_dim + j,1] = i
+                
             
-        Returns:
-            table (arr): Table with image pixel data
-            timestamp (str): Timestamp of observation
+    else: # odd half-box case
+        for i,star in enumerate(star_ind):
+            if star[1]%2 == 1: # even pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box)
+                    seek_ind[i*box_dim + j,1] = i
+                    
+            else: # odd pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1)
+                    seek_ind[i*box_dim + j,1] = i
+                
+
+    ## Sort seek_inds to eliminate backtracking and return the inds
+    seek_ind = seek_ind[seek_ind[:,0]]
+    return seek_ind[0],seek_ind[1]
+
+
+
+@cython.wraparound(False)
+def fluxBitString(list mindir,
+                  np.ndarray[UI16, ndim=2] star_coords,
+                  int box_dim=7,
+                  int l=2048,
+                  int pixel_buffer=20,
+                  bint gain_high=True):
+    """
+    
+
+    Args:
+        mindir (list): DESCRIPTION.
+        star_coords (list): Pixel coordinates of the star centrodis to be analyzed.
+        box_dim (int, optional): Width of integration box (in px). Must be odd
+                                 to be symmetric.
+        l (int, optional): Dimension of the square image.
+        pixel_buffer (int, optional): Buffer width from the image edge that
+                                      a star must be to be analyzed.
+        timestamp (bool, optional): Return the image timestamp. Defaults to True.
+        gain_high (bool, optional): Analyze high gain image over the low gain
+                                    image. Defaults to True.
+
+    Returns:
+        None.
+
     """
 
     ## Type definitions
-    cdef np.ndarray table
+    cdef int i,ind
+    cdef str path
+    cdef np.ndarray clipped_ind,seek_ind,,identifier,bit_buffer,flux
 
-    ## Open .rcd file and extract the observation timestamp and data
-    with open(filename, 'rb') as fid:
-        # Timestamp
-        fid.seek(152,0)
-        timestamp = fid.read(29).decode('utf-8')
+    ## Integration variables
+    half_box = box_dim//2
+    ints_to_read = (box_dim + 1)*(3/2)
+    bits_to_read = ints_to_read*8
+    
+    ## Eliminate stars too close to the border
+    clipped_ind = star_coords[np.all(star_ind > pixel_buffer, axis=1) & \
+                           np.all(star_ind < l - pixel_buffer, axis=1)]
+    
+    ## Get indexes of the stars to sum and create the bit buffer for tmp storage
+    seek_ind,identifier = noDriftMask(clipped_ind,box_dim,gain_high)
+    bit_buffer = np.empty(len(seek_ind)*bits_to_read,dtype=np.uint8)
+    
+    ## For each image in the directory, read the timestamp and then seek
+    ## indices and read in the relevant bits for all stars. Then convert
+    ## to uint16 type. Group the relevant integers and sum the fluxes.
+    cdef list timestamps = []
+    for path in mindir:
+        with open(path,'rb') as fid:
+            # Get frame timestamp
+            fid.seek(152,0)
+            timestamps.append(fid.read(29).decode('utf-8'))
+            
+            # Get bitstring
+            for i,ind in enumerate(seek_ind):
+                fid.seek(ind,0)
+                bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+            
+            # Convert 8-bit imposter ints to 16-bit proper ints, reshape, and sum
+            partial_flux = (conv_12to16(bit_buffer)).reshape((len(seek_ind),box_dim+1))
+            
+                
+                
 
-        # Load data portion of file
-        fid.seek(384,0)
-        table = np.fromfile(fid, dtype=np.uint8, count=12582912)
-
-    return table, timestamp
 
 @cython.wraparound(False)
 def fluxFromBits(filename,
@@ -115,6 +215,8 @@ def fluxFromBits(filename,
         img_time (str, optional): Image timestamp. Returned if timestamp=True.
         
     """
+    
+    raise DeprecationWarning
     
     ## Type definitions
     cdef int half_box,ints_to_read,bits_to_read
@@ -184,6 +286,40 @@ def fluxFromBits(filename,
                 return flux,img_time
             else:
                 return flux
+
+
+##############################
+## Retreive Data
+##############################
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def readRCD(filename):
+    """
+    Reads .rcd file
+    
+        Parameters:
+            filename (Path): Path to .rcd file
+            
+        Returns:
+            table (arr): Table with image pixel data
+            timestamp (str): Timestamp of observation
+    """
+
+    ## Type definitions
+    cdef np.ndarray table
+
+    ## Open .rcd file and extract the observation timestamp and data
+    with open(filename, 'rb') as fid:
+        # Timestamp
+        fid.seek(152,0)
+        timestamp = fid.read(29).decode('utf-8')
+
+        # Load data portion of file
+        fid.seek(384,0)
+        table = np.fromfile(fid, dtype=np.uint8, count=12582912)
+
+    return table, timestamp
             
 
 
