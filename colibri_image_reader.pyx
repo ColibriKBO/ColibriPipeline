@@ -15,6 +15,7 @@ import datetime
 import cython
 import numpy as np
 from astropy.io import fits
+from time import time
 
 # Custom Script Imports
 from bitconverter import conv_12to16
@@ -154,17 +155,17 @@ def importFramesRCD(image_paths,
         # Load in the image data and header timestamp and subtract the bias
         data,timestamp = readRCD(fname)
         image = split_images(conv_12to16(data), IMG_DIM, IMG_DIM)
-        image = np.subtract(image, bias, dtype=np.float64)
         
         # Timestamp formatted as YYYY-MM-DDThh:mm:ss.dddddddddZ
         # Roll over the time if it exceeded 24h
         hour = timestamp.split('T')[1].split(':')[0]
         if int(hour) > 23:
             timestamp = timestamp.replace('T' + hour, 'T' + str(int(hour) % 24))
-    
+        
         # Add corrected image and time data to appropriate array/list
         img_array[frame] = image
         img_times.append(timestamp)
+        
         
     else:
         frame += 1
@@ -177,7 +178,9 @@ def importFramesRCD(image_paths,
         img_array = img_array[:frame]
         print(f"We ran out of frames! Only {frame} of {num_frames}.")
         print(f"Contracting array...")
+        
     
+    img_array = np.subtract(img_array, bias, dtype=np.float64)
     
     return img_array,img_times        
 
