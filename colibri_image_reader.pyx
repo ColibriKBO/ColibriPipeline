@@ -118,8 +118,9 @@ def noDriftMask(np.ndarray[UI16, ndim=2] star_ind,
                 
 
     ## Sort seek_inds to eliminate backtracking and return the inds
-    seek_ind = seek_ind[seek_ind[:,0]]
-    return seek_ind[0],seek_ind[1]
+    seek_ind = seek_ind[seek_ind[:,0].argsort()]
+    ind_loc  = np.array([np.where(seek_ind == i) for i in range(len(star_ind))])
+    return seek_ind[0],ind_loc
 
 
 
@@ -151,9 +152,9 @@ def fluxBitString(list mindir,
     """
 
     ## Type definitions
-    cdef int i,ind
+    cdef int frame,i,ind
     cdef str path
-    cdef np.ndarray clipped_ind,seek_ind,,identifier,bit_buffer,flux
+    cdef np.ndarray clipped_ind,seek_ind,identifier,bit_buffer,star,flux
 
     ## Integration variables
     half_box = box_dim//2
@@ -167,12 +168,13 @@ def fluxBitString(list mindir,
     ## Get indexes of the stars to sum and create the bit buffer for tmp storage
     seek_ind,identifier = noDriftMask(clipped_ind,box_dim,gain_high)
     bit_buffer = np.empty(len(seek_ind)*bits_to_read,dtype=np.uint8)
+    flux = np.empty((len(mindir),len(clipped_ind)))
     
     ## For each image in the directory, read the timestamp and then seek
     ## indices and read in the relevant bits for all stars. Then convert
     ## to uint16 type. Group the relevant integers and sum the fluxes.
     cdef list timestamps = []
-    for path in mindir:
+    for frame,path in enumerate(mindir):
         with open(path,'rb') as fid:
             # Get frame timestamp
             fid.seek(152,0)
@@ -184,7 +186,13 @@ def fluxBitString(list mindir,
                 bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
             
             # Convert 8-bit imposter ints to 16-bit proper ints, reshape, and sum
-            partial_flux = (conv_12to16(bit_buffer)).reshape((len(seek_ind),box_dim+1))
+            partial_flux = np.sum((conv_12to16(bit_buffer)).reshape((len(seek_ind),box_dim+1)),axis=1).transpose()[0]
+            for i,star in enumerate(identifier):
+                flux[frame][i] = np.sum(partial_flux[star])
+
+                
+    return flux
+                
             
                 
                 
