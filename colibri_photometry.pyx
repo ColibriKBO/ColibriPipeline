@@ -491,12 +491,12 @@ def noDriftMask(np.ndarray[UI16, ndim=2] star_ind,
         for i,star in enumerate(star_ind):
             if star[1]%2 == 0: # even pixel case
                 for j in range(box_dim):
-                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box)
+                    seek_ind[i*box_dim + j,0] = 384 + 3072*(gain_high + 2*(star[0] + j - half_box)) + 3*(star[1] - half_box)
                     seek_ind[i*box_dim + j,1] = i
                     
             else: # odd pixel case
                 for j in range(box_dim):
-                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1)
+                    seek_ind[i*box_dim + j,0] = 384 + 3072*(gain_high + 2*(star[0] + j - half_box)) + 3*(star[1] - half_box - 1)
                     seek_ind[i*box_dim + j,1] = i
                 
             
@@ -504,19 +504,19 @@ def noDriftMask(np.ndarray[UI16, ndim=2] star_ind,
         for i,star in enumerate(star_ind):
             if star[1]%2 == 1: # even pixel case
                 for j in range(box_dim):
-                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box)
+                    seek_ind[i*box_dim + j,0] = 384 + 3072*(gain_high + 2*(star[0] + j - half_box)) + 3*(star[1] - half_box)
                     seek_ind[i*box_dim + j,1] = i
                     
             else: # odd pixel case
                 for j in range(box_dim):
-                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1)
+                    seek_ind[i*box_dim + j,0] = 384 + 3072*(gain_high + 2*(star[0] + j - half_box)) + 3*(star[1] - half_box - 1)
                     seek_ind[i*box_dim + j,1] = i
                 
 
     ## Sort seek_inds to eliminate backtracking and return the inds
     seek_ind = seek_ind[seek_ind[:,0].argsort()]
-    ind_loc  = np.array([np.where(seek_ind == i) for i in range(len(star_ind))])
-    return seek_ind[0],ind_loc
+    ind_loc  = np.array([np.where(seek_ind[:,1] == i) for i in range(len(star_ind))])
+    return seek_ind[:,0],ind_loc
 
 
 
@@ -539,7 +539,7 @@ def fluxBitString(list imgdir,
                                  to be symmetric.
         l (int, optional): Dimension of the square image.
         pixel_buffer (int, optional): Buffer width from the image edge that
-                                      a star must be to be analyzed.
+                                      a star must be to be analyzed. 
         timestamp (bool, optional): Return the image timestamp. Defaults to True.
         gain_high (bool, optional): Analyze high gain image over the low gain
                                     image. Defaults to True.
@@ -550,15 +550,14 @@ def fluxBitString(list imgdir,
     """
 
     ## Type definitions
-    cdef int half_box,ints_to_read,bits_to_read
+    cdef int half_box,ints_to_read
     cdef int frame,i,ind
-    cdef str path
     cdef np.ndarray clipped_ind,seek_ind,identifier,bit_buffer,star,partial_flux,flux,imgtimes
 
     ## Integration variables
     half_box = box_dim//2
-    ints_to_read = (box_dim + 1)*(3/2)
-    bits_to_read = ints_to_read*8
+    ints_to_read = (box_dim + 1)*3//2
+    #print(ints_to_read)
     
     ## Eliminate stars too close to the border
     clipped_ind = star_coords[np.all(star_coords > pixel_buffer, axis=1) & \
@@ -566,7 +565,8 @@ def fluxBitString(list imgdir,
     
     ## Get indexes of the stars to sum and create the bit buffer for tmp storage
     seek_ind,identifier = noDriftMask(clipped_ind,box_dim,gain_high)
-    bit_buffer = np.empty(len(seek_ind)*bits_to_read,dtype=np.uint8)
+    print("Star, seek: ",np.shape(clipped_ind),np.shape(seek_ind))
+    bit_buffer = np.empty(len(seek_ind)*ints_to_read,dtype=np.uint8)
     flux = np.empty((len(imgdir),len(clipped_ind)))
     
     ## For each image in the directory, read the timestamp and then seek
@@ -574,7 +574,11 @@ def fluxBitString(list imgdir,
     ## to uint16 type. Group the relevant integers and sum the fluxes.
     cdef list timestamps = []
     for frame,path in enumerate(imgdir):
+        print(path)
         with open(path,'rb') as fid:
+            fid.seek(-1,2)
+            print(fid.tell(), np.max(seek_ind))
+            
             # Get frame timestamp
             fid.seek(152,0)
             timestamps.append(fid.read(29).decode('utf-8'))
@@ -582,10 +586,19 @@ def fluxBitString(list imgdir,
             # Get bitstring
             for i,ind in enumerate(seek_ind):
                 fid.seek(ind,0)
-                bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                #print(ind,fid.tell())
+                #print(ind,identifier[i])
+                #bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
+                bitarr = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
+                #print(bitarr)
+                bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = bitarr
             
             # Convert 8-bit imposter ints to 16-bit proper ints, reshape, and sum
-            partial_flux = np.sum((conv_12to16(bit_buffer)).reshape((len(seek_ind),box_dim+1)),axis=1).transpose()[0]
+            #print("Bitbuffer",np.shape(bit_buffer))
+            reshape16b = (conv_12to16(bit_buffer)).reshape((len(seek_ind),box_dim+1))
+            #print("Reshape16b", np.shape(reshape16b))
+            partial_flux = np.sum(reshape16b,axis=1).transpose()
+            #print(partial_flux)
             for i,star in enumerate(identifier):
                 flux[frame][i] = np.sum(partial_flux[star])
 
@@ -624,7 +637,7 @@ def fluxFromBits(filename,
     raise DeprecationWarning
     
     ## Type definitions
-    cdef int half_box,ints_to_read,bits_to_read
+    cdef int half_box,ints_to_read
     cdef str img_time
     cdef int i,j
     cdef np.ndarray bit_buffer, flux
@@ -635,7 +648,6 @@ def fluxFromBits(filename,
     ## Integration variables
     half_box = box_dim//2
     ints_to_read = (box_dim + 1)*(3/2)
-    bits_to_read = ints_to_read*8
     
     bit_buffer = np.empty((box_dim, ints_to_read),dtype=np.uint8)
     flux = np.zeros(len(star_ind))
@@ -649,14 +661,14 @@ def fluxFromBits(filename,
                 if star[1]%2 == 0: # even pixel case
                     for j in range(box_dim):
                         fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box), 0)
-                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
                         
                     flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[:box_dim-1])
                 
                 else: # odd pixel case
                     for j in range(box_dim):
                         fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1), 0)
-                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
                         
                     flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[1:])
                     
@@ -664,8 +676,7 @@ def fluxFromBits(filename,
                 fid.seek(152,0)
                 img_time = fid.read(29).decode('utf-8')
                 return flux,img_time
-            else:
-                return flux
+
                     
                     
     else: # odd half-box case
@@ -674,14 +685,14 @@ def fluxFromBits(filename,
                 if star[1]%2 == 1: # odd pixel case
                     for j in range(box_dim):
                         fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box), 0)
-                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
                         
                     flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[:box_dim-1])
                 
                 else: # even pixel case
                     for j in range(box_dim):
                         fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1), 0)
-                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
                         
                     flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[1:])
                     
@@ -689,8 +700,8 @@ def fluxFromBits(filename,
                 fid.seek(152,0)
                 img_time = fid.read(29).decode('utf-8')
                 return flux,img_time
-            else:
-                return flux
+
+    return flux
             
 
 ##############################

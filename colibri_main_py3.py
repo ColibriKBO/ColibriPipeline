@@ -389,8 +389,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         
         print('No drift')
         
+        xy = initial_positions[:,:2].astype(np.uint16)
         star_xy,star_flux,imgtimes = cp.fluxBitString(imagePaths,
-                                                      initial_positions[:,:2],
+                                                      xy,
                                                       box_dim=7,
                                                       gain_high=gain_high)
         
