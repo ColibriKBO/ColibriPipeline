@@ -22,7 +22,7 @@ from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
 
 # Custom Script Imports
-
+from bitconverter import conv_12to16
 
 # Cython-Numpy Interface
 cimport numpy as np
@@ -452,6 +452,243 @@ def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
                           for frame in range(len(img_stack))])
     return star_data
 
+
+##############################
+## Bitreading Functions
+##############################
+
+@cython.wraparound(False)
+def noDriftMask(np.ndarray[UI16, ndim=2] star_ind,
+                int box_dim=7,
+                bint gain_high=True):
+    """
+    Create an array for reading in relevant bits (containing stars) for this
+    minute directory. Must pre-eliminate stars too close to the edge
+
+    Args:
+        star_ind (list): Pixel coordinates of the star centrodis to be analyzed.
+        box_dim (int, optional): Width of integration box (in px). Must be odd
+        gain_high (bool, optional): Analyze high gain image over the low gain
+                                    image. Defaults to True.
+
+    Returns:
+        seek_ind (arr): Array of bits to seek from the RCD file.
+        
+    """
+    
+    ## Specific container definitions
+    cdef int half_box = box_dim//2
+    cdef np.ndarray seek_ind = np.empty((len(star_ind)*box_dim,2))
+
+    ## Index definitions
+    cdef int i,j
+    cdef np.ndarray star
+
+
+    ## Loop to read in and sum the pixel box.
+    ## Uses two cases for half-box being even and odd
+    if half_box%2 == 0: # even half-box case
+        for i,star in enumerate(star_ind):
+            if star[1]%2 == 0: # even pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box)
+                    seek_ind[i*box_dim + j,1] = i
+                    
+            else: # odd pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1)
+                    seek_ind[i*box_dim + j,1] = i
+                
+            
+    else: # odd half-box case
+        for i,star in enumerate(star_ind):
+            if star[1]%2 == 1: # even pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box)
+                    seek_ind[i*box_dim + j,1] = i
+                    
+            else: # odd pixel case
+                for j in range(box_dim):
+                    seek_ind[i*box_dim + j,0] = 384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1)
+                    seek_ind[i*box_dim + j,1] = i
+                
+
+    ## Sort seek_inds to eliminate backtracking and return the inds
+    seek_ind = seek_ind[seek_ind[:,0].argsort()]
+    ind_loc  = np.array([np.where(seek_ind == i) for i in range(len(star_ind))])
+    return seek_ind[0],ind_loc
+
+
+
+@cython.wraparound(False)
+def fluxBitString(list imgdir,
+                  np.ndarray[UI16, ndim=2] star_coords,
+                  int box_dim=7,
+                  int l=2048,
+                  int pixel_buffer=20,
+                  bint gain_high=True):
+    """
+    Obtain the flux of stars for a list of images in a given minute. Uses a 
+    square flux aperature, eliminates stars near the boundaries, and uses a
+    selective bit reading method for I/O.
+
+    Args:
+        imgdir (list): DESCRIPTION.
+        star_coords (list): Pixel coordinates of the star centrodis to be analyzed.
+        box_dim (int, optional): Width of integration box (in px). Must be odd
+                                 to be symmetric.
+        l (int, optional): Dimension of the square image.
+        pixel_buffer (int, optional): Buffer width from the image edge that
+                                      a star must be to be analyzed.
+        timestamp (bool, optional): Return the image timestamp. Defaults to True.
+        gain_high (bool, optional): Analyze high gain image over the low gain
+                                    image. Defaults to True.
+
+    Returns:
+        None.
+
+    """
+
+    ## Type definitions
+    cdef int frame,i,ind
+    cdef str path
+    cdef np.ndarray clipped_ind,seek_ind,identifier,bit_buffer,star,flux
+
+    ## Integration variables
+    half_box = box_dim//2
+    ints_to_read = (box_dim + 1)*(3/2)
+    bits_to_read = ints_to_read*8
+    
+    ## Eliminate stars too close to the border
+    clipped_ind = star_coords[np.all(star_coords > pixel_buffer, axis=1) & \
+                           np.all(star_coords < l - pixel_buffer, axis=1)]
+    
+    ## Get indexes of the stars to sum and create the bit buffer for tmp storage
+    seek_ind,identifier = noDriftMask(clipped_ind,box_dim,gain_high)
+    bit_buffer = np.empty(len(seek_ind)*bits_to_read,dtype=np.uint8)
+    flux = np.empty((len(imgdir),len(clipped_ind)))
+    
+    ## For each image in the directory, read the timestamp and then seek
+    ## indices and read in the relevant bits for all stars. Then convert
+    ## to uint16 type. Group the relevant integers and sum the fluxes.
+    cdef list timestamps = []
+    for frame,path in enumerate(imgdir):
+        with open(path,'rb') as fid:
+            # Get frame timestamp
+            fid.seek(152,0)
+            timestamps.append(fid.read(29).decode('utf-8'))
+            
+            # Get bitstring
+            for i,ind in enumerate(seek_ind):
+                fid.seek(ind,0)
+                bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+            
+            # Convert 8-bit imposter ints to 16-bit proper ints, reshape, and sum
+            partial_flux = np.sum((conv_12to16(bit_buffer)).reshape((len(seek_ind),box_dim+1)),axis=1).transpose()[0]
+            for i,star in enumerate(identifier):
+                flux[frame][i] = np.sum(partial_flux[star])
+
+                
+    return np.hstack((clipped_ind,flux))
+
+
+@cython.wraparound(False)
+def fluxFromBits(filename,
+                 list star_ind,
+                 int box_dim=7,
+                 bint timestamp=True,
+                 bint gain_high=True):
+    """
+    Read specific stars from their pixel coordinates and returns an integrated
+    flux calculated using a box method. Only works with 2048x2048 RCD images.
+
+    Args:
+        filename (str/Path): Path or pathlib object to the frame to be analyzed.
+        star_ind (list): Pixel coordinates of the stars to be analyzed.
+        box_dim (int, optional): Width of integration box (in px). Must be odd
+                                 to be symmetric.
+        timestamp (bool, optional): Return the image timestamp. Defaults to True.
+        gain_high (bool, optional): Analyze high gain image over the low gain
+                                    image. Defaults to True.
+
+    Returns:
+        flux (arr): Flux corresponding to the star_ind stars integrated over a
+                    square area.
+        img_time (str, optional): Image timestamp. Returned if timestamp=True.
+        
+    """
+    
+    raise DeprecationWarning
+    
+    ## Type definitions
+    cdef int half_box,ints_to_read,bits_to_read
+    cdef str img_time
+    cdef int i,j
+    cdef np.ndarray bit_buffer, flux
+    
+    ## Assert that the integration box be symmetric
+    #assert box_dim%2 == 1
+    
+    ## Integration variables
+    half_box = box_dim//2
+    ints_to_read = (box_dim + 1)*(3/2)
+    bits_to_read = ints_to_read*8
+    
+    bit_buffer = np.empty((box_dim, ints_to_read),dtype=np.uint8)
+    flux = np.zeros(len(star_ind))
+    
+    
+    ## Loop to read in and sum the pixel box.
+    ## Uses two cases for half-box being even and odd
+    if half_box%2 == 0: # even half-box case
+        with open(filename, 'rb') as fid:
+            for i,star in enumerate(star_ind):
+                if star[1]%2 == 0: # even pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[:box_dim-1])
+                
+                else: # odd pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[1:])
+                    
+            if timestamp:
+                fid.seek(152,0)
+                img_time = fid.read(29).decode('utf-8')
+                return flux,img_time
+            else:
+                return flux
+                    
+                    
+    else: # odd half-box case
+        with open(filename, 'rb') as fid:
+            for i,star in enumerate(star_ind):
+                if star[1]%2 == 1: # odd pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[:box_dim-1])
+                
+                else: # even pixel case
+                    for j in range(box_dim):
+                        fid.seek(384 + 24576*(gain_high + 2*(star[0] + j - half_box)) + 12*(star[1] - half_box - 1), 0)
+                        bit_buffer[j] = np.fromfile(fid, dtype=np.uint8, count=bits_to_read)
+                        
+                    flux[i] = np.sum(conv_12to16(bit_buffer.flatten())[1:])
+                    
+            if timestamp:
+                fid.seek(152,0)
+                img_time = fid.read(29).decode('utf-8')
+                return flux,img_time
+            else:
+                return flux
+            
 
 ##############################
 ## Dip Detection
