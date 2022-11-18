@@ -125,17 +125,19 @@ def noDriftMask(np.ndarray[UI16, ndim=2] star_ind,
 
 
 @cython.wraparound(False)
-def fluxBitString(list mindir,
+def fluxBitString(list imgdir,
                   np.ndarray[UI16, ndim=2] star_coords,
                   int box_dim=7,
                   int l=2048,
                   int pixel_buffer=20,
                   bint gain_high=True):
     """
-    
+    Obtain the flux of stars for a list of images in a given minute. Uses a 
+    square flux aperature, eliminates stars near the boundaries, and uses a
+    selective bit reading method for I/O.
 
     Args:
-        mindir (list): DESCRIPTION.
+        imgdir (list): DESCRIPTION.
         star_coords (list): Pixel coordinates of the star centrodis to be analyzed.
         box_dim (int, optional): Width of integration box (in px). Must be odd
                                  to be symmetric.
@@ -174,7 +176,7 @@ def fluxBitString(list mindir,
     ## indices and read in the relevant bits for all stars. Then convert
     ## to uint16 type. Group the relevant integers and sum the fluxes.
     cdef list timestamps = []
-    for frame,path in enumerate(mindir):
+    for frame,path in enumerate(imgdir):
         with open(path,'rb') as fid:
             # Get frame timestamp
             fid.seek(152,0)
@@ -192,10 +194,6 @@ def fluxBitString(list mindir,
 
                 
     return flux
-                
-            
-                
-                
 
 
 @cython.wraparound(False)
