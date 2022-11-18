@@ -379,39 +379,22 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                    (x_drift, y_drift))        
             
         gc.collect()
+        
+        #loop through each detected object
+        dipResults = np.array([cp.dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold) for starNum in range(0,num_stars)],
+                              dtype=object)
     
             
     else:  # if there is not significant drift, don't account for drift  in photometry
         
         print('No drift')
         
-        # Loop through each image in the minute-long dataset in chunks
-        chunk_size = 10
-        residual   = (num_images-1)%chunk_size
-        for i in range((num_images-1)//chunk_size):
-            imageFile,imageTime = cir.importFramesRCD(imagePaths,chunk_size*i+1, chunk_size, bias)
-            headerTimes = headerTimes + imageTime
-            starData[chunk_size*i+1:chunk_size*(i+1)+1] = cp.getStationaryFlux(imageFile,
-                                                                               deepcopy(starData[chunk_size*i]),
-                                                                               imageTime,
-                                                                               ap_r,
-                                                                               num_stars,
-                                                                               (x_length, y_length))
-                
-            gc.collect()
-            
-        # Process remaining chunks
-        imageFile,imageTime = cir.importFramesRCD(imagePaths,
-                                                  num_images-(num_images-1)%chunk_size,
-                                                  (num_images-1)%chunk_size,
-                                                  bias)
-        headerTimes = headerTimes + imageTime
-        starData[num_images-residual:] = cp.getStationaryFlux(imageFile,
-                                                              deepcopy(starData[num_images-residual-1]),
-                                                              imageTime,
-                                                              ap_r,
-                                                              num_stars,
-                                                              (x_length, y_length))
+        star_xy,star_flux,imgtimes = cp.fluxBitString(imagePaths,
+                                                      initial_positions[:,:2],
+                                                      box_dim=7,
+                                                      gain_high=gain_high)
+        
+        dipResults = np.array([cp.dipDetection(star_flux[:,starNum], kernel, starNum, sigma_threshold) for starNum in range(0,len(star_xy))])
             
         gc.collect()
 
@@ -424,10 +407,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     ''' Dip detection '''
    
     #perform dip detection for all stars
-    
-    #loop through each detected object
-    dipResults = np.array([cp.dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold) for starNum in range(0,num_stars)],
-                          dtype=object)
    
     # event_frames = dipResults[:,0]         #array of event frames (-1 if no event detected, -2 if incomplete data)
     # light_curves = dipResults[:,1]         #array of light curves (empty if no event detected)

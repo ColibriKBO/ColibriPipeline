@@ -533,7 +533,7 @@ def fluxBitString(list imgdir,
     selective bit reading method for I/O.
 
     Args:
-        imgdir (list): DESCRIPTION.
+        imgdir (list): List of image paths to read in.
         star_coords (list): Pixel coordinates of the star centrodis to be analyzed.
         box_dim (int, optional): Width of integration box (in px). Must be odd
                                  to be symmetric.
@@ -550,9 +550,10 @@ def fluxBitString(list imgdir,
     """
 
     ## Type definitions
+    cdef int half_box,ints_to_read,bits_to_read
     cdef int frame,i,ind
     cdef str path
-    cdef np.ndarray clipped_ind,seek_ind,identifier,bit_buffer,star,flux
+    cdef np.ndarray clipped_ind,seek_ind,identifier,bit_buffer,star,partial_flux,flux,imgtimes
 
     ## Integration variables
     half_box = box_dim//2
@@ -588,8 +589,10 @@ def fluxBitString(list imgdir,
             for i,star in enumerate(identifier):
                 flux[frame][i] = np.sum(partial_flux[star])
 
-                
-    return np.hstack((clipped_ind,flux))
+    
+    # Convert time to unix and zip
+    imgtimes = Time(timestamps,precision=9).unix
+    return clipped_ind,flux,imgtimes
 
 
 @cython.wraparound(False)
