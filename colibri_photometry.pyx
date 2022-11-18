@@ -17,6 +17,7 @@ import sep
 import pathlib
 import datetime
 from copy import deepcopy
+from time import time
 from astropy.io import fits
 from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
@@ -519,7 +520,6 @@ def noDriftMask(np.ndarray[UI16, ndim=2] star_ind,
     return seek_ind[:,0],ind_loc
 
 
-
 @cython.wraparound(False)
 def fluxBitString(list imgdir,
                   np.ndarray[UI16, ndim=2] star_coords,
@@ -552,14 +552,16 @@ def fluxBitString(list imgdir,
     ## Type definitions
     cdef int half_box,ints_to_read
     cdef int frame,i,ind
-    cdef np.ndarray clipped_ind,seek_ind,identifier,bit_buffer,star,partial_flux,flux,imgtimes
+    cdef np.ndarray clipped_ind,seek_ind,identifier,bit_buffer,star,reshape16b,partial_flux,flux,imgtimes
 
     ## Integration variables
     half_box = box_dim//2
     ints_to_read = (box_dim + 1)*3//2
     #print(ints_to_read)
     
+    
     ## Eliminate stars too close to the border
+    t0 = time()
     clipped_ind = star_coords[np.all(star_coords > pixel_buffer, axis=1) & \
                            np.all(star_coords < l - pixel_buffer, axis=1)]
     
@@ -574,10 +576,10 @@ def fluxBitString(list imgdir,
     ## to uint16 type. Group the relevant integers and sum the fluxes.
     cdef list timestamps = []
     for frame,path in enumerate(imgdir):
-        print(path)
+        #print(path)
         with open(path,'rb') as fid:
-            fid.seek(-1,2)
-            print(fid.tell(), np.max(seek_ind))
+            #fid.seek(-1,2)
+            #print(fid.tell(), np.max(seek_ind))
             
             # Get frame timestamp
             fid.seek(152,0)
@@ -589,9 +591,7 @@ def fluxBitString(list imgdir,
                 #print(ind,fid.tell())
                 #print(ind,identifier[i])
                 #bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
-                bitarr = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
-                #print(bitarr)
-                bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = bitarr
+                bit_buffer[i*ints_to_read:(i+1)*ints_to_read] = np.fromfile(fid, dtype=np.uint8, count=ints_to_read)
             
             # Convert 8-bit imposter ints to 16-bit proper ints, reshape, and sum
             #print("Bitbuffer",np.shape(bit_buffer))
