@@ -25,6 +25,7 @@ cimport numpy as np
 np.import_array()
 
 # Compile Typing Definitions 
+ctypedef np.uint8_t UI8
 ctypedef np.uint16_t UI16
 ctypedef np.float64_t F64
 
@@ -76,7 +77,7 @@ def readRCD(filename):
     """
 
     ## Type definitions
-    cdef np.ndarray table
+    cdef np.ndarray[UI8, ndim=1] table = np.empty((12582912),np.uint8)
 
     ## Open .rcd file and extract the observation timestamp and data
     with open(filename, 'rb') as fid:
@@ -111,7 +112,7 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
 
 #@cython.boundscheck(False)
 @cython.wraparound(False)
-def importFramesRCD(image_paths,
+def importFramesRCD(list image_paths,
                     int  start_frame=0, 
                     int  num_frames=1,
                     np.ndarray[F64, ndim=2] bias=np.zeros((1,1),dtype=np.float64)):
@@ -183,6 +184,42 @@ def importFramesRCD(image_paths,
     img_array = np.subtract(img_array, bias, dtype=np.float64)
     
     return img_array,img_times        
+
+
+def readSingleRCD(str img_path,
+                  np.ndarray[UI16, ndim=2] bias):
+    """
+    Read in a single .rcd format frame.
+
+    Args:
+        img_path (TYPE): Path to image to be read.
+        bias (arr): 2D array of bias data.
+
+    Returns:
+        img_array (arr): Image data in a 2D array
+        img_time (str): Header time of the image.
+
+    """
+    
+    ## Type definitions
+    cdef unsigned int IMG_DIM = 2048
+    cdef str img_time,hour
+    cdef np.ndarray[UI8, ndim=1] buffer = np.empty((12582912),np.uint8)
+    cdef np.ndarray[UI16, ndim=2] img_array  = np.empty([IMG_DIM,IMG_DIM],
+                                                         np.uint16)
+    
+    ## Load in image data and header time
+    buffer, img_time = readRCD(img_path)
+    img_array = split_images(conv_12to16(buffer),IMG_DIM,IMG_DIM)
+    img_array = np.subtract(img_array, bias, np.uint16)
+    
+    ## Adjust timestamp if necessary
+    hour = img_time.split('T')[1].split(':')[0]
+    if int(hour) > 23:
+        img_time = img_time.replace('T' + hour, 'T' + str(int(hour) % 24))
+        
+    return img_array,img_time
+    
 
 
 ##############################

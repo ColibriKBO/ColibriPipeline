@@ -22,13 +22,14 @@ from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
 
 # Custom Script Imports
-
+import colibri_image_reader as cir
 
 # Cython-Numpy Interface
 cimport numpy as np
 np.import_array()
 
 # Compile Typing Definitions
+ctypedef np.uint8_t UI8
 ctypedef np.uint16_t UI16
 ctypedef np.float64_t F64
 
@@ -116,6 +117,44 @@ def refineCentroid(np.ndarray[F64, ndim=2] img_data,
 ##############################
 ## Image Manipulation Tools
 ##############################
+
+@cython.wraparound(False)
+def readForFlux(list image_paths,
+                np.ndarray[F64, ndim=2] bias,
+                unsigned int r,
+                unsigned int skip_frames=0):
+    """
+    A specific method for reading in a directory of frames (ignoring the first
+    n frames) to obtain the flux of the stars in the image. Does not assume
+    stationary stars. Assumes a square image of dim=(2048,2048).
+
+    Args:
+        image_paths (list): Ordered list of filepaths to the science images.
+        bias (arr): Master bias image to be subtracted from all science images.
+        r (uint): Radius of aperture for flux measurements.
+        skip_frames (uint, optional): Number of frames to skip. Defaults to 0.
+
+    Returns:
+        None.
+
+    """
+    
+    ## Type definitions
+    cdef unsigned int IMG_DIM = 2048
+    cdef str first_time,last_time,curr_time
+    cdef list time_list
+    cdef np.ndarray[UI8, ndim=1] buffer = np.empty((12582912),np.uint8)
+    cdef np.ndarray[UI16, ndim=2] first_frame = np.empty([IMG_DIM,IMG_DIM],
+                                                         np.uint16)
+    cdef np.ndarray[UI16, ndim=2] last_frame  = np.empty([IMG_DIM,IMG_DIM],
+                                                         np.uint16)
+    cdef np.ndarray[UI16, ndim=2] curr_frame  = np.empty([IMG_DIM,IMG_DIM],
+                                                         np.uint16)
+    
+    ## Drift calculations
+    
+    
+    
 
 def sumFlux(np.ndarray[F64, ndim=2] img_data,
             np.ndarray[F64, ndim=2] star_coords,
@@ -307,89 +346,6 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     star_data = tuple(zip(x, y, fluxes, np.full(len(fluxes), curr_time)))
     return star_data
 
-
-@cython.wraparound(False)
-def timeEvolve3D(np.ndarray[F64, ndim=3] img_stack,
-                 np.ndarray[F64, ndim=2] first_img,
-                 list img_times,
-                 int r,
-                 int num_stars,
-                 tuple pix_length,
-                 tuple pix_drift=(0,0)):
-    """
-    Adjusts aperture based on star drift and calculates flux in aperture.
-    !!!Currently does not work!!!
-    
-        Parameters:
-            img_stack (arr): 3D image flux array of stacked minute directory
-            img_times (list): List of header image times (not formatted)
-            r (int): Aperture radius to sum flux (in pixels)
-            numStars (int): Number of stars in image
-            pix_length (tuple): Image pixel length as (x_length,y_length)
-            pix_drift (tuple): Image drift rate as (x_drift,y_drift) (in px/s)
-            
-        Returns:
-            star_data (tuple): New star coordinates, image flux, time as tuple
-     """
-    
-# =============================================================================
-#     ## Type definitions
-#     cdef int num_frames,ind,frame,pixel_buffer
-#     cdef list fluxes
-#     cdef tuple star_data
-#     cdef np.ndarray unix_time,drift_time,x,y,stars,x_clipped,y_clipped
-#     cdef np.ndarray xmask,ymask,xymask,fluxarr
-#     
-#     ## Calculate time between subsequent frames
-#     num_frames = len(img_times)
-#     unix_time  = Time(img_times,precision=9).unix
-#     drift_time = unix_time -  first_img[1,3]
-#     
-#     ## Incorporate drift into each star's coords based on time since last frame
-#     ## Returns a 2D array with each 0-axis slice being a frame
-#     x = np.array([[first_img[ind, 0] + pix_drift[0]*drift_time[frame] for ind in range(0, num_stars)]
-#                    for frame in range(0,num_frames)])
-#     y = np.array([[first_img[ind, 1] + pix_drift[1]*drift_time[frame] for ind in range(0, num_stars)]
-#                    for frame in range(0,num_frames)])
-#     
-#     ## Eliminate stars too near the field of view boundary
-#     edge_stars = clipCutStars(x, y, *pix_length)
-#     edge_stars = np.sort(np.unique(edge_stars))
-#     x_clipped  = np.delete(x,edge_stars)
-#     y_clipped  = np.delete(y,edge_stars)
-#     
-#     ## Assign integrated flux to each star, and then insert 0 for edge stars
-#     #TODO: be clever about doing this with numpy arrays
-#     fluxes = (sep.sum_circle(curr_img, 
-#                              x_clipped, y_clipped, 
-#                              r, 
-#                              bkgann = (r + 6., r + 11.))[0]).tolist()
-#     for i in edge_stars:
-#         fluxes.insert(i,0)
-#         
-#     ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
-#     star_data = tuple(zip(x, y, fluxes, np.full(len(fluxes), curr_time)))
-#     return star_data
-#     
-#     ## Mask the out-of-bounds stars
-#     pixel_buffer = 20
-#     xmask  = ma.masked_outside(x, pixel_buffer,pix_length[0]-pixel_buffer)[1]
-#     ymask  = ma.masked_outside(y, pixel_buffer,pix_length[1]-pixel_buffer)[1]
-#     xymask = ma.array(xmask, mask=ymask)[1]
-#     
-#     ## Generate fluxes for each star and then mask the invalid ones
-#     fluxes  = [sep.sum_circle(img_stack[frame],x[frame],y[frame],r,bkgann = (r + 6., r + 11.))[0]
-#                for frame in range(0,num_frames)]
-#     fluxarr = ma.array(fluxes, mask=xymask, fill_value=0.0)
-#     
-#     ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
-#     star_data = tuple(zip(x, y, fluxes, np.full((num_frames,num_stars), np.vstack(unix_time))))
-#     return np.transpose(star_data,axes=[0,2,1]) # rotate axes to get correct shape
-# =============================================================================
-
-    #TODO: finish this method
-    raise NotImplementedError("Do not use this method! It is not working correctly.")
-    pass
     
 
 @cython.boundscheck(False)
