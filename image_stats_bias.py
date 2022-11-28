@@ -259,8 +259,8 @@ if __name__ == '__main__':
         
         '''------------set up paths to directories------------------'''
         #base_path = pathlib.Path('/', 'D:/')      
-        data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
-        save_path = base_path.joinpath('ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
+        data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
+        save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
         
         save_path.mkdir(parents=True, exist_ok=True)        #make save directory if it doesn't already exist
 
