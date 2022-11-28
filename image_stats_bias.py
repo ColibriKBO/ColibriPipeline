@@ -258,7 +258,7 @@ if __name__ == '__main__':
         obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
         
         '''------------set up paths to directories------------------'''
-        #base_path = pathlib.Path('/', 'D:/')      
+        #base_path = pathlib.Path('/', 'D:')      
         data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
         save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
         
