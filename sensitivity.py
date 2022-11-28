@@ -206,7 +206,7 @@ arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri proce
 
 arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
 arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
-arg_parser.add_argument('-t', '--threshold', help='Star detection threshold.', default='10')
+arg_parser.add_argument('-t', '--threshold', help='Star detection threshold.', default='4')
 arg_parser.add_argument('-m', '--minute', help='hh.mm.ss to process.')
 arg_parser.add_argument('-l', '--lightcurve', help='Star detection threshold.', default=True)
 
@@ -351,7 +351,7 @@ stars = pd.DataFrame(snplots.snr_single(lightcurve_path), columns = ['X', 'Y', '
 '''----------------matching tables----------------------------'''
 print('matching tables')
 # 1: match (RA, dec) from light curves with (RA, dec) from Gaia to get magnitudes
-SR = 0.0038   #half side length of search box in degrees (21 arcsec)
+SR = 0.0008   #half side length of search box in degrees (3 arcsec)
 
 rd_mag = match_RADec(coords_df, gaia, SR)       #dataframe of Colibri detections with Gaia magnitudes {X, Y, ra, dec, gmag}
 
@@ -417,3 +417,4 @@ final['ra_diff'] = (final['ra'] - final['Gaia_RA'])*np.cos(np.radians(final['dec
 final['dec_diff']  = (final['dec'] - final['Gaia_dec'])
 
 RAdec_diffPlot(final)
+
