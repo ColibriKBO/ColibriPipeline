@@ -351,7 +351,7 @@ stars = pd.DataFrame(snplots.snr_single(lightcurve_path), columns = ['X', 'Y', '
 '''----------------matching tables----------------------------'''
 print('matching tables')
 # 1: match (RA, dec) from light curves with (RA, dec) from Gaia to get magnitudes
-SR = 0.0008   #half side length of search box in degrees (3 arcsec)
+SR = 1/3600   #half side length of search box in degrees (1 arcsec)
 
 rd_mag = match_RADec(coords_df, gaia, SR)       #dataframe of Colibri detections with Gaia magnitudes {X, Y, ra, dec, gmag}
 
