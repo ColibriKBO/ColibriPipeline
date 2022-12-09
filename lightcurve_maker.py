@@ -876,7 +876,7 @@ def getLightcurves(folder, savefolder, ap_r, gain, telescope, detect_thresh):
     data[0] = tuple(zip(initial_positions[:,0], 
                         initial_positions[:,1], 
                         #sum_flux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
-                        (sep.sum_circle(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r, bkgann = (ap_r+2., ap_r + 4.))[0]).tolist(), 
+                        (sep.sum_circle(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r, bkgann = (inner_annulus, outer_annulus),gain=0.82)[0]).tolist(), 
                         np.ones(np.shape(np.array(initial_positions))[0]) * (Time(first_frame[1], precision=9).unix)))
 
     if drift:  # time evolve moving stars
