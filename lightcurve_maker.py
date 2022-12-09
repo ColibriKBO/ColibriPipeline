@@ -154,22 +154,27 @@ def timeEvolveFITS(data, t, coords, x_drift, y_drift, r, stars, x_length, y_leng
     y = [coords[ind, 1] + y_drift*drift_time for ind in range(0, stars)]
     
     '''get list of indices near edge of frame'''
-    EdgeInds = clipCutStars(x, y, x_length, y_length)
-    EdgeInds = list(set(EdgeInds))
-    EdgeInds.sort()
     
-    '''remove stars near edge of frame'''
-    xClip = np.delete(np.array(x), EdgeInds)
-    yClip = np.delete(np.array(y), EdgeInds)
+    #2022-12-06 Roman A. commented out removing stars that are drifting closer to the edge
+    
+#    EdgeInds = clipCutStars(x, y, x_length, y_length)
+#    EdgeInds = list(set(EdgeInds))
+#    EdgeInds.sort()
+#    
+#    '''remove stars near edge of frame'''
+#    xClip = np.delete(np.array(x), EdgeInds)
+#    yClip = np.delete(np.array(y), EdgeInds)
     
     '''add up all flux within aperture'''
    #bkg = np.median(data) * np.pi * r * r
    # sepfluxes = (sep.sum_circle(data, xClip, yClip, r)[0] - bkg).tolist()
-    sepfluxes = (sep.sum_circle(data, xClip, yClip, r, bkgann = (r + 6., r + 11.))[0]).tolist()
+
+#    sepfluxes = (sep.sum_circle(data, xClip, yClip, r, bkgann = (inner_annulus, outer_annulus),gain=0.82,err=bkg_rms)[0]).tolist()
+    sepfluxes = (sep.sum_circle(data, x, y, r, bkgann = (inner_annulus, outer_annulus),gain=0.82)[0]).tolist()
     
     '''set fluxes at edge to 0'''
-    for i in EdgeInds:
-        sepfluxes.insert(i,0)
+#    for i in EdgeInds:
+#        sepfluxes.insert(i,0)
         
     '''returns x, y star positions, fluxes at those positions, times'''
     star_data = tuple(zip(x, y, sepfluxes, np.full(len(sepfluxes), frame_time)))
@@ -188,23 +193,27 @@ def timeEvolveFITSNoDrift(data, t, coords, r, stars, x_length, y_length):
     y = [coords[ind, 1] for ind in range(0, stars)]
     
     '''get list of indices near edge of frame'''
-    EdgeInds = clipCutStars(x, y, x_length, y_length)
-    EdgeInds = list(set(EdgeInds))
-    EdgeInds.sort()
     
-    '''remove stars near edge of frame'''
-    xClip = np.delete(np.array(x), EdgeInds)
-    yClip = np.delete(np.array(y), EdgeInds)
+        #2022-12-06 Roman A. commented out removing stars that are drifting closer to the edge
+    
+#    EdgeInds = clipCutStars(x, y, x_length, y_length)
+#    EdgeInds = list(set(EdgeInds))
+#    EdgeInds.sort()
+#    
+#    '''remove stars near edge of frame'''
+#    xClip = np.delete(np.array(x), EdgeInds)
+#    yClip = np.delete(np.array(y), EdgeInds)
     
     '''add up all flux within aperture'''
    # bkg = np.median(data) * np.pi * r * r
    # sepfluxes = (sep.sum_circle(data, xClip, yClip, r)[0] - bkg).tolist()
-    sepfluxes = (sep.sum_circle(data, xClip, yClip, r, bkgann = (r + 6., r + 11.))[0]).tolist()
+#    sepfluxes = (sep.sum_circle(data, xClip, yClip, r,bkgann = (inner_annulus, outer_annulus))[0]).tolist()
+    sepfluxes = (sep.sum_circle(data, x, y, r,bkgann = (inner_annulus, outer_annulus))[0]).tolist()
 
     '''set fluxes at edge to 0'''
-    for i in EdgeInds:
-        sepfluxes.insert(i,0)
-    
+#    for i in EdgeInds:
+#        sepfluxes.insert(i,0)
+#    
     '''returns x, y star positions, fluxes at those positions, times'''
     star_data = tuple(zip(x, y, sepfluxes, np.full(len(sepfluxes), frame_time)))
     return star_data
@@ -674,6 +683,12 @@ def getLightcurves(folder, savefolder, ap_r, gain, telescope, detect_thresh):
     """
     ''' set up directory names '''
     dayfolder = folder.parent  		#directory for the night
+    global inner_annulus
+    inner_annulus = 5
+    global outer_annulus 
+    outer_annulus = 8
+    global Edge_buffer
+    Edge_buffer=10
     minutefolder = folder.name 		#name string containing date and time of current minute
     
     #set True to process .rcd files, otherwise process .fits files
@@ -757,42 +772,47 @@ def getLightcurves(folder, savefolder, ap_r, gain, telescope, detect_thresh):
     star_find_results = tuple(initialFindFITS(stacked, detect_thresh))
 
         
-    #remove stars where centre is too close to edge of frame
+        #remove stars where centre is too close to edge of frame
     before_trim = len(star_find_results)
-    star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + 3 < x_length and x[0] - ap_r - 3 > 0)
-    star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + 3 < x_length and y[1] - ap_r - 3 > 0)
+#    star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + 18 < x_length and x[0] - ap_r - 18 > 0)
+#    star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + 18 < x_length and y[1] - ap_r - 18 > 0)
+    star_find_results = tuple(x for x in star_find_results if x[0] + Edge_buffer < x_length and x[0] - Edge_buffer > 0)
+    star_find_results = tuple(y for y in star_find_results if y[1] + Edge_buffer < x_length and y[1] - Edge_buffer > 0)
     after_trim = len(star_find_results)
     
     print('Number of stars cut because too close to edge: ', before_trim - after_trim)
         
       
     #check number of stars for bad first image
-    i = 0  #counter used if several images are poor
-    min_stars = 10  #minimum stars in an image
-    while len(star_find_results) < min_stars:
-        print('too few stars, moving to next image ', len(star_find_results))
-
-        if RCDfiles == True:
-            first_frame = importFramesRCD(folder, filenames, 1+i, 1, bias, gain)
-            headerTimes = [first_frame[1]]
-            star_find_results = tuple(initialFindFITS(first_frame[0], detect_thresh))
-        else:
-            first_frame = importFramesFITS(folder, filenames, 1+i, 1, bias)
-            headerTimes = [first_frame[1]]
-            star_find_results = tuple(initialFindFITS(first_frame[0], detect_thresh))
-
-            # star_find_results = tuple(x for x in star_find_results if x[0] > 250)
-        
-             #remove stars where centre is too close to edge of frame
-        star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + 3 < x_length and x[0] - ap_r - 3 > 0)
-        star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + 3 < x_length and y[1] - ap_r - 3 > 0)
-        i += 1
-             #check if out of bounds
-        if (1+i) >= num_images:
-            print('no good images in minute: ', folder)
-            print (datetime.datetime.now(), "Closing:", folder)
-            print ("\n")
-            return -1
+    
+    #2022-12-06 Roman A. commented out section where it loops through frames if less than 10 stars found
+    
+#    i = 0  #counter used if several images are poor
+#    min_stars = 10  #minimum stars in an image
+#    while len(star_find_results) < min_stars:
+#        print('too few stars, moving to next image ', len(star_find_results))
+#
+#        if RCDfiles == True:
+#            first_frame = importFramesRCD(folder, filenames, 1+i, 1, bias, gain)
+#            headerTimes = [first_frame[1]]
+#            star_find_results = tuple(initialFindFITS(first_frame[0], detect_thresh))
+#        else:
+#            first_frame = importFramesFITS(folder, filenames, 1+i, 1, bias)
+#            headerTimes = [first_frame[1]]
+#            star_find_results = tuple(initialFindFITS(first_frame[0], detect_thresh))
+#
+#            # star_find_results = tuple(x for x in star_find_results if x[0] > 250)
+#        
+#             #remove stars where centre is too close to edge of frame
+#        star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + 3 < x_length and x[0] - ap_r - 3 > 0)
+#        star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + 3 < x_length and y[1] - ap_r - 3 > 0)
+#        i += 1
+#             #check if out of bounds
+#        if (1+i) >= num_images:
+#            print('no good images in minute: ', folder)
+#            print (datetime.datetime.now(), "Closing:", folder)
+#            print ("\n")
+#            return -1
 
     #print('star finding file index: ', i)
         
@@ -870,7 +890,7 @@ def getLightcurves(folder, savefolder, ap_r, gain, telescope, detect_thresh):
                 imageFile = importFramesFITS(folder, filenames, t, 1, bias)
                 headerTimes.append(imageFile[1])  #add header time to list
 
-            data[t] = timeEvolveFITS(*imageFile, deepcopy(data[t - 1]), 
+            data[t] = timeEvolveFITS(imageFile[0], imageFile[1][0], deepcopy(data[t - 1]), 
                                      x_drift, y_drift, ap_r, num_stars, x_length, y_length)
             
             
@@ -886,7 +906,7 @@ def getLightcurves(folder, savefolder, ap_r, gain, telescope, detect_thresh):
                 headerTimes.append(imageFile[1])  #add header time to list
             
             #calculate star fluxes from image
-            data[t] = timeEvolveFITSNoDrift(*imageFile, deepcopy(data[t - 1]), 
+            data[t] = timeEvolveFITSNoDrift(imageFile[0], imageFile[1][0], deepcopy(data[t - 1]), 
                                      ap_r, num_stars, x_length, y_length)
 
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]  
