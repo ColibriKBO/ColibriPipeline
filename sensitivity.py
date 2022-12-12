@@ -372,7 +372,9 @@ print('making mag vs snr plot')
 plt.scatter(final['GMAG'], final['SNR'], s = 5, label = 'Airmass: %.2f\nAlt, Az: (%.2f, %.2f)' % (airmass, altitude, azimuth))
 
 #plt.ylim(0, 16)
-plt.title('ap r = ' + str(ap_r) + ', ' + str(field_centre) + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
+#plt.title('ap r = ' + str(ap_r) + ', ' + str(field_centre) + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain)
+plt.title('ap r = ' + str(ap_r) + ', ' + str(field_centre) + ', ' + telescope + ', ' + str(obs_date) + ', ' + str(obs_time) + ', ' + gain+
+    ', stars:'+ str(np.sum(~np.isnan(np.array(final['GMAG'])))))
 #plt.title('Sensitivity limits for "%s" telescope at airmass %.1f' %(telescope, airmass))
 plt.xlabel('Gaia g-band magnitude')
 #plt.ylabel('Star signal-to-noise ratio')
