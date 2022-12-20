@@ -382,18 +382,21 @@ def kernelMatch(eventData, kernels, starNum, directory, starData_df,scope,filena
             StatMin = new_StatMin       #best matching statistical minimum
                 
     #list of Poisson uncertainty values for the event
-    eventSigmaP = sigmaP[MatchStart:MatchStart + len(kernels[active_kernel])]   
-    thresh = 0   #starting for sum in LHS of Eq. 2 in Pass 2018
+    
+    #2022-12-20 Roman A. commented out unnecessary threchold check
+    
+    #eventSigmaP = sigmaP[MatchStart:MatchStart + len(kernels[active_kernel])]   
+    #thresh = 0   #starting for sum in LHS of Eq. 2 in Pass 2018
     
     #unnecessary if we're sure kernels span 20-40% dip RAB Mar 15 2022
-    for P in eventSigmaP:
-        thresh += (abs(sigmaNorm)) / (abs(P))  # kernel match threshold - LHS of Eq. 2 in Pass 2018
+    #for P in eventSigmaP:
+        #thresh += (abs(sigmaNorm)) / (abs(P))  # kernel match threshold - LHS of Eq. 2 in Pass 2018
     
     
     '''------------check event for significance ---------------------'''
     
     #check if dip is significant to call a candidate event
-    if thresh > StatMin:      #Eq. 2 in Pass 2018
+    #if thresh > StatMin:      #Eq. 2 in Pass 2018
             
       #  critFrame = np.where(fluxProfile == fluxProfile[dipFrame])[0]    #time of event
      #   critFrame = dipFrame    
@@ -401,26 +404,26 @@ def kernelMatch(eventData, kernels, starNum, directory, starData_df,scope,filena
      #       raise ValueError
         
         #get parameters (TNO size, stellar size, impact param, shift adjustment) for best match
-        params = getKernelParams(active_kernel)
+    params = getKernelParams(active_kernel)
         
         #make plot with all the event information
-        plot = plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, starNum, directory, params, bkgd_fitLine, StatMin, starData_df,scope,filename)
+    plot = plotKernel(fluxProfile, eventData, kernels[active_kernel], MatchStart, starNum, directory, params, bkgd_fitLine, StatMin, starData_df,scope,filename)
 
         #reject events with a large jump in time between exposures
-        if plot < 0:
-            return -1
+    if plot < 0:
+        return -1
         
         #return results
-        return active_kernel, StatMin, MatchStart, params  # returns location in original time series where dip occurs
+    return active_kernel, StatMin, MatchStart, params  # returns location in original time series where dip occurs
         
-    else:
-        print('Event in star %s did not pass threshold' % starNum)
+    #else:
+        #print('Event in star %s did not pass threshold' % starNum)
         
         #params = getKernelParams(active_kernel)
         
         #plotKernel(fluxProfile, fluxTimes, kernels[active_kernel], MatchStart, dipFrame, num, directory, params, bkgd_fitLine)
         
-        return -1  # reject events that do not pass kernel matching
+        #return -1  # reject events that do not pass kernel matching
     
     
 
