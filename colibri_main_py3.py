@@ -269,7 +269,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             print(f"no good images in minute: {minuteDir}")
             print (f"{datetime.datetime.now()} Closing: {minuteDir}")
             print ("\n")
-            return -1
+            return
         
     #print('star finding file index: ', i)
     
@@ -595,7 +595,8 @@ if __name__ == '__main__':
     
     if cml_args.test:
         # Processing parameters
-        RCDfiles,runPar,gain_high = True,True,True
+        RCDfiles,gain_high = True,True
+        runPar = cml_args.noparallel
         sigma_threshold = cml_args.sigma
         
         # Target data
@@ -672,27 +673,29 @@ if __name__ == '__main__':
     if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
+        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), telescope+'_done.txt')
         
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
-                 base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(0,len(minute_dirs)))
+                 base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(len(minute_dirs)))
         
         try:
             star_minutes = pool.starmap(firstOccSearch,args)
+            end_time = timer.time()
+            starhours = sum(star_minutes)/(2399*60.0)
+            print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
+            print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
+            
+            with open(finish_txt, 'w') as f:
+                f.write(f'Calculated {starhours} star-hours\n')
+                f.write(f'Ran for {end_time - start_time} seconds')
         except:
+            end_time = timer.time()
             logging.exception("failed to parallelize")
+            
         pool.close()
         pool.join()
-
-        end_time = timer.time()
-        starhours = sum(star_minutes)/(2399*60.0)
-        print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
-        print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
-        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), telescope+'_done.txt')
-        with open(finish_txt, 'w') as f:
-            f.write(f'Calculated {starhours} star-hours\n')
-            f.write(f'Ran for {end_time - start_time} seconds')
 
 
 ###########################
@@ -700,9 +703,9 @@ if __name__ == '__main__':
 ###########################  
 
     else:
-        raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
+        #raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
-        for f in range(0, len(minute_dirs)):
+        for f in range(len(minute_dirs)):
            
             # Added a check to see if the fits conversion has been done. - MJM 
             #only run this check if we want to process fits files - RAB
@@ -732,8 +735,8 @@ if __name__ == '__main__':
             start_time = timer.time()
 
             print('Running sequentially...')
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
+            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
+                           base_path,obs_date,telescope,RCDfiles,gain_high)
             
             gc.collect()
 
