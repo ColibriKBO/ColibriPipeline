@@ -467,7 +467,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         date = headerTimes[f].split('T')[0]                                 #date of event
         time = headerTimes[f].split('T')[1].split('.')[0].replace(':','')   #time of event
         star_coords = initial_positions[np.where(event_frames == f)[0][0]]     #coords of occulted star
-        mstime = headerTimes[f][0].split('T')[1].split('.')[1]                 # micros time of event
+        mstime = headerTimes[f].split('T')[1].split('.')[1]                 # micros time of event
        # print(datetime.datetime.now(), ' saving event in frame', f)
         
         star_all_flux = save_curves[np.where(save_frames == f)][0]  #total light curve for current occulted star
@@ -485,7 +485,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         #     filehandle.write('#\n#\n#\n#\n')
         #     filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
         #     filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
-        #     filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f][0]))
+        #     filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f]))
         #     filehandle.write('#    Telescope: %s\n' %(telescope))
         #     filehandle.write('#    Field: %s\n' %(field_name))
         #     filehandle.write('#    Dip Type: %s\n' %(save_types[np.where(save_frames == f)][0]))
@@ -501,7 +501,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
             filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
             filehandle.write('#\n')
-            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f][0][:26]))
+            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f]))
             filehandle.write('#    Telescope: %s\n' %(telescope))
             filehandle.write('#    Field: %s\n' %(field_name))
             filehandle.write('#    significance: %.3f\n' %(save_sigma[j]))
@@ -524,7 +524,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 
                 #loop through each frame to be saved
                 for i in range(0, len(files_to_save)):  
-                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(headerTimes[:f + save_chunk][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(headerTimes[:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
             
             #if portion of light curve to save is not at the beginning
             else:
@@ -538,7 +538,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                     
                     #loop through each frame to save
                     for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
                 #if the portion of the light curve to save is not at beginning or end of the minute, save the whole portion around the event
                 else:  
@@ -549,7 +549,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                     
                     #loop through each frame to save
                     for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
 
 
