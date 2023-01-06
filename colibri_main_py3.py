@@ -711,24 +711,24 @@ if __name__ == '__main__':
             #only run this check if we want to process fits files - RAB
             if RCDfiles == False:
                 
-                    #check if conversion indicator file is present
-                    if not minute_dirs[f].joinpath('converted.txt').is_file():
+                #check if conversion indicator file is present
+                if not minute_dirs[f].joinpath('converted.txt').is_file():
                         
-                        print('Converting to .fits')
+                    print('Converting to .fits')
                         
-                        #make conversion indicator file
-                        with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
-                            os.utime(str(minute_dirs[f].joinpath('converted.txt')))
+                    #make conversion indicator file
+                    with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
+                        os.utime(str(minute_dirs[f].joinpath('converted.txt')))
                             
-                            #do .rcd -> .fits conversion using the desired gain level
-                            if gain_high:
-                                os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
-                            else:
-                                os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
+                        #do .rcd -> .fits conversion using the desired gain level
+                        if gain_high:
+                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
+                        else:
+                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
                     
-                    else:
-                        print('Already converted raw files to fits format.')
-                        print('Remove file converted.txt if you want to overwrite.')
+                else:
+                    print('Already converted raw files to fits format.')
+                    print('Remove file converted.txt if you want to overwrite.')
 
             print(f"Running on... {minute_dirs[f]}")
 
