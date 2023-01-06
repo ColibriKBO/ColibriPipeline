@@ -464,8 +464,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     j=0
     for f in save_frames:
         
-        date = headerTimes[f][0].split('T')[0]                                 #date of event
-        time = headerTimes[f][0].split('T')[1].split('.')[0].replace(':','')   #time of event
+        date = headerTimes[f].split('T')[0]                                 #date of event
+        time = headerTimes[f].split('T')[1].split('.')[0].replace(':','')   #time of event
         star_coords = initial_positions[np.where(event_frames == f)[0][0]]     #coords of occulted star
         mstime = headerTimes[f][0].split('T')[1].split('.')[1]                 # micros time of event
        # print(datetime.datetime.now(), ' saving event in frame', f)
