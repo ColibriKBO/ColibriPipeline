@@ -369,7 +369,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                   (num_images-1)%chunk_size,
                                                   bias)
         headerTimes = headerTimes + imageTime
-        for i in range(residual)[::-1]:
+        for i in range(residual+1)[1::-1]:
             starData[num_images-i] = cp.timeEvolve(imageFile[residual-i],
                                                    deepcopy(starData[num_images-i-1]),
                                                    imageTime[residual-i],
