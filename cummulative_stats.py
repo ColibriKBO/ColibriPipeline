@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 22 14:39:39 2022
+
+Cummulative statistics for detections and occultations
+
+@author: Roman A.
+"""
+
 from pathlib import Path
 import os
 import shutil
@@ -10,6 +19,20 @@ from matplotlib.ticker import ScalarFormatter
 from matplotlib.ticker import MaxNLocator
 
 def getNightTime(f):
+    """
+    Get time of the night folder
+
+    Parameters
+    ----------
+    f : path type
+        Night folder.
+
+    Returns
+    -------
+    datime
+        date of the night folder.
+
+    """
     try:
         NightTime=datetime.strptime(f.name[0:10], '%Y-%m-%d').date()
     except:
@@ -18,6 +41,20 @@ def getNightTime(f):
     return NightTime
 
 def readSigma(filepath):
+    """
+    Read sigma from det.txt file
+
+    Parameters
+    ----------
+    filepath : path type
+        Txt file of the detections.
+
+    Returns
+    -------
+    sigma : float
+        Event significance.
+
+    """
    
     with filepath.open() as f:
         
@@ -32,16 +69,12 @@ def readSigma(filepath):
     return (sigma)
 
 base_path=Path('/','D:')
-
+#archive pathes
 green_arch=base_path.joinpath('/ColibriArchive')
 red_arch=Path('/','Z:',)
 blue_arch=Path('/','Y:')
 
-# green_arch=Path('/','C:','/Users','Admin','Desktop','Colibri','10-05','green')
-# green_arch=Path('/','E:','/Colibri','Green','ColibriArchive')
-# red_arch=Path('/','C:','/Users','Admin','Desktop','Colibri','10-05','red')
-# blue_arch=Path('/','C:','/Users','Admin','Desktop','Colibri','10-05','blue')
-
+#create directories that will store all the data needed
 
 cumm_dets=green_arch.joinpath('cummulative_detections')
 
@@ -62,6 +95,7 @@ archives=[green_arch,red_arch,blue_arch]
 
 #%% cummulative detections
 for archive in archives:
+    #sort out night dirs to reduce time
     nights=[f for f in archive.iterdir() if ('diagnostics' not in f.name and getNightTime(f)>date(2022, 9, 19) and 'cummulative' not in f.name and f.is_dir())]
     for night in nights:
         print(night)
@@ -73,13 +107,14 @@ for archive in archives:
                 with open(detection) as f:
                     if 'significance' in f.read():
                         try:
-                            shutil.copy2(detection,os.path.join(cumm_dets,detection.name))
+                            shutil.copy2(detection,os.path.join(cumm_dets,detection.name)) #copy detection files
                         except shutil.SameFileError:
                             pass
 
         print(night)
 #%%  cummulative telescope matches    
 
+#sort out night dirs to reduce time
 nights=[f for f in green_arch.iterdir() if ('diagnostics' not in f.name and os.path.getctime(f)>1663609502 and 'cummulative' not in f.name and f.is_dir())]
 for night in nights:
     if os.path.exists(night.joinpath('matched')):
@@ -89,14 +124,14 @@ for night in nights:
             if len(dets)==3:
                 for detection in dets:
                     try:
-                        shutil.copy2(detection,os.path.join(cumm_occults3,detection.name))
+                        shutil.copy2(detection,os.path.join(cumm_occults3,detection.name)) #copy to 3-telescope candidate
                     except:
                         continue
                     
             elif len(dets)==2:
                 for detection in dets:
                     try:
-                        shutil.copy2(detection,os.path.join(cumm_occults2,detection.name))
+                        shutil.copy2(detection,os.path.join(cumm_occults2,detection.name)) #copy to 2-telescope candidate
                     except:
                         continue
             elif len(dets)==1:
