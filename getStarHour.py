@@ -320,6 +320,26 @@ def fieldCoords(fieldname):
     return coords
 
 def getStarHour(main_path, obs_date, threshold=10, gain='high'):
+    """
+    Get string that will tell you field coordinates and star-hours
+
+    Parameters
+    ----------
+    main_path : str
+        base_path for observations, usually it's D:.
+    obs_date : str
+        Observation date eg 2022-11-27.
+    threshold : int, optional
+        Star-finding threshold for SEP. The default is 10.
+    gain : str, optional
+        Image reading gain. The default is 'high'.
+
+    Returns
+    -------
+    summary : str
+        A list of strings with fields, coordinates and starhours.
+
+    """
     # gain='high'
     # threshold=10
 
