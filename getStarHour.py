@@ -4,7 +4,8 @@ Created on Tue Dec 20 11:06:40 2022
 
 @author: Roman A.
 
-documentation will be later
+Return star-hours for each field observed in the night directory based on number of frames of certain fields and
+number of stars in the mid-frame
 """
 from pathlib import Path
 import sep
@@ -271,6 +272,20 @@ def chooseBias(obs_folder, MasterBiasList):
     return bias
 
 def fieldCoords(fieldname):
+    """
+    Get field coordinates based on field index
+
+    Parameters
+    ----------
+    fieldname : str
+        Index name of the field.
+
+    Returns
+    -------
+    coords : str
+        A string of field coordinates.
+
+    """
     if fieldname == 'field1':
         coords='[273.735, -18.638]'
     if fieldname == 'field2':
@@ -304,24 +319,24 @@ def fieldCoords(fieldname):
         
     return coords
 
-def getStarHour(main_path, obs_date):
-    gain='high'
-    threshold=10
+def getStarHour(main_path, obs_date, threshold=10, gain='high'):
+    # gain='high'
+    # threshold=10
 
     main_path=Path(main_path)
-    data_path=main_path.joinpath('/ColibriData',str(obs_date).replace('-', ''))
-    #data_path=main_path.joinpath('/Colibri','Green','ColibriData',str(obs_date).replace('-', ''))
+    data_path=main_path.joinpath('/ColibriData',str(obs_date).replace('-', '')) #path of observed night
+
     
-    minute_dirs=[d for d in data_path.iterdir() if (os.path.isdir(d) and d.name != 'Bias')]
+    minute_dirs=[d for d in data_path.iterdir() if (os.path.isdir(d) and d.name != 'Bias')] #list of minute dirs
     
-    total_frames=[]
-    fields=[]
-    for dirs in minute_dirs:
+    total_frames=[] #total list of all frames observed
+    fields=[] #list of all fields observed
+    for dirs in minute_dirs: #loop through each minute
         frames=[f for f in dirs.iterdir()]
         total_frames.append(frames)
         fields.append(str(frames[0].name).split('_')[0])
         
-    all_frames = []
+    all_frames = [] #flatten the list of frames
     for sublist in total_frames:
         all_frames.extend(sublist)
         
@@ -329,17 +344,21 @@ def getStarHour(main_path, obs_date):
     
     summary=[]
     for field in fields:
-        stars=[f for f in all_frames if field in f.name]
-        
+        stars=[f for f in all_frames if field in f.name] #list of frames for scpecific filed
+        #get Biases in order to read the image
         NumBiasImages = 9
         MasterBiasList = makeBiasSet(data_path.joinpath('Bias'), NumBiasImages, main_path.joinpath('tmp'), gain)
         folder=stars[int(len(stars) / 2)].parent
         
         bias = chooseBias(folder, MasterBiasList)
+        #read mid frame in the list
         img=importFramesRCD([stars[int(len(stars) / 2)]], 0, 1, bias, gain)
+        #use sep to find the number of stars
         star_pos=initialFindFITS(img,threshold)
         # print(len(list(star_pos)))
+        # get field coordinates
         coords=fieldCoords(field)
+        #assuming exposure time is 25ms
         output=f'{field} observed  {len(stars)*0.025/60/60*len(list(star_pos))}  star-hours {coords}'
         print(output)
         summary.append(output)
