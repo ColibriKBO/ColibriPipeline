@@ -691,7 +691,6 @@ if __name__ == '__main__':
                 f.write(f'Calculated {starhours} star-hours\n')
                 f.write(f'Ran for {end_time - start_time} seconds')
         except:
-            end_time = timer.time()
             logging.exception("failed to parallelize")
             
         pool.close()
