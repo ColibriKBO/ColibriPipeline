@@ -269,7 +269,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             print(f"no good images in minute: {minuteDir}")
             print (f"{datetime.datetime.now()} Closing: {minuteDir}")
             print ("\n")
-            return -1
+            return
         
     #print('star finding file index: ', i)
     
@@ -369,7 +369,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                   (num_images-1)%chunk_size,
                                                   bias)
         headerTimes = headerTimes + imageTime
-        for i in range(residual, 0, step=-1):
+        for i in range(residual+1)[1::-1]:
             starData[num_images-i] = cp.timeEvolve(imageFile[residual-i],
                                                    deepcopy(starData[num_images-i-1]),
                                                    imageTime[residual-i],
@@ -464,10 +464,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     j=0
     for f in save_frames:
         
-        date = headerTimes[f][0].split('T')[0]                                 #date of event
-        time = headerTimes[f][0].split('T')[1].split('.')[0].replace(':','')   #time of event
+        date = headerTimes[f].split('T')[0]                                 #date of event
+        time = headerTimes[f].split('T')[1].split('.')[0].replace(':','')   #time of event
         star_coords = initial_positions[np.where(event_frames == f)[0][0]]     #coords of occulted star
-        mstime = headerTimes[f][0].split('T')[1].split('.')[1]                 # micros time of event
+        mstime = headerTimes[f].split('T')[1].split('.')[1]                 # micros time of event
        # print(datetime.datetime.now(), ' saving event in frame', f)
         
         star_all_flux = save_curves[np.where(save_frames == f)][0]  #total light curve for current occulted star
@@ -485,7 +485,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         #     filehandle.write('#\n#\n#\n#\n')
         #     filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
         #     filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
-        #     filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f][0]))
+        #     filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f]))
         #     filehandle.write('#    Telescope: %s\n' %(telescope))
         #     filehandle.write('#    Field: %s\n' %(field_name))
         #     filehandle.write('#    Dip Type: %s\n' %(save_types[np.where(save_frames == f)][0]))
@@ -501,7 +501,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
             filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
             filehandle.write('#\n')
-            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f][0][:26]))
+            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f]))
             filehandle.write('#    Telescope: %s\n' %(telescope))
             filehandle.write('#    Field: %s\n' %(field_name))
             filehandle.write('#    significance: %.3f\n' %(save_sigma[j]))
@@ -524,7 +524,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 
                 #loop through each frame to be saved
                 for i in range(0, len(files_to_save)):  
-                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(headerTimes[:f + save_chunk][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(headerTimes[:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
             
             #if portion of light curve to save is not at the beginning
             else:
@@ -538,7 +538,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                     
                     #loop through each frame to save
                     for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
                 #if the portion of the light curve to save is not at beginning or end of the minute, save the whole portion around the event
                 else:  
@@ -549,7 +549,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                     
                     #loop through each frame to save
                     for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i][0].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
 
 
@@ -595,7 +595,8 @@ if __name__ == '__main__':
     
     if cml_args.test:
         # Processing parameters
-        RCDfiles,runPar,gain_high = True,True,True
+        RCDfiles,gain_high = True,True
+        runPar = cml_args.noparallel
         sigma_threshold = cml_args.sigma
         
         # Target data
@@ -672,27 +673,28 @@ if __name__ == '__main__':
     if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
+        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), telescope+'_done.txt')
         
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
-                 base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(0,len(minute_dirs)))
+                 base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(len(minute_dirs)))
         
         try:
             star_minutes = pool.starmap(firstOccSearch,args)
+            end_time = timer.time()
+            starhours = sum(star_minutes)/(2399*60.0)
+            print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
+            print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
+            
+            with open(finish_txt, 'w') as f:
+                f.write(f'Calculated {starhours} star-hours\n')
+                f.write(f'Ran for {end_time - start_time} seconds')
         except:
             logging.exception("failed to parallelize")
+            
         pool.close()
         pool.join()
-
-        end_time = timer.time()
-        starhours = sum(star_minutes)/(2399*60.0)
-        print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
-        print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
-        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), telescope+'_done.txt')
-        with open(finish_txt, 'w') as f:
-            f.write(f'Calculated {starhours} star-hours\n')
-            f.write(f'Ran for {end_time - start_time} seconds')
 
 
 ###########################
@@ -700,40 +702,40 @@ if __name__ == '__main__':
 ###########################  
 
     else:
-        raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
+        #raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
-        for f in range(0, len(minute_dirs)):
+        for f in range(len(minute_dirs)):
            
             # Added a check to see if the fits conversion has been done. - MJM 
             #only run this check if we want to process fits files - RAB
             if RCDfiles == False:
                 
-                    #check if conversion indicator file is present
-                    if not minute_dirs[f].joinpath('converted.txt').is_file():
+                #check if conversion indicator file is present
+                if not minute_dirs[f].joinpath('converted.txt').is_file():
                         
-                        print('Converting to .fits')
+                    print('Converting to .fits')
                         
-                        #make conversion indicator file
-                        with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
-                            os.utime(str(minute_dirs[f].joinpath('converted.txt')))
+                    #make conversion indicator file
+                    with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
+                        os.utime(str(minute_dirs[f].joinpath('converted.txt')))
                             
-                            #do .rcd -> .fits conversion using the desired gain level
-                            if gain_high:
-                                os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
-                            else:
-                                os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
+                        #do .rcd -> .fits conversion using the desired gain level
+                        if gain_high:
+                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
+                        else:
+                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
                     
-                    else:
-                        print('Already converted raw files to fits format.')
-                        print('Remove file converted.txt if you want to overwrite.')
+                else:
+                    print('Already converted raw files to fits format.')
+                    print('Remove file converted.txt if you want to overwrite.')
 
             print(f"Running on... {minute_dirs[f]}")
 
             start_time = timer.time()
 
             print('Running sequentially...')
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
+            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
+                           base_path,obs_date,telescope,RCDfiles,gain_high)
             
             gc.collect()
 
