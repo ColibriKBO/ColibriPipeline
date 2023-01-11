@@ -287,35 +287,35 @@ def fieldCoords(fieldname):
 
     """
     if fieldname == 'field1':
-        coords='[273.735, -18.638]'
+        coords=[273.735, -18.638]
     if fieldname == 'field2':
-        coords='[288.355, -7.992]'
+        coords=[288.355, -7.992]
     if fieldname == 'field3':
-        coords='[87.510,  20.819]'
+        coords=[87.510,  20.819]
     if fieldname == 'field4':
-        coords='[103.263, 24.329]'
+        coords=[103.263, 24.329]
     if fieldname == 'field5':
-        coords='[129.869, 19.474]'
+        coords=[129.869, 19.474]
     if fieldname == 'field6':
-        coords='[254.846, -27.353]'
+        coords=[254.846, -27.353]
     if fieldname == 'field7':
-        coords='[56.684,  24.313]'
+        coords=[56.684,  24.313]
     if fieldname == 'field12':
-        coords='[318.657, -13.830]'
+        coords=[318.657, -13.830]
     if fieldname == 'field13':
-        coords='[222.785, -11.810]'
+        coords=[222.785, -11.810]
     if fieldname == 'field14':
-        coords='[334.741, -12.383]'
+        coords=[334.741, -12.383]
     if fieldname == 'field15':
-        coords='[39.791,  16.953]'
+        coords=[39.791,  16.953]
     if fieldname == 'field16':
-        coords='[8.974,   1.834]'
+        coords=[8.974,   1.834]
     if fieldname == 'field18':
-        coords='[142.138, 12.533]'
+        coords=[142.138, 12.533]
     if fieldname == 'field19':
-        coords='[206.512, -10.259]'
+        coords=[206.512, -10.259]
     if fieldname == 'field24':
-        coords='[167.269, 2.203]'
+        coords=[167.269, 2.203]
         
     return coords
 
@@ -379,7 +379,7 @@ def getStarHour(main_path, obs_date, threshold=10, gain='high'):
         # get field coordinates
         coords=fieldCoords(field)
         #assuming exposure time is 25ms
-        output=f'{field} observed  {len(stars)*0.025/60/60*len(list(star_pos))}  star-hours {coords}'
+        output=f'{field} observed  {len(stars)*0.025/60/60*len(list(star_pos))}  star-hours, Ra: {coords[0]} dec: {coords[1]}'
         print(output)
         summary.append(output)
         
