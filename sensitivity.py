@@ -10,7 +10,7 @@ Update: Jan. 24, 2022, 11:20
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import datetime 
+from datetime import datetime, date
 import astropy
 import astropy.stats
 from astropy.io import fits
@@ -212,7 +212,7 @@ arg_parser.add_argument('-l', '--lightcurve', help='Star detection threshold.', 
 
 cml_args = arg_parser.parse_args()
 obsYYYYMMDD = cml_args.date
-obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 
 cml_args = arg_parser.parse_args()
 
@@ -220,21 +220,24 @@ base_path = pathlib.Path(cml_args.basedir)
 data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''))    #path to data
 
 
-minute_dirs=[f.name for f in data_path.iterdir() if str(obs_date).replace('-', '') in f.name]
+minute_dirs=[f.name for f in data_path.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)]
 
-#if minute not provided - choose the middle minute dir, else choose the closest to provided minute
+
+
+
 if not cml_args.minute:
     obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
 else:
     desired_time = str(cml_args.minute)
-    datetime.strptime(desired_time,"%H.%M.%S")
+    #desired_time =datetime.strptime(desired_time,"%H.%M.%S").time()
     for i in range(len(minute_dirs)):
         # if (minute_names[i]>det_time and i==0):
         #     print('search lightcurve in ',minute_names[i])
-        minute_time=datetime.strptime(minute_dirs[i].name.split('_')[1],"%H.%M.%S.%f")
+        minute_time=datetime.strptime(minute_dirs[i].split('_')[1],"%H.%M.%S.%f").time()
         
-        if minute_time>=desired_time:
-            obs_time=minute_time
+        if desired_time[:-2] in str(minute_time).replace(':','.'):
+            obs_time=str(minute_time).replace(':','.')[:-4]
+            print(obs_time)
             break
 
 cml_args = arg_parser.parse_args()
