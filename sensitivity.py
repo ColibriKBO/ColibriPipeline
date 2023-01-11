@@ -222,13 +222,20 @@ data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''))  
 
 minute_dirs=[f.name for f in data_path.iterdir() if str(obs_date).replace('-', '') in f.name]
 
-
-
-
+#if minute not provided - choose the middle minute dir, else choose the closest to provided minute
 if not cml_args.minute:
     obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
 else:
-    obs_time = str(cml_args.minute)
+    desired_time = str(cml_args.minute)
+    datetime.strptime(desired_time,"%H.%M.%S")
+    for i in range(len(minute_dirs)):
+        # if (minute_names[i]>det_time and i==0):
+        #     print('search lightcurve in ',minute_names[i])
+        minute_time=datetime.strptime(minute_dirs[i].name.split('_')[1],"%H.%M.%S.%f")
+        
+        if minute_time>=desired_time:
+            obs_time=minute_time
+            break
 
 cml_args = arg_parser.parse_args()
 detect_thresh = int(cml_args.threshold)
@@ -419,4 +426,3 @@ final['ra_diff'] = (final['ra'] - final['Gaia_RA'])*np.cos(np.radians(final['dec
 final['dec_diff']  = (final['dec'] - final['Gaia_dec'])
 
 RAdec_diffPlot(final)
-
