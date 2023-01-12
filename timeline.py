@@ -697,12 +697,18 @@ block = np.mean(a, axis=0)
 block=pd.DataFrame(block,columns=x,index=['transparency'])
 # ax2=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.016,-0.27,1,1), bbox_transform=ax1.transAxes)
 
-ax2=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
+ax=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
 # ax2=sns.heatmap(block,cmap='Blues_r',vmax=-10,vmin=-20,cbar=False,zorder=1)
-ax2=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=1)
 
+ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=1)
 
-ax2.yaxis.tick_right()
+ax.axes.invert_yaxis()
+
+ax2=plt.twinx()
+sns.lineplot(x=x,y=ynew,color='k',ax=ax2)
+ax2.yaxis.set_ticks(np.arange(0, np.amax(ynew), 1))
+ax.set_yticklabels([])
+ax.set_xticklabels([])
 ax2.set_xticklabels([])
 ax2.set_xticks([])
 # ax2.patch.set_alpha(0.01)
@@ -833,9 +839,10 @@ ax4.set_xlabel('Gmag')
 ax4.set_ylabel('Temporal SNR')
 
 #plt.title()#!!!
-snr_info='Airmass: %.2f Time: %s \n' % (red_airmass, red_snrtime)+'Airmass: %.2f Time: %s /n' % (blue_airmass, blue_snrtime)+'Airmass: %.2f Time: %s' % (green_airmass, green_snrtime)
-ax4.text(1, -2, field_info, ha='right',  fontsize=14,
-    verticalalignment='bottom',transform=ax3.transAxes)
+# snr_info='Airmass: %.2f Time: %s \n' % (red_airmass, red_snrtime)+'Airmass: %.2f Time: %s /n' % (blue_airmass, blue_snrtime)+'Airmass: %.2f Time: %s' % (green_airmass, green_snrtime)
+# ax4.text(1, -2, field_info, ha='right',  fontsize=14,
+#     verticalalignment='bottom',transform=ax3.transAxes)
+plt.legend()
 plt.grid()
 # plt.show(fig4)
 
