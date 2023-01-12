@@ -415,7 +415,20 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             
         gc.collect()
 
-
+    import matplotlib.pyplot as plt
+    for i in range(len(starData[0])):
+        flux=[]
+        frame=[]
+        for j in range(len(starData)):
+            flux.append(starData[j][i][2])
+            frame.append(j)
+            
+    
+        fig, ax1 = plt.subplots()
+        ax1.scatter(frame, flux)
+        plt.savefig(base_path.joinpath('ColibriArchive', str(obs_date),str(minuteDir)+'_star_'+str(i) + '.png'))
+        plt.close()
+	
     #d3 = timer.time() - c3
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
 
