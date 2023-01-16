@@ -40,11 +40,8 @@ ctypedef np.float64_t F64
 @cython.boundscheck(False)
 @cython.wraparound(False)
 
-# 2023-01-16 Roman A. added variables for photometry and star detection
 
-cdef int inner_annulus = 5
-cdef int outer_annulus = 8
-cdef int Edge_buffer = 10
+
 
 def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     """
@@ -286,6 +283,9 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     cdef list fluxes
     cdef tuple star_data
     cdef np.ndarray x,y,stars,x_clipped,y_clipped
+    cdef int inner_annulus = 5
+    cdef int outer_annulus = 8
+    cdef int Edge_buffer = 10
     
     ## Calculate time between prev_img and curr_img
     curr_time  = Time(img_time,precision=9).unix
@@ -433,6 +433,9 @@ def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
     cdef np.ndarray unix_time,x,y,
     cdef np.ndarray edge_stars,x_clipped,y_clipped
     cdef np.ndarray fluxes,star_data
+    cdef int inner_annulus = 5
+    cdef int outer_annulus = 8
+    cdef int Edge_buffer = 10
     
     ## Calculate time between prev_img and curr_img
     unix_time  = Time(img_times,precision=9).unix
