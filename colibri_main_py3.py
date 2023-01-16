@@ -257,10 +257,11 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         star_find_results = tuple(cp.initialFind(stacked, detect_thresh))
 
         #remove stars where centre is too close to edge of frame
-        edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
-        star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
-        star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
-
+        # edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
+        # star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
+        # star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
+        star_find_results = tuple(x for x in star_find_results if x[0] + Edge_buffer < x_length and x[0] - Edge_buffer > 0)
+        star_find_results = tuple(y for y in star_find_results if y[1] + Edge_buffer < x_length and y[1] - Edge_buffer > 0)
         #increase start image counter
         i += 1
             
@@ -339,12 +340,14 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     starData[0] = tuple(zip(initial_positions[:,0], 
                         initial_positions[:,1], 
                         #sumFlux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
-                        (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(), 
+                        # (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(),
+                        (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r,
+                                        bkgann = (inner_annulus, outer_annulus))[0]).tolist(),
                         np.ones(np.shape(np.array(initial_positions))[0]) * (Time(fframe_time, precision=9).unix)))
 
     if drift:  # time evolve moving stars
     
-        print(f"Drifted - applying drift to photometry {x_drift} {y_drift}")
+        print(f"{minuteDir} Drifted - applying drift to photometry {x_drift} {y_drift}")
         
         # Loop through each image in the minute-long dataset in chunks
         chunk_size = 20
@@ -354,12 +357,12 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             headerTimes = headerTimes + imageTime
             for j in range(chunk_size):
                 starData[chunk_size*i+j+1] = cp.timeEvolve(imageFile[j],
-                                                           deepcopy(starData[chunk_size*i+j]),
-                                                           imageTime[j],
-                                                           ap_r,
-                                                           num_stars,
-                                                           (x_length, y_length),
-                                                           (x_drift, y_drift))
+                                                            deepcopy(starData[chunk_size*i+j]),
+                                                            imageTime[j],
+                                                            ap_r,
+                                                            num_stars,
+                                                            (x_length, y_length),
+                                                            (x_drift, y_drift))
                 
                 gc.collect()
             
@@ -371,19 +374,19 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         headerTimes = headerTimes + imageTime
         for i in range(residual+1)[1::-1]:
             starData[num_images-i] = cp.timeEvolve(imageFile[residual-i],
-                                                   deepcopy(starData[num_images-i-1]),
-                                                   imageTime[residual-i],
-                                                   ap_r,
-                                                   num_stars,
-                                                   (x_length, y_length),
-                                                   (x_drift, y_drift))        
+                                                    deepcopy(starData[num_images-i-1]),
+                                                    imageTime[residual-i],
+                                                    ap_r,
+                                                    num_stars,
+                                                    (x_length, y_length),
+                                                    (x_drift, y_drift))        
             
         gc.collect()
     
             
     else:  # if there is not significant drift, don't account for drift  in photometry
         
-        print('No drift')
+        print(f'{minuteDir} No drift')
         
         # Loop through each image in the minute-long dataset in chunks
         chunk_size = 10
@@ -412,23 +415,30 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                               ap_r,
                                                               num_stars,
                                                               (x_length, y_length))
-            
+                
         gc.collect()
+    
+
 
     import matplotlib.pyplot as plt
     for i in range(len(starData[0])):
         flux=[]
         frame=[]
+        x_coords_in=starData[0][i][0]
+        y_coords_in=starData[0][i][1]
+        x_coords_fi=starData[0][-1][0]
+        y_coords_fi=starData[0][-1][1]
         for j in range(len(starData)):
             flux.append(starData[j][i][2])
             frame.append(j)
             
     
         fig, ax1 = plt.subplots()
-        ax1.scatter(frame, flux)
+        ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
         plt.savefig(base_path.joinpath('ColibriArchive', str(obs_date),'_star_'+str(i) + '.png'))
         plt.close()
-	
+    
+
     #d3 = timer.time() - c3
     # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
 
@@ -589,7 +599,12 @@ if __name__ == '__main__':
 ###########################
 ## Argument Parser Setup
 ###########################
-    
+    global inner_annulus
+    inner_annulus = 5
+    global outer_annulus 
+    outer_annulus = 8
+    global Edge_buffer
+    Edge_buffer=10
     ## Generate argument parser
     arg_parser = argparse.ArgumentParser(description="First-level data analysis for the Colibri telescopes",
                                          formatter_class=argparse.RawTextHelpFormatter)
