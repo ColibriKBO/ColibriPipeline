@@ -603,8 +603,8 @@ df = pd.read_csv(filename, delimiter=',')
 data = [list(row) for row in df.values]
 
 
-telescopes = {"GREENBIRD" : 1, "REDBIRD" : 2, "BLUEBIRD" : 3, 'Night' : 4} #bars are located in ascending order
-colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b", 'Night' : "k"}
+telescopes = {"GREENBIRD" : 1, "REDBIRD" : 2, "BLUEBIRD" : 3} #bars are located in ascending order
+colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b"}
 
 verts = []
 colors = []
@@ -630,9 +630,9 @@ ax1.xaxis.set_major_locator(loc)
 xfmt = DateFormatter('%H')
 ax1.xaxis.set_major_formatter(xfmt)
 ax1.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
-ax1.set_yticks([1,2,3,4])
-ax1.set_ylim(top=4+.4)
-ax1.set_yticklabels(['Green','Red','Blue','Night'])
+ax1.set_yticks([1,2,3])
+ax1.set_ylim(top=3+.4)
+ax1.set_yticklabels(['Green','Red','Blue'])
 ax1.xaxis.set_tick_params(labelsize=9)
 ax1.xaxis.grid(True)
 ax1.xaxis.tick_top()
@@ -706,7 +706,7 @@ ax.axes.invert_yaxis()
 
 ax2=plt.twinx()
 sns.lineplot(x=x,y=ynew,color='k',ax=ax2)
-ax2.yaxis.set_ticks(np.arange(0, np.amax(ynew), 1))
+ax2.yaxis.set_ticks(np.arange(0, 4, 1))
 ax.set_yticklabels([])
 ax.set_xticklabels([])
 ax2.set_xticklabels([])
