@@ -341,8 +341,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                         initial_positions[:,1], 
                         #sumFlux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
                         # (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(),
-                        (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r,
-                                        bkgann = (inner_annulus, outer_annulus))[0]).tolist(),
+                        (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(),
                         np.ones(np.shape(np.array(initial_positions))[0]) * (Time(fframe_time, precision=9).unix)))
 
     if drift:  # time evolve moving stars
@@ -436,7 +435,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         fig, ax1 = plt.subplots()
         ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
         plt.legend()
-        plt.savefig(base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name, '_star_'+str(i) + '.png'))
+        plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
+        if not os.path.exists(plot_path):
+            os.mkdir(plot_path)
+        plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
         
         plt.close()
     
