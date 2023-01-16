@@ -435,7 +435,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
         fig, ax1 = plt.subplots()
         ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
-        plt.savefig(base_path.joinpath('ColibriArchive', str(obs_date),'_star_'+str(i) + '.png'))
+        plt.legend()
+        plt.savefig(base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name, '_star_'+str(i) + '.png'))
+        
         plt.close()
     
 
