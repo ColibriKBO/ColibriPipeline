@@ -37,6 +37,11 @@ import logging
 #warnings.filterwarnings("ignore",category=DeprecationWarning)
 #warnings.filterwarnings("ignore",category=VisibleDeprecationWarning)
 
+global inner_annulus
+inner_annulus = 5
+global outer_annulus 
+global Edge_buffer
+Edge_buffer=10	
 
 
 #--------------------------------functions------------------------------------#
@@ -381,6 +386,29 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                     (x_drift, y_drift))        
             
         gc.collect()
+        
+        import matplotlib.pyplot as plt
+        for i in range(len(starData[0])):
+            flux=[]
+            frame=[]
+            x_coords_in=starData[0][i][0]
+            y_coords_in=starData[0][i][1]
+            x_coords_fi=starData[-1][i][0]
+            y_coords_fi=starData[-1][i][1]
+            for j in range(len(starData)):
+                flux.append(starData[j][i][2])
+                frame.append(j)
+                
+        
+            fig, ax1 = plt.subplots()
+            ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
+            plt.legend()
+            plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
+            if not os.path.exists(plot_path):
+                os.mkdir(plot_path)
+            plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
+            
+            plt.close()
     
             
     else:  # if there is not significant drift, don't account for drift  in photometry
@@ -419,28 +447,28 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
 
 
-    import matplotlib.pyplot as plt
-    for i in range(len(starData[0])):
-        flux=[]
-        frame=[]
-        x_coords_in=starData[0][i][0]
-        y_coords_in=starData[0][i][1]
-        x_coords_fi=starData[0][-1][0]
-        y_coords_fi=starData[0][-1][1]
-        for j in range(len(starData)):
-            flux.append(starData[j][i][2])
-            frame.append(j)
-            
-    
-        fig, ax1 = plt.subplots()
-        ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
-        plt.legend()
-        plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
-        if not os.path.exists(plot_path):
-            os.mkdir(plot_path)
-        plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
+        import matplotlib.pyplot as plt
+        for i in range(len(starData[0])):
+            flux=[]
+            frame=[]
+            x_coords_in=starData[0][i][0]
+            y_coords_in=starData[0][i][1]
+            x_coords_fi=starData[-1][i][0]
+            y_coords_fi=starData[-1][i][1]
+            for j in range(len(starData)):
+                flux.append(starData[j][i][2])
+                frame.append(j)
+                
         
-        plt.close()
+            fig, ax1 = plt.subplots()
+            ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
+            plt.legend()
+            plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
+            if not os.path.exists(plot_path):
+                os.mkdir(plot_path)
+            plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
+            
+            plt.close()
     
 
     #d3 = timer.time() - c3
@@ -603,12 +631,7 @@ if __name__ == '__main__':
 ###########################
 ## Argument Parser Setup
 ###########################
-    global inner_annulus
-    inner_annulus = 5
-    global outer_annulus 
-    outer_annulus = 8
-    global Edge_buffer
-    Edge_buffer=10
+
     ## Generate argument parser
     arg_parser = argparse.ArgumentParser(description="First-level data analysis for the Colibri telescopes",
                                          formatter_class=argparse.RawTextHelpFormatter)
