@@ -704,30 +704,32 @@ if __name__ == '__main__':
     else:
         #raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
+        # Added a check to see if the fits conversion has been done. - MJM 
+        #only run this check if we want to process fits files - RAB
+        if RCDfiles == False:
+                
+            #check if conversion indicator file is present
+            if not minute_dirs[f].joinpath('converted.txt').is_file():
+                        
+                print('Converting to .fits')
+                
+                #make conversion indicator file
+                with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
+                    os.utime(str(minute_dirs[f].joinpath('converted.txt')))
+                            
+                #do .rcd -> .fits conversion using the desired gain level
+                if gain_high:
+                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
+                else:
+                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
+                    
+        else:
+            print('Already converted raw files to fits format.')
+            print('Remove file converted.txt if you want to overwrite.')
+        
         for f in range(len(minute_dirs)):
            
-            # Added a check to see if the fits conversion has been done. - MJM 
-            #only run this check if we want to process fits files - RAB
-            if RCDfiles == False:
-                
-                #check if conversion indicator file is present
-                if not minute_dirs[f].joinpath('converted.txt').is_file():
-                        
-                    print('Converting to .fits')
-                        
-                    #make conversion indicator file
-                    with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
-                        os.utime(str(minute_dirs[f].joinpath('converted.txt')))
-                            
-                        #do .rcd -> .fits conversion using the desired gain level
-                        if gain_high:
-                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
-                        else:
-                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
-                    
-                else:
-                    print('Already converted raw files to fits format.')
-                    print('Remove file converted.txt if you want to overwrite.')
+
 
             print(f"Running on... {minute_dirs[f]}")
 
