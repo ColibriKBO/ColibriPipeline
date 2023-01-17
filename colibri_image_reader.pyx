@@ -127,7 +127,7 @@ def importFramesRCD(image_paths,
             
         Returns:
             img_array (arr): Image data
-            img_times (arr): Header times of these images
+            img_times (list): Header times of these images
     """
     
     ## Type definitions

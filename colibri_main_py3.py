@@ -354,7 +354,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         print(f"{minuteDir} Drifted - applying drift to photometry {x_drift} {y_drift}")
         
         # Loop through each image in the minute-long dataset in chunks
-        chunk_size = 20
+        chunk_size = 10
         residual   = (num_images-1)%chunk_size
         for i in range((num_images-1)//chunk_size):
             imageFile,imageTime = cir.importFramesRCD(imagePaths,chunk_size*i+1, chunk_size, bias)
@@ -372,8 +372,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             
         # Process remaining chunks
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
-                                                  num_images-(num_images-1)%chunk_size,
-                                                  (num_images-1)%chunk_size,
+                                                  num_images-residual,
+                                                  residual,
                                                   bias)
         headerTimes = headerTimes + imageTime
         for i in range(residual+1)[1::-1]:
@@ -384,6 +384,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                     num_stars,
                                                     (x_length, y_length),
                                                     (x_drift, y_drift))        
+        
         print("DRIFTED DATA SAVED")    
         gc.collect()
         
