@@ -379,7 +379,7 @@ def getStarHour(main_path, obs_date, threshold=10, gain='high'):
         # get field coordinates
         coords=fieldCoords(field)
         #assuming exposure time is 25ms
-        output=f'{field} observed  {len(stars)*0.025/60/60*len(list(star_pos))}  star-hours, Ra: {coords[0]} dec: {coords[1]}'
+        output=f'{field} observed  {len(stars)*0.025/60/60*len(list(star_pos))}  star-hours, Ra: {coords[0]} dec: {coords[1]}\n'
         print(output)
         summary.append(output)
         
