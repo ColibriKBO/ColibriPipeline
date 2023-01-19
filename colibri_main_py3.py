@@ -244,22 +244,21 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     numtoStack = 9          #number of images to include in stack
     startIndex = 1          #which image to start stack at (vignetting in 0th image)
 
-    i = 0                   #counter used if several images are poor
     min_stars = 30          #minimum stars in an image
     star_find_results = []  #to store results of star finding
     
-    #run until the minimum number of stars is found
+    #run until the minimum number of stars is found, exit if the images in the whole directory are blank
     while len(star_find_results) < min_stars:
         
-        startIndex += i     #adjust number to start stack if there weren't enough stars
         
         #print('stacking images %i to %i\n' %(startIndex, numtoStack))
         
         #create median combined image for star finding
         stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
 
-        #make list of star coords and half light radii
-        star_find_results = tuple(cp.initialFind(stacked, detect_thresh))
+        # make list of star coords and half light radii using a conservative
+        # threshold scaled to the number of images stacked
+        star_find_results = tuple(cp.initialFind(stacked, detect_thresh*numtoStack**0.5))
 
         #remove stars where centre is too close to edge of frame
         # edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
@@ -268,10 +267,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         star_find_results = tuple(x for x in star_find_results if x[0] + Edge_buffer < x_length and x[0] - Edge_buffer > 0)
         star_find_results = tuple(y for y in star_find_results if y[1] + Edge_buffer < x_length and y[1] - Edge_buffer > 0)
         #increase start image counter
-        i += 1
+        startIndex += 1     #adjust number to start stack if there weren't enough stars
             
         #check if we've reached the end of the minute, return error if so
-        if (1 + i + 9) >= num_images:
+        if startIndex + 9 >= num_images:
             print(f"no good images in minute: {minuteDir}")
             print (f"{datetime.datetime.now()} Closing: {minuteDir}")
             print ("\n")
@@ -294,18 +293,19 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
     ''' Drift calculations '''
     if RCDfiles == True: # Choose to open rcd or fits - MJM
-        fframe_data,fframe_time = cir.importFramesRCD(imagePaths, 0, 1, bias)   #import first image
+        fframe_data,fframe_time = cir.importFramesRCD(imagePaths, startIndex, 1, bias)   #import first image
         headerTimes = [fframe_time] #list of image header times
         lframe_data,lframe_time = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
 
     else:
-        fframe_data,fframe_time = importFramesFITS(imagePaths, 0, 1, bias)      #data and time from 1st image
+        fframe_data,fframe_time = importFramesFITS(imagePaths, startIndex, 1, bias)      #data and time from 1st image
         headerTimes = [fframe_time]  #list of image header times
         lframe_data,lframe_time = importFramesFITS(imagePaths, len(imagePaths)-1, 1, bias) #data and time from last image
 
     drift_pos = np.empty([2, num_stars], dtype = (np.float64, 2))  #array to hold first and last positions
     drift_times = []   #list to hold times for each set of drifted coords
     GaussSigma = np.mean(radii * 2. / 2.35)  # calculate gaussian sigma for each star's light profile
+    print(f"Weighting Radius for Starfinding (GaussSigma) = {GaussSigma}")
 
     #refined star positions and times for first image
     first_drift = cp.refineCentroid(fframe_data,fframe_time[0], initial_positions, GaussSigma)
@@ -313,7 +313,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     drift_times.append(first_drift[1])
 
     #refined star positions and times for last image
-    last_drift = cp.refineCentroid(lframe_data,lframe_time[0], drift_pos[0], GaussSigma)
+    drift_multiple = 10  # relaxation factor on our centroid finding
+    last_drift = cp.refineCentroid(lframe_data,lframe_time[0], drift_pos[0], GaussSigma*drift_multiple)
     drift_pos[1] = last_drift[0]
     drift_times.append(last_drift[1])
     drift_times = Time(drift_times, precision=9).unix
@@ -774,30 +775,32 @@ if __name__ == '__main__':
     else:
         #raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
+        # Added a check to see if the fits conversion has been done. - MJM 
+        #only run this check if we want to process fits files - RAB
+        if RCDfiles == False:
+                
+            #check if conversion indicator file is present
+            if not minute_dirs[f].joinpath('converted.txt').is_file():
+                        
+                print('Converting to .fits')
+                
+                #make conversion indicator file
+                with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
+                    os.utime(str(minute_dirs[f].joinpath('converted.txt')))
+                            
+                #do .rcd -> .fits conversion using the desired gain level
+                if gain_high:
+                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
+                else:
+                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
+                    
+        else:
+            print('Already converted raw files to fits format.')
+            print('Remove file converted.txt if you want to overwrite.')
+        
         for f in range(len(minute_dirs)):
            
-            # Added a check to see if the fits conversion has been done. - MJM 
-            #only run this check if we want to process fits files - RAB
-            if RCDfiles == False:
-                
-                #check if conversion indicator file is present
-                if not minute_dirs[f].joinpath('converted.txt').is_file():
-                        
-                    print('Converting to .fits')
-                        
-                    #make conversion indicator file
-                    with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
-                        os.utime(str(minute_dirs[f].joinpath('converted.txt')))
-                            
-                        #do .rcd -> .fits conversion using the desired gain level
-                        if gain_high:
-                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
-                        else:
-                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
-                    
-                else:
-                    print('Already converted raw files to fits format.')
-                    print('Remove file converted.txt if you want to overwrite.')
+
 
             print(f"Running on... {minute_dirs[f]}")
 

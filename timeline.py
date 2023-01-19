@@ -28,10 +28,55 @@ from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 from matplotlib.ticker import ScalarFormatter
 from matplotlib.ticker import MaxNLocator
 from getStarHour import getStarHour
+from astropy.time import Time 
 
 #!!!
 # import matplotlib as mpl
 # mpl.rcParams.update(mpl.rcParamsDefault)
+
+def getAirmass(time, RA, dec):
+    '''get airmass of the field at the given time
+    input: time [isot format string], field coordinates [RA, Dec]
+    returns: airmass, altitude [degrees], and azimuth [degrees]'''
+    
+    #latitude and longitude of Elginfield
+    siteLat = 43.1933116667
+    siteLong = -81.3160233333
+    
+    #get J2000 day
+    
+    #get local sidereal time
+    LST = Time(time, format='isot', scale='utc').sidereal_time('mean', longitude = siteLong)
+
+    #get hour angle of field
+    HA = LST.deg - RA
+    
+    #convert angles to radians for sin/cos funcs
+    dec = np.radians(dec)
+    siteLat = np.radians(siteLat)
+    HA = np.radians(HA)
+    
+    #get altitude (elevation) of field
+    alt = np.arcsin(np.sin(dec)*np.sin(siteLat) + np.cos(dec)*np.cos(siteLat)*np.cos(HA))
+    
+    #get azimuth of field
+    A = np.degrees(np.arccos((np.sin(dec) - np.sin(alt)*np.sin(siteLat))/(np.cos(alt)*np.cos(siteLat))))
+    
+    if np.sin(HA) < 0:
+        az = A
+    else:
+        az = 360. - A
+    
+    alt = np.degrees(alt)
+    
+    #get zenith angle
+    ZA = 90 - alt
+    
+    #get airmass
+    airmass = 1./np.cos(np.radians(ZA))
+    
+    return airmass, alt, az
+
 def readSigma(filepath):
    
     with filepath.open() as f:
@@ -434,24 +479,83 @@ try:
     red_table=pd.read_csv([f for f in red_sens.iterdir() if 'starTable' in f.name][0], 
             names = [ 'X', 'Y', 'ra', 'dec' ,'GMAG', 'Gaia_RA' ,'Gaia_dec', 'Gaia_B-R', 'med' ,'std', 'SNR'],
             sep = ' ',header=0,index_col=0)
+    
+    
+    starTxtFile = sorted(red_sens.joinpath('high_4sig_lightcurves').glob('*.txt'))[0]
+
+    #get header info from file
+    with starTxtFile.open() as f:
+            
+        #loop through each line of the file
+        for i, line in enumerate(f):
+                
+            #get event time
+            if i == 6:
+                timestamp = line.split(' ')[-1].split('\n')[0]
+    
+    red_airmass = getAirmass(timestamp, red_table['ra'][int(len(red_table['ra']) / 2)], 
+                             red_table['dec'][int(len(red_table['dec']) / 2)])[0]
+    red_snrtime=timestamp.split('T')[1].split('.')[0]
+    
 except (FileNotFoundError, IndexError):
     red_table=[]
+    red_snrtime=''
+    red_airmass=0
     print("Red sensitivity data is not available!")
+    
     
 try:
     blue_table=pd.read_csv([f for f in blue_sens.iterdir() if 'starTable' in f.name][0], 
             names = [ 'X', 'Y', 'ra', 'dec' ,'GMAG', 'Gaia_RA' ,'Gaia_dec', 'Gaia_B-R', 'med' ,'std', 'SNR'], 
             sep = ' ',header=0,index_col=0)
+    
+    starTxtFile = sorted(blue_sens.joinpath('high_4sig_lightcurves').glob('*.txt'))[0]
+
+    #get header info from file
+    with starTxtFile.open() as f:
+            
+        #loop through each line of the file
+        for i, line in enumerate(f):
+                
+            #get event time
+            if i == 6:
+                timestamp = line.split(' ')[-1].split('\n')[0]
+    
+    
+    blue_snrtime=timestamp.split('T')[1].split('.')[0]
+    blue_airmass = getAirmass(timestamp, blue_table['ra'][int(len(blue_table['ra']) / 2)], 
+                             blue_table['dec'][int(len(blue_table['dec']) / 2)])[0]
+    
 except (FileNotFoundError, IndexError):
     blue_table=[]
+    blue_snrtime=''
+    blue_airmass=0
     print("Blue sensitivity data is not available!")
 
 try:
     green_table=pd.read_csv([f for f in green_sens.iterdir() if 'starTable' in f.name][0],
             names = [ 'X', 'Y', 'ra', 'dec' ,'GMAG', 'Gaia_RA' ,'Gaia_dec', 'Gaia_B-R', 'med' ,'std', 'SNR'], 
             sep = ' ',header=0,index_col=0)
+    
+    starTxtFile = sorted(green_sens.joinpath('high_4sig_lightcurves').glob('*.txt'))[0]
+
+    #get header info from file
+    with starTxtFile.open() as f:
+            
+        #loop through each line of the file
+        for i, line in enumerate(f):
+                
+            #get event time
+            if i == 6:
+                timestamp = line.split(' ')[-1].split('\n')[0]
+    
+    green_snrtime=timestamp.split('T')[1].split('.')[0]
+    green_airmass = getAirmass(timestamp, green_table['ra'][int(len(green_table['ra']) / 2)], 
+                             green_table['dec'][int(len(green_table['dec']) / 2)])[0]
 except (FileNotFoundError, IndexError):
     green_table=[]
+    green_snrtime=''
+    green_airmass =0
     print("Green sensitivity data is not available!")
 
 
@@ -499,8 +603,8 @@ df = pd.read_csv(filename, delimiter=',')
 data = [list(row) for row in df.values]
 
 
-telescopes = {"GREENBIRD" : 1, "REDBIRD" : 2, "BLUEBIRD" : 3, 'Night' : 4} #bars are located in ascending order
-colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b", 'Night' : "k"}
+telescopes = {"GREENBIRD" : 1, "REDBIRD" : 2, "BLUEBIRD" : 3} #bars are located in ascending order
+colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b"}
 
 verts = []
 colors = []
@@ -526,9 +630,9 @@ ax1.xaxis.set_major_locator(loc)
 xfmt = DateFormatter('%H')
 ax1.xaxis.set_major_formatter(xfmt)
 ax1.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
-ax1.set_yticks([1,2,3,4])
-ax1.set_ylim(top=4+.4)
-ax1.set_yticklabels(['Green','Red','Blue','Night'])
+ax1.set_yticks([1,2,3])
+ax1.set_ylim(top=3+.4)
+ax1.set_yticklabels(['Green','Red','Blue'])
 ax1.xaxis.set_tick_params(labelsize=9)
 ax1.xaxis.grid(True)
 ax1.xaxis.tick_top()
@@ -593,12 +697,18 @@ block = np.mean(a, axis=0)
 block=pd.DataFrame(block,columns=x,index=['transparency'])
 # ax2=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.016,-0.27,1,1), bbox_transform=ax1.transAxes)
 
-ax2=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
+ax=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
 # ax2=sns.heatmap(block,cmap='Blues_r',vmax=-10,vmin=-20,cbar=False,zorder=1)
-ax2=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=1)
 
+ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=1)
 
-ax2.yaxis.tick_right()
+ax.axes.invert_yaxis()
+
+ax2=plt.twinx()
+sns.lineplot(x=x,y=ynew,color='k',ax=ax2)
+ax2.yaxis.set_ticks(np.arange(0, 4, 1))
+ax.set_yticklabels([])
+ax.set_xticklabels([])
 ax2.set_xticklabels([])
 ax2.set_xticks([])
 # ax2.patch.set_alpha(0.01)
@@ -713,15 +823,15 @@ fig123.savefig(operations_savepath.joinpath("event.svg"),dpi=800,bbox_inches='ti
 
 fig4, ax4=plt.subplots()
 try:
-    ax4.scatter(x=red_table['GMAG'],y=red_table['SNR'],color='r', s=3,alpha=0.4,label=red_sens.name)
+    ax4.scatter(x=red_table['GMAG'],y=red_table['SNR'],color='r', s=3,alpha=0.4,label='Airmass: %.2f Time: %s' % (red_airmass, red_snrtime))
 except:
     pass
 try:
-    ax4.scatter(x=blue_table['GMAG'],y=blue_table['SNR'],color='b',s=3, alpha=0.4,label=blue_sens.name)
+    ax4.scatter(x=blue_table['GMAG'],y=blue_table['SNR'],color='b',s=3, alpha=0.4,label='Airmass: %.2f Time: %s' % (blue_airmass, blue_snrtime))
 except:
     pass
 try:
-    ax4.scatter(x=green_table['GMAG'],y=green_table['SNR'],color='g',s=3, alpha=0.4,label=green_sens.name)
+    ax4.scatter(x=green_table['GMAG'],y=green_table['SNR'],color='g',s=3, alpha=0.4,label='Airmass: %.2f Time: %s' % (green_airmass, green_snrtime))
 except:
     pass
 ax4.set_ylim([0,15])
@@ -729,11 +839,15 @@ ax4.set_xlabel('Gmag')
 ax4.set_ylabel('Temporal SNR')
 
 #plt.title()#!!!
+# snr_info='Airmass: %.2f Time: %s \n' % (red_airmass, red_snrtime)+'Airmass: %.2f Time: %s /n' % (blue_airmass, blue_snrtime)+'Airmass: %.2f Time: %s' % (green_airmass, green_snrtime)
+# ax4.text(1, -2, field_info, ha='right',  fontsize=14,
+#     verticalalignment='bottom',transform=ax3.transAxes)
+plt.legend()
 plt.grid()
 # plt.show(fig4)
 
 fig4.savefig(operations_savepath.joinpath('SNR.svg'),dpi=800,bbox_inches='tight')
-
+plt.close()
 
 #%% PLOT STATISTICS FOR SINGLE DETECTIONS FOR 3 TELESCOPES
 
