@@ -347,7 +347,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         print(f"Drifted - applying drift to photometry {x_drift} {y_drift}")
         
         # Loop through each image in the minute-long dataset in chunks
-        chunk_size = 20
+        chunk_size = 10
         residual   = (num_images-1)%chunk_size
         for i in range((num_images-1)//chunk_size):
             imageFile,imageTime = cir.importFramesRCD(imagePaths,chunk_size*i+1, chunk_size, bias)
@@ -365,11 +365,11 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
             
         # Process remaining chunks
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
-                                                  num_images-(num_images-1)%chunk_size,
-                                                  (num_images-1)%chunk_size,
+                                                  num_images-residual,
+                                                  residual,
                                                   bias)
         headerTimes = headerTimes + imageTime
-        for i in range(residual+1)[1::-1]:
+        for i in range(residual+1)[:0:-1]:
             starData[num_images-i] = cp.timeEvolve(imageFile[residual-i],
                                                    deepcopy(starData[num_images-i-1]),
                                                    imageTime[residual-i],
@@ -704,30 +704,32 @@ if __name__ == '__main__':
     else:
         #raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
+        # Added a check to see if the fits conversion has been done. - MJM 
+        #only run this check if we want to process fits files - RAB
+        if RCDfiles == False:
+                
+            #check if conversion indicator file is present
+            if not minute_dirs[f].joinpath('converted.txt').is_file():
+                        
+                print('Converting to .fits')
+                
+                #make conversion indicator file
+                with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
+                    os.utime(str(minute_dirs[f].joinpath('converted.txt')))
+                            
+                #do .rcd -> .fits conversion using the desired gain level
+                if gain_high:
+                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
+                else:
+                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
+                    
+        else:
+            print('Already converted raw files to fits format.')
+            print('Remove file converted.txt if you want to overwrite.')
+        
         for f in range(len(minute_dirs)):
            
-            # Added a check to see if the fits conversion has been done. - MJM 
-            #only run this check if we want to process fits files - RAB
-            if RCDfiles == False:
-                
-                #check if conversion indicator file is present
-                if not minute_dirs[f].joinpath('converted.txt').is_file():
-                        
-                    print('Converting to .fits')
-                        
-                    #make conversion indicator file
-                    with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
-                        os.utime(str(minute_dirs[f].joinpath('converted.txt')))
-                            
-                        #do .rcd -> .fits conversion using the desired gain level
-                        if gain_high:
-                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
-                        else:
-                            os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
-                    
-                else:
-                    print('Already converted raw files to fits format.')
-                    print('Remove file converted.txt if you want to overwrite.')
+
 
             print(f"Running on... {minute_dirs[f]}")
 
