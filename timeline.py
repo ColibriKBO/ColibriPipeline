@@ -586,9 +586,9 @@ sunset=time.Time(sunset, format='jd') #sunset time for this night
 sunset.format='fits'
 
 #add sunrise and sunset time to the timeline csv for future ploting
-with open(filename, 'a',newline='') as csvfile:
-    csvwriter = csv.writer(csvfile)
-    csvwriter.writerow([sunset, sunrise,'nighting','Night']) 
+# with open(filename, 'a',newline='') as csvfile:
+#     csvwriter = csv.writer(csvfile)
+#     csvwriter.writerow([sunset, sunrise,'nighting','Night']) 
 
 
 # %% 
@@ -603,8 +603,8 @@ df = pd.read_csv(filename, delimiter=',')
 data = [list(row) for row in df.values]
 
 
-telescopes = {"GREENBIRD" : 1, "REDBIRD" : 2, "BLUEBIRD" : 3, 'Night' : 4} #bars are located in ascending order
-colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b", 'Night' : "k"}
+telescopes = {"GREENBIRD" : 1, "REDBIRD" : 2, "BLUEBIRD" : 3} #bars are located in ascending order
+colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b"}
 
 verts = []
 colors = []
@@ -630,9 +630,9 @@ ax1.xaxis.set_major_locator(loc)
 xfmt = DateFormatter('%H')
 ax1.xaxis.set_major_formatter(xfmt)
 ax1.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
-ax1.set_yticks([1,2,3,4])
-ax1.set_ylim(top=4+.4)
-ax1.set_yticklabels(['Green','Red','Blue','Night'])
+ax1.set_yticks([1,2,3])
+ax1.set_ylim(top=3+.4)
+ax1.set_yticklabels(['Green','Red','Blue'])
 ax1.xaxis.set_tick_params(labelsize=9)
 ax1.xaxis.grid(True)
 ax1.xaxis.tick_top()
@@ -706,7 +706,7 @@ ax.axes.invert_yaxis()
 
 ax2=plt.twinx()
 sns.lineplot(x=x,y=ynew,color='k',ax=ax2)
-ax2.yaxis.set_ticks(np.arange(0, np.amax(ynew), 1))
+ax2.yaxis.set_ticks(np.arange(0, 4, 1))
 ax.set_yticklabels([])
 ax.set_xticklabels([])
 ax2.set_xticklabels([])
@@ -790,7 +790,8 @@ for logpath in ACP_logpaths:
 #                    verticalalignment="bottom")
 
     # format xaxis with 4 month intervals
-    
+    ax3.plot([],[],label="X - bad weather \n ♦ - dome close")
+
     ax3.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
     ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
     ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
@@ -815,9 +816,10 @@ for logpath in ACP_logpaths:
 
 fig123.subplots_adjust(hspace=0)
 plt.title(str(obs_date)+' UT'+'\n'+str(sunset)+' - '+str(sunrise),pad=20)
+plt.legend()
 #plt.show(fig123)
 fig123.savefig(operations_savepath.joinpath("event.svg"),dpi=800,bbox_inches='tight')
-
+plt.close()
 
 #%% PLOT SNR VS GMAG
 
@@ -915,8 +917,11 @@ plt.savefig(operations_savepath.joinpath("sigma_det_today.svg"),dpi=800)
 plt.close()  
 
 #%% PLOT OCCULTATION CANDIDATES ON 2 AND 3 TELSCOPES
-
-matched_dirs=[d for d in matched_dir.iterdir() if d.is_dir()]
+try:
+    matched_dirs=[d for d in matched_dir.iterdir() if d.is_dir()] 
+except:
+    print("no matches!")
+    matched_dirs=[]
 for match in matched_dirs:
     detected_files=[f for f in match.iterdir() if ('det' in f.name and '.txt' in f.name)]
     if len(detected_files)==2:
@@ -1052,4 +1057,3 @@ with open(operations_savepath.joinpath('observation_results.html'), "wb") as fil
     file.write(html)
     
     
-
