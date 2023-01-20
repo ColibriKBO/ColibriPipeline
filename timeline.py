@@ -795,10 +795,7 @@ for logpath in ACP_logpaths:
     ax3.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
     ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
     ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-    field_info=getStarHour('D:/',str(obs_date))
-    #field_info=str(field_info)+'\n'+'$*$ - star collection '+'$x$ - bad weather '+'$D$ - dome close'
-    ax3.text(1, -0.5, field_info, ha='right',  fontsize=14,
-        verticalalignment='bottom',transform=ax3.transAxes)
+    
     # plt.setp(ax1.get_xticklabels(), rotation=30, ha="right")
     
     # remove y axis and spines
@@ -809,6 +806,13 @@ for logpath in ACP_logpaths:
     ax3.set_xticks([])
     ax3.margins(y=0.1)
     c+=1
+field_info=getStarHour('D:/',str(obs_date))
+    #field_info=str(field_info)+'\n'+'$*$ - star collection '+'$x$ - bad weather '+'$D$ - dome close'
+text=''
+for info in field_info:
+    text+=info
+ax3.text(1, -0.5, text, ha='right',  fontsize=14,
+    verticalalignment='bottom',transform=ax3.transAxes)
     
 # fig3.savefig('Events.svg',dpi=800,bbox_inches='tight')
 
