@@ -39,6 +39,10 @@ ctypedef np.float64_t F64
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+
+
+
+
 def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     """
     Locates the stars in an image using the sep module and completes
@@ -275,33 +279,44 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
      """
     
     ## Type definitions
-    cdef float curr_time,drift_time
+    cdef float drift_time
+    cdef double curr_time
     cdef list fluxes
     cdef tuple star_data
     cdef np.ndarray x,y,stars,x_clipped,y_clipped
+    cdef int inner_annulus = 5
+    cdef int outer_annulus = 8
+    cdef int Edge_buffer = 10
     
     ## Calculate time between prev_img and curr_img
-    curr_time  = Time(img_time,precision=9).unix
+    curr_time  = Time(img_time,format='isot',scale='utc',precision=9).unix
+    # print(img_time, curr_time,Time(img_time,format='isot',scale='utc',precision=9).unix)
     drift_time = curr_time - prev_img[1,3]
     
     ## Incorporate drift into each star's coords based on time since last frame
     x = np.array([prev_img[ind, 0] + pix_drift[0]*drift_time for ind in range(0, num_stars)])
     y = np.array([prev_img[ind, 1] + pix_drift[1]*drift_time for ind in range(0, num_stars)])
     
+    #2023-01-16 Roman A. commented out removing stars that are drifting closer to the edge
+    
     ## Eliminate stars too near the field of view boundary
-    edge_stars = clipCutStars(x, y, *pix_length)
-    edge_stars = np.sort(np.unique(edge_stars))
-    x_clipped  = np.delete(x,edge_stars)
-    y_clipped  = np.delete(y,edge_stars)
+    # edge_stars = clipCutStars(x, y, *pix_length)
+    # edge_stars = np.sort(np.unique(edge_stars))
+    # x_clipped  = np.delete(x,edge_stars)
+    # y_clipped  = np.delete(y,edge_stars)
     
     ## Assign integrated flux to each star, and then insert 0 for edge stars
     #TODO: be clever about doing this with numpy arrays
+    # fluxes = (sep.sum_circle(curr_img, 
+    #                          x_clipped, y_clipped, 
+    #                          r, 
+    #                          bkgann = (r + 6., r + 11.))[0]).tolist()
     fluxes = (sep.sum_circle(curr_img, 
-                             x_clipped, y_clipped, 
+                             x, y, 
                              r, 
-                             bkgann = (r + 6., r + 11.))[0]).tolist()
-    for i in edge_stars:
-        fluxes.insert(i,0)
+                             bkgann = (inner_annulus, outer_annulus))[0]).tolist()
+    # for i in edge_stars:
+    #     fluxes.insert(i,0)
         
     ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
     star_data = tuple(zip(x, y, fluxes, np.full(len(fluxes), curr_time)))
@@ -420,6 +435,9 @@ def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
     cdef np.ndarray unix_time,x,y,
     cdef np.ndarray edge_stars,x_clipped,y_clipped
     cdef np.ndarray fluxes,star_data
+    cdef int inner_annulus = 5
+    cdef int outer_annulus = 8
+    cdef int Edge_buffer = 10
     
     ## Calculate time between prev_img and curr_img
     unix_time  = Time(img_times,precision=9).unix
@@ -429,22 +447,31 @@ def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
     y = np.array([prev_img[ind, 1] for ind in range(0, num_stars)])
     
     ## Eliminate stars too near the field of view boundary
-    edge_stars = clipCutStars(x, y, *pix_length)
-    edge_stars = np.sort(np.unique(edge_stars))
-    x_clipped  = np.delete(x,edge_stars)
-    y_clipped  = np.delete(y,edge_stars)
+    
+    #2023-01-16 Roman A. commented out removing stars that are drifting closer to the edge
+    
+    # edge_stars = clipCutStars(x, y, *pix_length)
+    # edge_stars = np.sort(np.unique(edge_stars))
+    # x_clipped  = np.delete(x,edge_stars)
+    # y_clipped  = np.delete(y,edge_stars)
     
     ## Assign integrated flux to each star, and then insert 0 for edge stars
     #TODO: be clever about doing this with numpy arrays
     
+    # fluxes = np.array([sep.sum_circle(img_stack[frame],
+    #                                   x_clipped,y_clipped,
+    #                                   r, 
+    #                                   bkgann=(r + 6., r + 11.))[0]
+    #                    for frame in range(len(img_stack))])
+    
     fluxes = np.array([sep.sum_circle(img_stack[frame],
-                                      x_clipped,y_clipped,
+                                      x,y,
                                       r, 
-                                      bkgann=(r + 6., r + 11.))[0]
+                                      bkgann=(inner_annulus, outer_annulus))[0]
                        for frame in range(len(img_stack))])
 
-    for bad_ind in edge_stars:
-        fluxes = np.insert(fluxes, bad_ind, 0, axis=1)
+    # for bad_ind in edge_stars:
+    #     fluxes = np.insert(fluxes, bad_ind, 0, axis=1)
         
         
     ## Return star data as layered tuple as (x,y,integrated flux,array of curr_time)
