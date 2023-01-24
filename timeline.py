@@ -391,7 +391,7 @@ tables=[]
 for data_path in datapaths:
 
     try:
-        minutes=[f for f in data_path[0].iterdir() if obs_date.replace('-','') in f.name] #get a list of minute-folders
+        minutes=[f for f in data_path[0].iterdir() if ('Bias' not in f.name and '.txt' not in f.name)] #get a list of minute-folders
     except FileNotFoundError:
         print(str(data_path[0]), ' does not exist')
         continue
@@ -401,8 +401,16 @@ for data_path in datapaths:
     minute_end=[]
     for minute in minutes: #loop through all minute-folders and get the time of first and last frame in the folder
         imagePaths = sorted(minute.glob('*.rcd'))
-        minute_start.append(importTimesRCD(imagePaths, 0, 1)[0])
-        minute_end.append(importTimesRCD(imagePaths, len(imagePaths)-1, 1)[0])
+        try:
+            minute_start.append(importTimesRCD(imagePaths, 0, 1)[0])
+        except UnicodeDecodeError:
+            print(str(minute)+" corrupted image!")
+            
+        try:
+            minute_end.append(importTimesRCD(imagePaths, len(imagePaths)-1, 1)[0])
+        except UnicodeDecodeError:
+            print(str(minute)+" corrupted image!")
+            
     
     table=[minute_start,minute_end,['observing']*len(minute_end),[data_path[1]]*len(minute_end)] #create a table of times
     table=zip(*table)
@@ -586,9 +594,9 @@ sunset=time.Time(sunset, format='jd') #sunset time for this night
 sunset.format='fits'
 
 #add sunrise and sunset time to the timeline csv for future ploting
-with open(filename, 'a',newline='') as csvfile:
-    csvwriter = csv.writer(csvfile)
-    csvwriter.writerow([sunset, sunrise,'nighting','Night']) 
+# with open(filename, 'a',newline='') as csvfile:
+#     csvwriter = csv.writer(csvfile)
+#     csvwriter.writerow([sunset, sunrise,'nighting','Night']) 
 
 
 # %% 
@@ -706,7 +714,7 @@ ax.axes.invert_yaxis()
 
 ax2=plt.twinx()
 sns.lineplot(x=x,y=ynew,color='k',ax=ax2)
-ax2.yaxis.set_ticks(np.arange(0, 4, 1))
+ax2.yaxis.set_ticks(np.arange(0, 5, 1))
 ax.set_yticklabels([])
 ax.set_xticklabels([])
 ax2.set_xticklabels([])
@@ -727,7 +735,7 @@ for logpath in ACP_logpaths:
         c+=1
         continue
         
-    
+    # print(file)
     log=ReadLog(file)
     #list of events in log that are worth noting, this list can be expanded 
     pattern=['Weather unsafe!','Dome closed!','Field index:']
@@ -790,14 +798,11 @@ for logpath in ACP_logpaths:
 #                    verticalalignment="bottom")
 
     # format xaxis with 4 month intervals
-    
+
     ax3.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
     ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
     ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-    field_info=getStarHour('D:/',str(obs_date))
-    #field_info=str(field_info)+'\n'+'$*$ - star collection '+'$x$ - bad weather '+'$D$ - dome close'
-    ax3.text(1, -0.5, field_info, ha='right',  fontsize=14,
-        verticalalignment='bottom',transform=ax3.transAxes)
+    
     # plt.setp(ax1.get_xticklabels(), rotation=30, ha="right")
     
     # remove y axis and spines
@@ -808,6 +813,15 @@ for logpath in ACP_logpaths:
     ax3.set_xticks([])
     ax3.margins(y=0.1)
     c+=1
+field_info=getStarHour('D:/',str(obs_date))
+    #field_info=str(field_info)+'\n'+'$*$ - star collection '+'$x$ - bad weather '+'$D$ - dome close'
+text=''
+for info in field_info:
+    text+=info
+ax3.text(1, -0.5, text, ha='right',  fontsize=14,
+    verticalalignment='bottom',transform=ax3.transAxes)
+ax3.plot([],[],label="X - bad weather \n ♦ - dome close")
+ax3.legend()
     
 # fig3.savefig('Events.svg',dpi=800,bbox_inches='tight')
 
@@ -815,9 +829,11 @@ for logpath in ACP_logpaths:
 
 fig123.subplots_adjust(hspace=0)
 plt.title(str(obs_date)+' UT'+'\n'+str(sunset)+' - '+str(sunrise),pad=20)
+
+# plt.legend()        
 #plt.show(fig123)
 fig123.savefig(operations_savepath.joinpath("event.svg"),dpi=800,bbox_inches='tight')
-
+plt.close()
 
 #%% PLOT SNR VS GMAG
 
@@ -834,7 +850,7 @@ try:
     ax4.scatter(x=green_table['GMAG'],y=green_table['SNR'],color='g',s=3, alpha=0.4,label='Airmass: %.2f Time: %s' % (green_airmass, green_snrtime))
 except:
     pass
-ax4.set_ylim([0,15])
+# ax4.set_ylim([0,15])
 ax4.set_xlabel('Gmag')
 ax4.set_ylabel('Temporal SNR')
 
@@ -915,8 +931,11 @@ plt.savefig(operations_savepath.joinpath("sigma_det_today.svg"),dpi=800)
 plt.close()  
 
 #%% PLOT OCCULTATION CANDIDATES ON 2 AND 3 TELSCOPES
-
-matched_dirs=[d for d in matched_dir.iterdir() if d.is_dir()]
+try:
+    matched_dirs=[d for d in matched_dir.iterdir() if d.is_dir()] 
+except:
+    print("no matches!")
+    matched_dirs=[]
 for match in matched_dirs:
     detected_files=[f for f in match.iterdir() if ('det' in f.name and '.txt' in f.name)]
     if len(detected_files)==2:
@@ -1052,4 +1071,3 @@ with open(operations_savepath.joinpath('observation_results.html'), "wb") as fil
     file.write(html)
     
     
-

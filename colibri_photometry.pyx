@@ -279,7 +279,8 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
      """
     
     ## Type definitions
-    cdef float curr_time,drift_time
+    cdef float drift_time
+    cdef double curr_time
     cdef list fluxes
     cdef tuple star_data
     cdef np.ndarray x,y,stars,x_clipped,y_clipped
@@ -288,7 +289,8 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     cdef int Edge_buffer = 10
     
     ## Calculate time between prev_img and curr_img
-    curr_time  = Time(img_time,precision=9).unix
+    curr_time  = Time(img_time,format='isot',scale='utc',precision=9).unix
+    # print(img_time, curr_time,Time(img_time,format='isot',scale='utc',precision=9).unix)
     drift_time = curr_time - prev_img[1,3]
     
     ## Incorporate drift into each star's coords based on time since last frame
