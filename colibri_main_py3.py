@@ -241,42 +241,36 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     if star_pos_file.exists():
         star_pos_file.unlink()
 
-    numtoStack = 9          #number of images to include in stack
+    ## Search the first 9 images for stars, exit if they are blank
+
     startIndex = 1          #which image to start stack at (vignetting in 0th image)
+    numtoStack = 9          #number of images to include in stack
 
     min_stars = 30          #minimum stars in an image
-    star_find_results = []  #to store results of star finding
     
-    #run until the minimum number of stars is found, exit if the images in the whole directory are blank
-    while len(star_find_results) < min_stars:
-        
-        
-        #print('stacking images %i to %i\n' %(startIndex, numtoStack))
-        
-        #create median combined image for star finding
-        stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
+    
+    #create median combined image for star finding
+    stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
 
-        # make list of star coords and half light radii using a conservative
-        # threshold scaled to the number of images stacked
-        star_find_results = tuple(cp.initialFind(stacked, detect_thresh*numtoStack**0.5))
+    # make list of star coords and half light radii using a conservative
+    # threshold scaled to the number of images stacked
+    star_find_results = tuple(cp.initialFind(stacked, detect_thresh*numtoStack**0.5))
 
-        #remove stars where centre is too close to edge of frame
-        # edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
-        # star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
-        # star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
-        star_find_results = tuple(x for x in star_find_results if x[0] + Edge_buffer < x_length and x[0] - Edge_buffer > 0)
-        star_find_results = tuple(y for y in star_find_results if y[1] + Edge_buffer < x_length and y[1] - Edge_buffer > 0)
-        #increase start image counter
-        startIndex += 1     #adjust number to start stack if there weren't enough stars
+    #remove stars where centre is too close to edge of frame
+    # edge_buffer = 1     #number of pixels between edge of star aperture and edge of image
+    # star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
+    # star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
+    star_find_results = tuple(x for x in star_find_results if x[0] + Edge_buffer < x_length and x[0] - Edge_buffer > 0)
+    star_find_results = tuple(y for y in star_find_results if y[1] + Edge_buffer < x_length and y[1] - Edge_buffer > 0)
+    #increase start image counter
             
-        #check if we've reached the end of the minute, return error if so
-        if startIndex + 9 >= num_images:
-            print(f"no good images in minute: {minuteDir}")
-            print (f"{datetime.datetime.now()} Closing: {minuteDir}")
-            print ("\n")
-            return
+    #check if we've reached the end of the minute, return error if so
+    if len(star_find_results) < min_stars:
+        print(f"Insufficient stars in minute: {minuteDir}")
+        print (f"{datetime.datetime.now()} Closing: {minuteDir}")
+        print ("\n")
+        return
         
-    #print('star finding file index: ', i)
     
     #save to .npy file
     #star position file format: x  |  y  | half light radius
