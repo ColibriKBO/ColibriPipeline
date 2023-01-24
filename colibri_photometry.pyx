@@ -39,10 +39,6 @@ ctypedef np.float64_t F64
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-
-
-
-
 def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     """
     Locates the stars in an image using the sep module and completes
@@ -289,7 +285,7 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     cdef int Edge_buffer = 10
     
     ## Calculate time between prev_img and curr_img
-    curr_time  = Time(img_time,format='isot',scale='utc',precision=9).unix
+    curr_time  = Time(img_time,scale='utc',precision=9).unix
     # print(img_time, curr_time,Time(img_time,format='isot',scale='utc',precision=9).unix)
     drift_time = curr_time - prev_img[1,3]
     
