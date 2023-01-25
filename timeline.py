@@ -631,7 +631,7 @@ bars = PolyCollection(verts, facecolors=colors)
 
 ax1.add_collection(bars)
 ax1.autoscale()
-ax1.zorder=5
+ax1.zorder=1
 ax1.patch.set_alpha(0.01)
 loc = mdates.HourLocator(interval=1)
 ax1.xaxis.set_major_locator(loc)
@@ -708,13 +708,14 @@ block=pd.DataFrame(block,columns=x,index=['transparency'])
 ax=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
 # ax2=sns.heatmap(block,cmap='Blues_r',vmax=-10,vmin=-20,cbar=False,zorder=1)
 
-ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=1)
+ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=5)
 
 ax.axes.invert_yaxis()
 
 ax2=plt.twinx()
-sns.lineplot(x=x,y=ynew,color='k',ax=ax2)
+sns.lineplot(x=x,y=ynew,color='k',ax=ax2, zorder=2)
 ax2.yaxis.set_ticks(np.arange(0, 5, 1))
+ax2.set_ylim([0,4])
 ax.set_yticklabels([])
 ax.set_xticklabels([])
 ax2.set_xticklabels([])
@@ -738,7 +739,7 @@ for logpath in ACP_logpaths:
     # print(file)
     log=ReadLog(file)
     #list of events in log that are worth noting, this list can be expanded 
-    pattern=['Weather unsafe!','Dome closed!','Field index:']
+    pattern=['Weather unsafe!','Dome closed!','Field name:']
     event_list=ReadLogLine(log, pattern, Break=False)
     
     
@@ -828,7 +829,7 @@ ax3.legend()
 #%% Combine plot 1 2 3 into one
 
 fig123.subplots_adjust(hspace=0)
-plt.title(str(obs_date)+' UT'+'\n'+str(sunset)+' - '+str(sunrise),pad=20)
+plt.title(' UT'+'\n'+str(sunset).replace('T', ' ')[-4]+' - '+str(sunrise).replace('T', ' ')[-4],pad=20)
 
 # plt.legend()        
 #plt.show(fig123)
