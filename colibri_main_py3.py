@@ -115,65 +115,47 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     ## Select and load the master bias closest in time to the current minute
     bias = cir.chooseBias(minuteDir, MasterBiasList, obs_date)
 
-    
-
-    ''' get list of image names to process'''       
-    
-    imagePaths = sorted(minuteDir.glob('*.rcd')) 
-        
+    ## Get a sorted list of images in this minute directory, ignoring the first
+    ## due to vignetting
+    imagePaths = sorted(minuteDir.glob('*.rcd'))     
     del imagePaths[0]
-    
+        
+    ## Idenitify important characteristics from name and length of images list
     field_name = imagePaths[0].name.split('_')[0]  #which of 11 fields are observed
-    
-    ''' get 2d shape of images, number of image in directory'''
-    
     x_length, y_length, num_images = cir.getSizeRCD(imagePaths)
 
-    print (datetime.datetime.now(), "Imported", num_images, "frames")
+    print(datetime.datetime.now(), "Imported", num_images, "frames")
     
-    #check if there are enough images in the current directory 
+    ## Check if there are enough images in the current directory 
     minNumImages = len(kernel.array)*3         #3x kernel length
     if num_images < minNumImages:
         print (datetime.datetime.now(), "Insufficient number of images, skipping...")
-        return
+        return 0
     
 
-    ''' create star positional data from median combined stack'''
+###########################
+## Star Identification
+###########################
     
-    print (datetime.datetime.now(), field_name, 'starfinding...',)
+    #print (datetime.datetime.now(), field_name, 'starfinding...',)
+    print(f"Starfinding in {field_name}...")
     
-    #name of .npy file to save star positions in 
-    star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
-
-    # Remove position file if it exists - MJM (modified RAB Feb 2022)
-    if star_pos_file.exists():
-        star_pos_file.unlink()
-
-    ## Search the first 9 images for stars, exit if they are blank
-
-    startIndex = 1          #which image to start stack at (vignetting in 0th image)
-    numtoStack = 9          #number of images to include in stack
-
-    min_stars = 30          #minimum stars in an image
-    
-    
-    #create median combined image for star finding
+    ## Create median combined image for star finding
+    startIndex = 1          # which image to start stack at (vignetting in 0th image)
+    numtoStack = 9          # number of images to include in stack
     stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
 
-    # make list of star coords and half light radii using a conservative
-    # threshold scaled to the number of images stacked
+    ## Make list of star coords and half light radii using a conservative
+    ## threshold scaled to the number of images stacked
     star_find_results = tuple(cp.initialFind(stacked, detect_thresh*numtoStack**0.5))
 
-    #remove stars where centre is too close to edge of frame
-    # edge_buffer = 10     #number of pixels between edge of star aperture and edge of image
-    Edge_buffer = 10 
-    # star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
-    # star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
-    star_find_results = tuple(x for x in star_find_results if x[0] + Edge_buffer < x_length and x[0] - Edge_buffer > 0)
-    star_find_results = tuple(y for y in star_find_results if y[1] + Edge_buffer < x_length and y[1] - Edge_buffer > 0)
-    #increase start image counter
+    ## Remove stars where centre is too close to edge of frame
+    edge_buffer = 10     #number of pixels between edge of star aperture and edge of image
+    star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
+    star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
             
-    #check if we've reached the end of the minute, return error if so
+    ## Enforce a minimum number of visible stars in each image
+    min_stars = 30
     if len(star_find_results) < min_stars:
         print(f"Insufficient stars in minute: {minuteDir}")
         print (f"{datetime.datetime.now()} Closing: {minuteDir}")
@@ -181,68 +163,74 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         return
         
     
-    #save to .npy file
-    #star position file format: x  |  y  | half light radius
+    ## Save the array of star positions as an .npy file
+    ## Format: x  |  y  | half light radius
+    star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
+    if star_pos_file.exists():
+        star_pos_file.unlink()
     np.save(star_pos_file, star_find_results)
         
-    #save radii and positions in separate arrays
+    ## Seperate radii and positions in separate arrays
     star_find_results = np.array(star_find_results)
     radii = star_find_results[:,-1]
     initial_positions = star_find_results[:,:-1]
 
-    num_stars = len(initial_positions)      #number of stars in image
+    ## Number of stars identified in image
+    num_stars = len(initial_positions)
     
-    #print(datetime.datetime.now(), 'Done star finding. Number of stars found: ', num_stars) 
     
-    ''' Drift calculations '''
-    fframe_data,fframe_time = cir.importFramesRCD(imagePaths, startIndex, 1, bias)   #import first image
-    headerTimes = [fframe_time] #list of image header times
-    lframe_data,lframe_time = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
+###########################
+## Drift Calculations
+########################### 
 
+    ## Initialize centroid refining parameters
     drift_pos = np.empty([2, num_stars], dtype = (np.float64, 2))  #array to hold first and last positions
-    drift_times = []   #list to hold times for each set of drifted coords
     GaussSigma = np.mean(radii * 2. / 2.35)  # calculate gaussian sigma for each star's light profile
+    drift_multiple = 1  # relaxation factor on our centroid finding
     print(f"Weighting Radius for Starfinding (GaussSigma) = {GaussSigma}")
 
-    #refined star positions and times for first image
+    ## Import the first frame and last frame for starfinding purposes
+    fframe_data,fframe_time = cir.importFramesRCD(imagePaths, startIndex, 1, bias)   #import first image
+    lframe_data,lframe_time = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
+    headerTimes = [fframe_time] #list of image header times
+
+    ## Refine star positions for first and last image (also returns frame times)
     first_drift = cp.refineCentroid(fframe_data,fframe_time[0], initial_positions, GaussSigma)
-    drift_pos[0] = first_drift[0]
-    drift_times.append(first_drift[1])
-
-    #refined star positions and times for last image
-    drift_multiple = 1  # relaxation factor on our centroid finding
     last_drift = cp.refineCentroid(lframe_data,lframe_time[0], drift_pos[0], GaussSigma*drift_multiple)
-    drift_pos[1] = last_drift[0]
-    drift_times.append(last_drift[1])
-    drift_times = Time(drift_times, precision=9).unix
 
-    # print(len(drift_pos[0]))
-    # print(len(drift_pos[1]))
+    ## Organize frame times and centroid positions into containers
+    drift_pos[0] = first_drift[0]  # first frame positions
+    drift_pos[1] = last_drift[0]  # last frame positions
+    drift_times = [first_drift[1], last_drift[1]]  # frame times
+    drift_times = Time(drift_times, precision=9).unix  # convert times to unix
 
-    #get median drift rate [px/s] in x and y over the minute
+    ## Calculate median drift rate [px/s] in x and y over the minute
     x_drift, y_drift = cp.averageDrift(drift_pos[0],drift_pos[1], drift_times[0],drift_times[1])
     
-    #check drift rates
-    driftTolerance = 2.5e-2   #px per s
-    
-    if abs(x_drift) > driftTolerance or abs(y_drift) > driftTolerance:
+    ## Decide whether to apply drift modifications to frame analysis using a
+    ## tolerence threshold. If the drift values are too large, disregard this
+    ## minute as a tracking error. Rates in px/s.
+    driftErrorThresh = 1        # threshold for drift that is manageable
+    driftTolerance = 2.5e-2     # threshold for drift compensation
+    if abs(x_drift) > driftErrorThresh or abs(y_drift) > driftErrorThresh:
+        print (f"{datetime.datetime.now()} Significant drift ({x_drift}, {y_drift}). Skipping {minuteDir}...") 
+        return 0
+    elif abs(x_drift) > driftTolerance or abs(y_drift) > driftTolerance:
         drift = True # variable to check whether stars have drifted since last frame
     else:
         drift = False
 
-    driftErrorThresh = 1        #threshold for drift that is manageable
-    
-    #check if stars have drifted too much, return error if so
-    if abs(np.median(x_drift)) > driftErrorThresh or abs(np.median(y_drift)) > driftErrorThresh:
-        print (datetime.datetime.now(), "Significant drift, skipping ", minuteDir) 
-        return 0
 
-    ''' flux and time calculations with optional time evolution '''
-    #c3 = timer.time()
-    #image data (2d array with dimensions: # of images x # of stars)
-    starData = np.empty((num_images, num_stars), dtype=(np.float64, 4))
+###########################
+## Flux Measurements
+########################### 
+
+    ## Define the container containing the flux measurements of all images
+    ## with each frame holding a ( num_stars * 4 ) sized array.
+    ## [0] x coorinate; [1] y coordinate; [2] flux; [3] frame time
+    starData = np.empty((num_images, num_stars, 4), dtype=np.float64)
     
-    #get first image data from initial star positions
+    ## Fill the first data frame with information from the first image
     starData[0] = tuple(zip(initial_positions[:,0], 
                         initial_positions[:,1], 
                         #sumFlux(first_frame[0], initial_positions[:,0], initial_positions[:,1], ap_r),
@@ -250,7 +238,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                         (sep.sum_circle(fframe_data, initial_positions[:,0], initial_positions[:,1], ap_r)[0]).tolist(),
                         np.ones(np.shape(np.array(initial_positions))[0]) * (Time(fframe_time, precision=9).unix)))
 
-    if drift:  # time evolve moving stars
+
+    ## Iteratively process the images and put the results into starData
+    if drift:  # If drift compensation is required, enter this loop
     
         print(f"{minuteDir} Drifted - applying drift to photometry {x_drift} {y_drift}")
         
@@ -258,9 +248,11 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         chunk_size = 10
         residual   = (num_images-1)%chunk_size
         for i in range((num_images-1)//chunk_size):
+            # Read in the images in a given chunk
             imageFile,imageTime = cir.importFramesRCD(imagePaths,chunk_size*i+1, chunk_size, bias)
             headerTimes = headerTimes + imageTime
             for j in range(chunk_size):
+                # Process the images in the current chunk
                 starData[chunk_size*i+j+1] = cp.timeEvolve(imageFile[j],
                                                             deepcopy(starData[chunk_size*i+j]),
                                                             imageTime[j],
@@ -268,15 +260,16 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                             num_stars,
                                                             (x_length, y_length),
                                                             (x_drift, y_drift))
-                
                 gc.collect()
             
-        # Process remaining chunks
+        # Read in the remaining images
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
                                                   num_images-residual,
                                                   residual,
                                                   bias)
         headerTimes = headerTimes + imageTime
+        
+        # Process the remaining images
         for i in range(residual+1)[:0:-1]:
             starData[num_images-i] = cp.timeEvolve(imageFile[residual-i],
                                                     deepcopy(starData[num_images-i-1]),
@@ -285,37 +278,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                     num_stars,
                                                     (x_length, y_length),
                                                     (x_drift, y_drift))        
-        
-            
         gc.collect()
         
-        import matplotlib.pyplot as plt
-        for i in range(len(starData[0])):
-            flux=[]
-            frame=[]
-            x_coords_starfind=starData[0][i][0]
-            y_coords_starfind=starData[0][i][1]
-            #x_coords_fi=starData[-1][i][0]
-            #y_coords_fi=starData[-1][i][1]
-            x_coords_in=first_drift[0][i][0]
-            y_coords_in=first_drift[0][i][1]
-            x_coords_fi=last_drift[0][i][0]
-            y_coords_fi=last_drift[0][i][1]
-            for j in range(len(starData)):
-                flux.append(starData[j][i][2])
-                frame.append(j)
-                
-        
-            fig, ax1 = plt.subplots()
-            ax1.scatter(frame, flux,label="starfind pos: x="+str(x_coords_starfind)+" y="+str(y_coords_starfind)+"\n initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
-            plt.legend()
-            plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
-            if not os.path.exists(plot_path):
-                os.mkdir(plot_path)
-            plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
-            
-            plt.close()
-    
             
     else:  # if there is not significant drift, don't account for drift  in photometry
         
@@ -351,66 +315,45 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 
         gc.collect()
     
-        import matplotlib.pyplot as plt
-    # for starNum in range(0,num_stars):
-    #     flux=starData[:, starNum, 2]
-    #     x_coords_in=starData[0][starNum][0]
-    #     y_coords_in=starData[0][starNum][1]
-    #     x_coords_fi=starData[-1][starNum][0]
-    #     y_coords_fi=starData[-1][starNum][1]
-    #     fig, ax1 = plt.subplots()
-    #     ax1.scatter(range(0,len(starData)), flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
-    #     plt.legend()
-    #     plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
-    #     if not os.path.exists(plot_path):
-    #         os.mkdir(plot_path)
-    #     plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
-        
-    #     plt.close()
 
-        for i in range(len(starData[0])):
-            flux=[]
-            frame=[]
-            x_coords_starfind=starData[0][i][0]
-            y_coords_starfind=starData[0][i][1]
-            #x_coords_fi=starData[-1][i][0]
-            #y_coords_fi=starData[-1][i][1]
-            x_coords_in=first_drift[0][i][0]
-            y_coords_in=first_drift[0][i][1]
-            x_coords_fi=last_drift[0][i][0]
-            y_coords_fi=last_drift[0][i][1]
-            for j in range(len(starData)):
-                flux.append(starData[j][i][2])
-                frame.append(j)
+    """ ## Roman's flux plotting function
+    import matplotlib.pyplot as plt
+    for i in range(len(starData[0])):
+        flux=[]
+        frame=[]
+        x_coords_starfind=starData[0][i][0]
+        y_coords_starfind=starData[0][i][1]
+        #x_coords_fi=starData[-1][i][0]
+        #y_coords_fi=starData[-1][i][1]
+        x_coords_in=first_drift[0][i][0]
+        y_coords_in=first_drift[0][i][1]
+        x_coords_fi=last_drift[0][i][0]
+        y_coords_fi=last_drift[0][i][1]
+        for j in range(len(starData)):
+            flux.append(starData[j][i][2])
+            frame.append(j)
                 
         
-            fig, ax1 = plt.subplots()
-            ax1.scatter(frame, flux,label="starfind pos: x="+str(x_coords_starfind)+" y="+str(y_coords_starfind)+"\n initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
-            plt.legend()
-            plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
-            if not os.path.exists(plot_path):
-                os.mkdir(plot_path)
-            plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
-            
-            plt.close()
-    
+        fig, ax1 = plt.subplots()
+        ax1.scatter(frame, flux,label="starfind pos: x="+str(x_coords_starfind)+" y="+str(y_coords_starfind)+"\n initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
+        plt.legend()
+        plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
+        if not os.path.exists(plot_path):
+            os.mkdir(plot_path)
+        plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
+        
+        plt.close()
+    """
 
-    #d3 = timer.time() - c3
-    # data is an array of shape: [frames, star_num, {0:star x, 1:star y, 2:star flux, 3:unix_time}]
 
-    #print (datetime.datetime.now(), 'Photometry done.')
-
-    ''' Dip detection '''
+###########################
+## Dip Detection
+###########################
    
-    #perform dip detection for all stars
-    
     #loop through each detected object
     dipResults = np.array([cp.dipDetection(starData[:, starNum, 2], kernel, starNum, sigma_threshold) for starNum in range(0,num_stars)],
                           dtype=object)
    
-    # event_frames = dipResults[:,0]         #array of event frames (-1 if no event detected, -2 if incomplete data)
-    # light_curves = dipResults[:,1]         #array of light curves (empty if no event detected)
-    # dip_types = dipResults[:,2]             #array of keywords describing type of dip detected
     
     event_frames = dipResults[:,0]         #array of event frames (-1 if no event detected, -2 if incomplete data)
     light_curves = dipResults[:,1]         #array of light curves (empty if no event detected)
