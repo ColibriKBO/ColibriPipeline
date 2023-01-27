@@ -151,8 +151,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     ## Remove stars where centre is too close to edge of frame
     edge_buffer = 10     #number of pixels between edge of star aperture and edge of image
-    star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
-    star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
+    #star_find_results = tuple(x for x in star_find_results if x[0] + ap_r + edge_buffer < x_length and x[0] - ap_r - edge_buffer > 0)
+    #star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
+    star_find_results = tuple(x for x in star_find_results if x[0] + edge_buffer < x_length and x[0] - edge_buffer > 0)
+    star_find_results = tuple(y for y in star_find_results if y[1] + edge_buffer < x_length and y[1] - edge_buffer > 0)
             
     ## Enforce a minimum number of visible stars in each image
     min_stars = 30
@@ -196,7 +198,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     ## Refine star positions for first and last image (also returns frame times)
     first_drift = cp.refineCentroid(fframe_data,fframe_time[0], initial_positions, GaussSigma)
-    last_drift = cp.refineCentroid(lframe_data,lframe_time[0], drift_pos[0], GaussSigma*drift_multiple)
+    last_drift = cp.refineCentroid(lframe_data,lframe_time[0], first_drift[0], GaussSigma*drift_multiple)
 
     ## Organize frame times and centroid positions into containers
     drift_pos[0] = first_drift[0]  # first frame positions
@@ -206,6 +208,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     ## Calculate median drift rate [px/s] in x and y over the minute
     x_drift, y_drift = cp.averageDrift(drift_pos[0],drift_pos[1], drift_times[0],drift_times[1])
+    print(f"Drift (x,y): {x_drift} px/s, {y_drift} px/s")
     
     ## Decide whether to apply drift modifications to frame analysis using a
     ## tolerence threshold. If the drift values are too large, disregard this
@@ -213,7 +216,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     driftErrorThresh = 1        # threshold for drift that is manageable
     driftTolerance = 2.5e-2     # threshold for drift compensation
     if abs(x_drift) > driftErrorThresh or abs(y_drift) > driftErrorThresh:
-        print (f"{datetime.datetime.now()} Significant drift ({x_drift}, {y_drift}). Skipping {minuteDir}...") 
+        print (f"{datetime.datetime.now()} Significant drift. Skipping {minuteDir}...") 
         return 0
     elif abs(x_drift) > driftTolerance or abs(y_drift) > driftTolerance:
         drift = True # variable to check whether stars have drifted since last frame
@@ -289,8 +292,10 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         chunk_size = 10
         residual   = (num_images-1)%chunk_size
         for i in range((num_images-1)//chunk_size):
+            # Read in the images in a given chunk
             imageFile,imageTime = cir.importFramesRCD(imagePaths,chunk_size*i+1, chunk_size, bias)
             headerTimes = headerTimes + imageTime
+            # Process the the current chunk all at once
             starData[chunk_size*i+1:chunk_size*(i+1)+1] = cp.getStationaryFlux(imageFile,
                                                                                deepcopy(starData[chunk_size*i]),
                                                                                imageTime,
@@ -300,12 +305,13 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                 
             gc.collect()
             
-        # Process remaining chunks
+        # Read in the remaining images
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
                                                   num_images-(num_images-1)%chunk_size,
                                                   (num_images-1)%chunk_size,
                                                   bias)
         headerTimes = headerTimes + imageTime
+        # Process the residual chunk
         starData[num_images-residual:] = cp.getStationaryFlux(imageFile,
                                                               deepcopy(starData[num_images-residual-1]),
                                                               imageTime,
