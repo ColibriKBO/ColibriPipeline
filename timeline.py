@@ -794,14 +794,21 @@ for logpath in ACP_logpaths:
 #    ax3.plot(dates, np.zeros_like(dates), "-o",
 #            color="k", markerfacecolor="w")  # Baseline and markers on it.
     d=0
-    
+    k=[0,1,2]
+    i=0
     for name in names:
+
+        
         m = markers.get(name)
         
-        ax3.plot(dates[d], 0+c*2,
-                color=color[c], marker=m, markersize=10,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
-        ax3.axhline(y = 0+c*2, color = color[c], linestyle = '-')
+        ax3.plot(dates[d], 0+c*2+0.4*k[i],
+                color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
+        ax3.axhline(y = 0+c*2+0.4*k[i], color = color[c], linestyle = '-')
         d+=1
+        i+=1
+        if i>2:
+            i=0
+        
 
 
     # annotate lines
