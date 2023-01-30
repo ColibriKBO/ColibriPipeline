@@ -372,14 +372,31 @@ def getStarHour(main_path, obs_date, threshold=10, gain='high'):
         
         bias = chooseBias(folder, MasterBiasList)
         #read mid frame in the list
-        img=importFramesRCD([stars[int(len(stars) / 2)]], 0, 1, bias, gain)
-        #use sep to find the number of stars
-        star_pos=initialFindFITS(img,threshold)
+        try:
+            img=importFramesRCD([stars[int(len(stars) / 2)]], 0, 1, bias, gain)
+        
+            star_pos=list(initialFindFITS(img,threshold))
+        except: #in case of corrupt images
+            star_pos=[]
+        i=0
+        while len(star_pos)<40: #in case of bad frames with no stars
+            print("not enough stars!")
+            folder=stars[i].parent #iterate every 100th frame of the list to find enough stars
+        
+            bias = chooseBias(folder, MasterBiasList)
+
+            img=importFramesRCD([stars[i]], 0, 1, bias, gain)
+        
+            star_pos=list(initialFindFITS(img,threshold))
+            i+=100
+
+
         # print(len(list(star_pos)))
         # get field coordinates
         coords=fieldCoords(field)
         #assuming exposure time is 25ms
-        output=f'{field} observed  {len(stars)*0.025/60/60*len(list(star_pos)):.1f}  star-hours, Ra: {coords[0]} dec: {coords[1]}\n'
+
+        output=f'{field} observed  {len(stars)*0.025/60/60*len(star_pos):.1f}  star-hours, Ra: {coords[0]} dec: {coords[1]}\n'
         print(output)
         summary.append(output)
         
@@ -387,4 +404,4 @@ def getStarHour(main_path, obs_date, threshold=10, gain='high'):
         
 
 if __name__ == '__main__':
-    print(getStarHour('E:','2022-10-05'))
+    print(getStarHour('D:','2023-01-15'))
