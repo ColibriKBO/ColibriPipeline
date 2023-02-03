@@ -224,21 +224,20 @@ def readRAdec(filepath):
 '''---------------------------------------------SCRIPT STARTS HERE--------------------------------------'''
 
 ''' Argument parsing added by MJM - July 20, 2022 '''
-if len(sys.argv) == 2:
-    arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
-        Usage:
+
+arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
+    Usage:
+
+    """,
+    formatter_class=argparse.RawTextHelpFormatter)
+
+arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+
+cml_args = arg_parser.parse_args()
+obsYYYYMMDD = cml_args.date
+obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     
-        """,
-        formatter_class=argparse.RawTextHelpFormatter)
-    
-    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
-    
-    cml_args = arg_parser.parse_args()
-    obsYYYYMMDD = cml_args.date
-    obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    
-else:
-    obs_date='2022-10-05'
+
 
 night_dir=str(obs_date)
 green_path=Path('/','D:','/ColibriArchive',night_dir) #path for Green pipeline results
@@ -353,13 +352,16 @@ milsec_match=[[]]
 
 
 ##loop through each pattern of hhmmss and compare their milliseconds time with combinatorics
+
 for k in pattern:
     milsecond_couple=[]
     matched_ab=[]
     for file in sorted(os.listdir(matched_dir)):
+        
         if k in file:
             for minute in re.findall("_(\d{9})_", file):
                 milsecond_couple.append(float('.'+ minute))
+
     for a, b in itertools.combinations(milsecond_couple, 2):  
         if isclose(a, b,  abs_tol=milisec_tol):
  
@@ -368,10 +370,13 @@ for k in pattern:
 del(milsec_match[0]) #delete first row of zeroes
 milsec_match = list(np.unique(np.concatenate(milsec_match).flat))
 for n in range(len(milsec_match)):
-    milsec_match[n]=str(milsec_match[n]).replace('0.','')+'0'
+    milsec_match[n]=str(milsec_match[n]).replace('0.','')
+    if len(milsec_match[n])<9:
+        milsec_match[n]=milsec_match[n]+'0'
 
 for matchedTXT in matched_dir.iterdir():
-    if re.findall("_(\d{9})_", str(matchedTXT))[0] not in milsec_match: 
+    if re.findall("_(\d{9})_", str(matchedTXT))[0] not in milsec_match:
+         
         if os.path.exists(matchedTXT):
             
             shutil.move(str(matchedTXT), str(milisec_unmatched)) 
@@ -504,24 +509,30 @@ print("Matching in milliseconds again...")
 matched_pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
 milsec_match=[[]]
 
-
 for k in matched_pattern:
     milsecond_couple=[]
     matched_ab=[]
     for file in sorted(os.listdir(matched_dir)):
+        
         if k in file:
+
             for minute in re.findall("_(\d{9})_", file):
                 milsecond_couple.append(float('.'+ minute))
-    for a, b in itertools.combinations(milsecond_couple, 2):  
-        if isclose(a, b,  abs_tol=milisec_tol):
+
+    for a, b in itertools.combinations(milsecond_couple, 2):
  
+        if isclose(a, b,  abs_tol=milisec_tol):
+            
             milsec_match.append([a,b]) 
+
         
 del(milsec_match[0]) #delete first row of zeroes
 milsec_match = list(np.unique(np.concatenate(milsec_match).flat))
 for n in range(len(milsec_match)):
-    milsec_match[n]=str(milsec_match[n]).replace('0.','')+'0'
-
+    milsec_match[n]=str(milsec_match[n]).replace('0.','')
+    if len(milsec_match[n])<9:
+        milsec_match[n]=milsec_match[n]+'0'
+        
 for matchedTXT in matched_dir.iterdir():
     if re.findall("_(\d{9})_", str(matchedTXT))[0] not in milsec_match: 
         if os.path.exists(matchedTXT):
