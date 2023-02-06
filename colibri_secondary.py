@@ -98,7 +98,7 @@ def match_RADec(RA, DEC, gdata, SR):
 def getKernelParams(kernel_i):
     '''get parameters for best fitting kernel from the output .txt file'''
     
-    param_filename = base_path.parent.joinpath('kernels', 'params_kernels_040622.txt')
+    param_filename = base_path.parent.joinpath('kernels', 'params_kernels.txt')
     kernel_params = pd.read_csv(param_filename, delim_whitespace = True)
     
     return kernel_params.iloc[kernel_i]
@@ -574,7 +574,7 @@ if __name__ == '__main__':
 
     #load in pre-made kernel set
     # kernel_set = np.loadtxt(base_path.parent.joinpath('kernels', 'kernels_040622.txt')) # Commented out - MJM
-    kernel_set = np.loadtxt(base_path.joinpath('kernels', 'kernels_040622.txt'))
+    kernel_set = np.loadtxt(base_path.joinpath('kernels', 'kernels.txt'))
     
     #check if each kernel has a detectable dip - moved out of dipdetection function RAB 031722
     noise = 0.8   #minimum kernel depth threshold RAB Mar 15 2022- detector noise levels (??) TODO: change - will depend on high/low
