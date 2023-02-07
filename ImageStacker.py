@@ -9,13 +9,13 @@ Stacks 1-minute long images using clipped mean
 
 from pathlib import Path
 import numpy as np
-from datetime import datetime, date
+from datetime import datetime, date, time
 import argparse
 
 from astropy.io import fits
 import  os
 
-import time
+import time as T
 import numba as nb
 
 import multiprocessing
@@ -53,9 +53,9 @@ def getDateTime(folder):
     folderTime = str(folder.name).split('_')[1].split('.')
   # folderTime = '19.30.00.000'
    # folderTime = folderTime.split('.')
-    folderDate = datetime.date(int(folderDate[:4]), int(folderDate[4:6]), int(folderDate[-2:]))  #convert to date object
-    folderTime = datetime.time(int(folderTime[0]), int(folderTime[1]), int(folderTime[2]))       #convert to time object
-    folderDatetime = datetime.datetime.combine(folderDate, folderTime)                     #combine into datetime object
+    folderDate = date(int(folderDate[:4]), int(folderDate[4:6]), int(folderDate[-2:]))  #convert to date object
+    folderTime = time(int(folderTime[0]), int(folderTime[1]), int(folderTime[2]))       #convert to time object
+    folderDatetime = datetime.combine(folderDate, folderTime)                     #combine into datetime object
     
     return folderDatetime
 
@@ -194,7 +194,7 @@ def getBias(filepath, numOfBiases, gain):
     rcdbiases = importFramesRCD(filepath, rcdbiasFileList, 0, numOfBiases, np.zeros((2048,2048)), gain)[0]
     
     '''take median of bias images'''
-    biasMed = np.mean(rcdbiases, axis=0)
+    biasMed = np.median(rcdbiases, axis=0)
     
     return biasMed
 
@@ -292,7 +292,7 @@ def clippedMean(filelist, hiclips, loclips,gain):
     vnumpix = 2048
     
     for f in filelist:
-        print(f.name)
+        # print(f.name)
         fid = open(f, 'rb')
         
         fid.seek(384,0)
@@ -340,9 +340,11 @@ if __name__ == '__main__':
 
     cml_args = arg_parser.parse_args()
     obsYYYYMMDD = cml_args.date
-    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+    obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     gain='high'
     chunk=40
+    hiclip_value=1
+    loclip_value=0
     data_path=Path('/','D:','/ColibriData',str(obs_date).replace('-',''))
     base_path=Path('/','D:')
     NumBiasImages=50
@@ -350,12 +352,12 @@ if __name__ == '__main__':
     if not os.path.exists(bias_save_folder):
         os.makedirs(bias_save_folder)
     
-    MasterBiasList = makeBiasSet(base_path.joinpath('Bias'), NumBiasImages, bias_save_folder, 
+    MasterBiasList = makeBiasSet(data_path.joinpath('Bias'), NumBiasImages, bias_save_folder, 
                                  gain)
     
     minutes=[f for f in data_path.iterdir() if (os.path.isdir(f) and "Bias" not in f.name)]
     for minute in minutes:
-        start_time = time.time()
+        start_time = T.time()
         files=[f for f in minute.iterdir() if ".rcd" in f.name]
         field=files[0].name.split('_')[0]
         # stacked=clippedMean(files,1,0,'high')
@@ -363,7 +365,7 @@ if __name__ == '__main__':
         
         pool_size = multiprocessing.cpu_count() -2
         pool = Pool(pool_size)
-        args = ((files[f:f+chunk],1,0,'high')for f in range(0,len(files),chunk))
+        args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
         # stacked=[]
         try:
             stacked= pool.starmap(clippedMean,args)
@@ -396,8 +398,8 @@ if __name__ == '__main__':
         save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Bias')
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        Filepath = save_path.joinpath(minute.name+'_meanbias.fits')
+        Filepath = save_path.joinpath(minute.name+'_medianbias.fits')
         
         hdu.writeto(Filepath, overwrite=True)
         
-        print("Finished stacking minute in %s seconds" % (time.time() - start_time))
+        print("Finished stacking minute in %s seconds" % (T.time() - start_time))
