@@ -402,4 +402,4 @@ if __name__ == '__main__':
         
         hdu.writeto(Filepath, overwrite=True)
         
-        print("Finished stacking minute in %s seconds" % (T.time() - start_time))
+        print("Finished stacking minute in %.2f seconds" % (T.time() - start_time))
