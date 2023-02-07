@@ -200,6 +200,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     first_drift = cp.refineCentroid(fframe_data,fframe_time[0], initial_positions, GaussSigma)
     last_drift = cp.refineCentroid(lframe_data,lframe_time[0], first_drift[0], GaussSigma*drift_multiple)
 
+<<<<<<< HEAD
     ## Organize frame times and centroid positions into containers
     drift_pos[0] = first_drift[0]  # first frame positions
     drift_pos[1] = last_drift[0]  # last frame positions
@@ -207,6 +208,16 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     drift_times = Time(drift_times, precision=9).unix  # convert times to unix
 
     ## Calculate median drift rate [px/s] in x and y over the minute
+=======
+    #refined star positions and times for last image
+    drift_multiple = 10  # relaxation factor on our centroid finding
+    last_drift = cp.refineCentroid(lframe_data,lframe_time[0], drift_pos[0], GaussSigma*drift_multiple)
+    drift_pos[1] = last_drift[0]
+    drift_times.append(last_drift[1])
+    drift_times = Time(drift_times, precision=9).unix
+
+    #get median drift rate [px/s] in x and y over the minute
+>>>>>>> 1ca5865bd23fba35d8fae2b11e3845caa096f278
     x_drift, y_drift = cp.averageDrift(drift_pos[0],drift_pos[1], drift_times[0],drift_times[1])
     print(f"Drift (x,y): {x_drift} px/s, {y_drift} px/s")
     
@@ -283,6 +294,32 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                                                     (x_drift, y_drift))        
         gc.collect()
         
+<<<<<<< HEAD
+=======
+        # import matplotlib.pyplot as plt
+        # for i in range(len(starData[0])):
+        #     flux=[]
+        #     frame=[]
+        #     x_coords_in=starData[0][i][0]
+        #     y_coords_in=starData[0][i][1]
+        #     x_coords_fi=starData[-1][i][0]
+        #     y_coords_fi=starData[-1][i][1]
+        #     for j in range(len(starData)):
+        #         flux.append(starData[j][i][2])
+        #         frame.append(j)
+                
+        
+        #     fig, ax1 = plt.subplots()
+        #     ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
+        #     plt.legend()
+        #     plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
+        #     if not os.path.exists(plot_path):
+        #         os.mkdir(plot_path)
+        #     plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
+            
+        #     plt.close()
+    
+>>>>>>> 1ca5865bd23fba35d8fae2b11e3845caa096f278
             
     else:  # if there is not significant drift, don't account for drift  in photometry
         
@@ -322,26 +359,17 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         gc.collect()
     
 
-    """ ## Roman's flux plotting function
+    """
+    # Roman's photometry plotting section
     import matplotlib.pyplot as plt
-    for i in range(len(starData[0])):
-        flux=[]
-        frame=[]
-        x_coords_starfind=starData[0][i][0]
-        y_coords_starfind=starData[0][i][1]
-        #x_coords_fi=starData[-1][i][0]
-        #y_coords_fi=starData[-1][i][1]
-        x_coords_in=first_drift[0][i][0]
-        y_coords_in=first_drift[0][i][1]
-        x_coords_fi=last_drift[0][i][0]
-        y_coords_fi=last_drift[0][i][1]
-        for j in range(len(starData)):
-            flux.append(starData[j][i][2])
-            frame.append(j)
-                
-        
+    for starNum in range(0,num_stars):
+        flux=starData[:, starNum, 2]
+        x_coords_in=starData[0][starNum][0]
+        y_coords_in=starData[0][starNum][1]
+        x_coords_fi=starData[-1][starNum][0]
+        y_coords_fi=starData[-1][starNum][1]
         fig, ax1 = plt.subplots()
-        ax1.scatter(frame, flux,label="starfind pos: x="+str(x_coords_starfind)+" y="+str(y_coords_starfind)+"\n initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
+        ax1.scatter(range(0,len(starData)), flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
         plt.legend()
         plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
         if not os.path.exists(plot_path):
@@ -349,7 +377,30 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
         
         plt.close()
+
+        for i in range(len(starData[0])):
+            flux=[]
+            frame=[]
+            x_coords_in=starData[0][i][0]
+            y_coords_in=starData[0][i][1]
+            x_coords_fi=starData[-1][i][0]
+            y_coords_fi=starData[-1][i][1]
+            for j in range(len(starData)):
+                flux.append(starData[j][i][2])
+                frame.append(j)
+                
+        
+            fig, ax1 = plt.subplots()
+            ax1.scatter(frame, flux,label="initial pos: x="+str(x_coords_in)+" y="+str(y_coords_in)+"\n final pos: x="+str(x_coords_fi)+" y="+str(y_coords_fi))
+            plt.legend()
+            plot_path=base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name)
+            if not os.path.exists(plot_path):
+                os.mkdir(plot_path)
+            plt.savefig(plot_path.joinpath('_star_'+str(i) + '.png'))
+            
+            plt.close()
     """
+
 
 
 ###########################

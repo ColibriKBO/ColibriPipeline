@@ -132,9 +132,9 @@ def ReadLogLine(log_list, pattern, Break=True):
                 if pat in line:
                     messages.append((line))
                     if int(line.split(" ")[3].split(':')[0])>20:
-                        times.append(obs_date+' '+line.split(" ")[3])
-                    else:
                         times.append(str(obs_date)+' '+line.split(" ")[3])
+                    else:
+                        times.append(str(tomorrowT)+' '+line.split(" ")[3])
         
         return messages, times
     
@@ -401,15 +401,20 @@ for data_path in datapaths:
     minute_end=[]
     for minute in minutes: #loop through all minute-folders and get the time of first and last frame in the folder
         imagePaths = sorted(minute.glob('*.rcd'))
+        
         try:
             minute_start.append(importTimesRCD(imagePaths, 0, 1)[0])
+            # print(importTimesRCD(imagePaths, 0, 1)[0])
         except UnicodeDecodeError:
             print(str(minute)+" corrupted image!")
-            
+            minute_start.append(str(datetime.fromtimestamp(os.path.getctime(imagePaths[0]))).replace(' ','T'))
         try:
             minute_end.append(importTimesRCD(imagePaths, len(imagePaths)-1, 1)[0])
+            # print(importTimesRCD(imagePaths, len(imagePaths)-1, 1)[0])
         except UnicodeDecodeError:
             print(str(minute)+" corrupted image!")
+            minute_end.append(str(datetime.fromtimestamp(os.path.getctime(imagePaths[-1]))).replace(' ','T'))
+            
             
     
     table=[minute_start,minute_end,['observing']*len(minute_end),[data_path[1]]*len(minute_end)] #create a table of times
@@ -627,11 +632,11 @@ for d in data:
     colors.append(colormapping[d[3]])
 
 bars = PolyCollection(verts, facecolors=colors)
-
+bars.set_alpha(0.7)
 
 ax1.add_collection(bars)
 ax1.autoscale()
-ax1.zorder=5
+ax1.zorder=1
 ax1.patch.set_alpha(0.01)
 loc = mdates.HourLocator(interval=1)
 ax1.xaxis.set_major_locator(loc)
@@ -708,13 +713,14 @@ block=pd.DataFrame(block,columns=x,index=['transparency'])
 ax=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
 # ax2=sns.heatmap(block,cmap='Blues_r',vmax=-10,vmin=-20,cbar=False,zorder=1)
 
-ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=1)
+ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=2)
 
 ax.axes.invert_yaxis()
 
 ax2=plt.twinx()
-sns.lineplot(x=x,y=ynew,color='k',ax=ax2)
+sns.lineplot(x=x,y=ynew,color='k',ax=ax2, zorder=5)
 ax2.yaxis.set_ticks(np.arange(0, 5, 1))
+ax2.set_ylim([0,4])
 ax.set_yticklabels([])
 ax.set_xticklabels([])
 ax2.set_xticklabels([])
@@ -729,16 +735,19 @@ c=0#counter to loop through each telescope and colormap
 markers={}#markers on the plot
 for logpath in ACP_logpaths:
     #try reading ACP log
+
     try:
         file=[file for file in logpath.iterdir() if obs_date.replace('-','') in file.name][0]
+        
     except IndexError:
         c+=1
         continue
         
     # print(file)
     log=ReadLog(file)
+
     #list of events in log that are worth noting, this list can be expanded 
-    pattern=['Weather unsafe!','Dome closed!','Field index:']
+    pattern=['Weather unsafe!','Dome closed!','Field Name:']
     event_list=ReadLogLine(log, pattern, Break=False)
     
     
@@ -746,6 +755,7 @@ for logpath in ACP_logpaths:
     names=event_list[0]
 
     for i in range(len(names)):
+        
         if pattern[0] in names[i]:
             names[i]='bad weather'
             markers[names[i]]="x"
@@ -754,9 +764,13 @@ for logpath in ACP_logpaths:
             markers[names[i]]="D"
         if pattern[2] in names[i]:
             names[i]=names[i].split('INFO: ')[1]
-            field_num=names[i].split(": ")[1].strip("\n")
-            markers[names[i]]=fr"${field_num}$"
-            markers[names[i]]=markers[names[i]]
+            try:
+                field_num=int(names[i].split(": ")[1].split("field")[1].strip("\n"))
+                
+                markers[names[i]]=fr"${field_num}$"
+                markers[names[i]]=markers[names[i]]
+            except:
+                continue
 
 
 
@@ -780,14 +794,21 @@ for logpath in ACP_logpaths:
 #    ax3.plot(dates, np.zeros_like(dates), "-o",
 #            color="k", markerfacecolor="w")  # Baseline and markers on it.
     d=0
-    
+    k=[0,1,2]
+    i=0
     for name in names:
+
+        
         m = markers.get(name)
         
-        ax3.plot(dates[d], 0+c*2,
-                color=color[c], marker=m, markersize=10,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
-        ax3.axhline(y = 0+c*2, color = color[c], linestyle = '-')
+        ax3.plot(dates[d], 0+c*2+0.4*k[i],
+                color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
+        ax3.axhline(y = 0+c*2+0.4*k[i], color = color[c], linestyle = '-')
         d+=1
+        i+=1
+        if i>2:
+            i=0
+        
 
 
     # annotate lines
@@ -828,7 +849,7 @@ ax3.legend()
 #%% Combine plot 1 2 3 into one
 
 fig123.subplots_adjust(hspace=0)
-plt.title(str(obs_date)+' UT'+'\n'+str(sunset)+' - '+str(sunrise),pad=20)
+plt.title(' UT'+'\n'+str(sunset).replace('T', ' ')[:-4]+' - '+str(sunrise).replace('T', ' ')[:-4],pad=20)
 
 # plt.legend()        
 #plt.show(fig123)
