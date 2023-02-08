@@ -398,7 +398,7 @@ if __name__ == '__main__':
         args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
         # stacked=[]
         try:
-            stacked_img= pool.starmap(clippedMean,args)
+            stacked= pool.starmap(clippedMean,args)
             # pool.starmap(clippedMean,args)
         except:
             logging.exception("failed to parallelize")
@@ -407,7 +407,7 @@ if __name__ == '__main__':
         pool.join()
         # print(len(stacked), stacked[0].shape)
     
-        # stacked_img=np.mean(stacked,axis=0)
+        stacked_img=np.mean(stacked,axis=0)
 
 
         flat_img=stacked_img.flatten()
