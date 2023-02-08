@@ -279,6 +279,26 @@ def split_images(data,pix_h,pix_v,gain):
 
 
 def clippedMean(filelist, hiclips, loclips,gain):
+    '''
+    
+
+    Parameters
+    ----------
+    filelist : list
+        List of image file paths.
+    hiclips : int
+        Number of images with high values to cu.
+    loclips : int
+        Number of images with low values to cut.
+    gain : str
+        high or low.
+
+    Returns
+    -------
+    stack : numpy array
+        Array representing stacked image.
+
+    '''
     stackArray = np.zeros([2048,2048])
     hiArray = np.zeros([2048,2048,hiclips+1])
     loArray = np.zeros([2048,2048,loclips+1])
@@ -341,26 +361,36 @@ if __name__ == '__main__':
     cml_args = arg_parser.parse_args()
     obsYYYYMMDD = cml_args.date
     obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    gain='high'
-    chunk=40
-    hiclip_value=1
-    loclip_value=0
-    data_path=Path('/','D:','/ColibriData',str(obs_date).replace('-',''))
-    base_path=Path('/','D:')
-    NumBiasImages=50
-    bias_save_folder=base_path.joinpath('/StackedData','Biases')
+    
+    gain='high' #gain of images to read
+    chunk=40 #number of images to stack for each core
+    hiclip_value=1 #number of images with high values to cut (less than 5 is okay)
+    loclip_value=0 #number of images with low values to cut (usually don't need)
+    NumBiasImages=50 #median stack all biases
+    data_path=Path('/','D:','/ColibriData',str(obs_date).replace('-','')) #path for night
+    base_path=Path('/','D:') 
+    
+    bias_save_folder=base_path.joinpath('/StackedData','Biases') #folder to save median stacked biases
+    
     if not os.path.exists(bias_save_folder):
         os.makedirs(bias_save_folder)
     
+    print("Getting list of Biases...")
     MasterBiasList = makeBiasSet(data_path.joinpath('Bias'), NumBiasImages, bias_save_folder, 
-                                 gain)
+                                 gain) #make list of available biases
     
     minutes=[f for f in data_path.iterdir() if (os.path.isdir(f) and "Bias" not in f.name)]
+    #list of minutes in the night
+    
+    t1=T.time()#time when it all starts
+    
     for minute in minutes:
-        start_time = T.time()
-        files=[f for f in minute.iterdir() if ".rcd" in f.name]
-        field=files[0].name.split('_')[0]
+        start_time = T.time()#time when i minute stacking starts
+        files=[f for f in minute.iterdir() if ".rcd" in f.name] #list of files in a minute dir
+        field=files[0].name.split('_')[0] #read field number from first image name
+        
         # stacked=clippedMean(files,1,0,'high')
+        
         print('Running in parallel...')
         
         pool_size = multiprocessing.cpu_count() -2
@@ -368,7 +398,7 @@ if __name__ == '__main__':
         args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
         # stacked=[]
         try:
-            stacked= pool.starmap(clippedMean,args)
+            stacked_img= pool.starmap(clippedMean,args)
             # pool.starmap(clippedMean,args)
         except:
             logging.exception("failed to parallelize")
@@ -377,14 +407,14 @@ if __name__ == '__main__':
         pool.join()
         # print(len(stacked), stacked[0].shape)
     
-        stacked_img=np.mean(stacked,axis=0)
+        # stacked_img=np.mean(stacked,axis=0)
 
-        bias = chooseBias(minute, MasterBiasList)
+        bias = chooseBias(minute, MasterBiasList) #choose best bias according to time
         
-        reduced_image = np.subtract(stacked_img,bias)
+        reduced_image = np.subtract(stacked_img,bias) #Image - bias
         
         
-        hdu = fits.PrimaryHDU(reduced_image)
+        hdu = fits.PrimaryHDU(reduced_image) #save stacked image as .fits
         
         save_path=base_path.joinpath('/StackedData',field,str(obs_date))
         if not os.path.exists(save_path):
@@ -393,7 +423,7 @@ if __name__ == '__main__':
         
         hdu.writeto(Filepath, overwrite=True)
         
-        hdu = fits.PrimaryHDU(bias)
+        hdu = fits.PrimaryHDU(bias) #save used bias as .fits
         
         save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Bias')
         if not os.path.exists(save_path):
@@ -403,3 +433,5 @@ if __name__ == '__main__':
         hdu.writeto(Filepath, overwrite=True)
         
         print("Finished stacking minute in %.2f seconds" % (T.time() - start_time))
+        
+    print("Finished stacking night in %.2f seconds" % (T.time() - t1))
