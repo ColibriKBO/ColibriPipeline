@@ -42,6 +42,26 @@ def chooseBias(obs_folder, MasterBiasList):
         
     return bias
 
+def chooseBias_Med(img_median, MasterBiasList):
+    """ choose correct master bias by comparing time to the observation time
+    input: filepath to current minute directory, 2D numpy array of [bias datetimes, bias filepaths]
+    returns: bias image that is closest in time to observation"""
+    
+    
+    
+    '''make array of time differences between current and biases'''
+
+    bias_diffs = np.array(abs(MasterBiasList[:,2] - img_median))
+    bias_i = np.argmin(bias_diffs)    #index of best match
+    
+    '''select best master bias using above index'''
+    bias_image = MasterBiasList[bias_i][1]
+                
+    #load in new master bias image
+    bias = fits.getdata(bias_image)
+
+    return bias
+
 def getDateTime(folder):
     """function to get date and time of folder, then make into python datetime object
     input: filepath 
@@ -229,7 +249,9 @@ def makeBiasSet(filepath, numOfBiases, savefolder, gain):
         
         folderDatetime = getDateTime(folder)
         
-        biasList.append((folderDatetime, biasFilepath))
+        biasMed=np.median(masterBiasImage)
+        
+        biasList.append((folderDatetime, biasFilepath, biasMed))
     
     #package times and filepaths into array, sort by time
     biasList = np.array(biasList)
@@ -415,7 +437,7 @@ if __name__ == '__main__':
         stack_med=stats.sigma_clipped_stats(flat_img, sigma=3, maxiters=100,axis=0)[1]
         print("Stack image median: ",stack_med)
 
-        bias = chooseBias(minute, MasterBiasList) #choose best bias according to time
+        bias = chooseBias_Med(stack_med, MasterBiasList) #choose best bias according to time
         
         print("Bias median: ", np.median(bias))
 
@@ -440,6 +462,6 @@ if __name__ == '__main__':
         
         hdu.writeto(Filepath, overwrite=True)
         
-        print("Finished stacking "+"minute.name in %.2f seconds" % (T.time() - start_time))
+        print("Finished stacking "+minute.name+" in %.2f seconds" % (T.time() - start_time))
         
     print("Finished stacking night in %.2f seconds" % (T.time() - t1))
