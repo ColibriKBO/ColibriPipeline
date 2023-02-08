@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 from datetime import datetime, date, time
 import argparse
-
+from astropy import stats
 from astropy.io import fits
 import  os
 
@@ -409,8 +409,16 @@ if __name__ == '__main__':
     
         # stacked_img=np.mean(stacked,axis=0)
 
+
+        flat_img=stacked_img.flatten()
+        
+        stack_med=stats.sigma_clipped_stats(flat_img, sigma=3, maxiters=100,axis=0)[1]
+        print("Stack image median: ",stack_med)
+
         bias = chooseBias(minute, MasterBiasList) #choose best bias according to time
         
+        print("Bias median: ", np.median(bias))
+
         reduced_image = np.subtract(stacked_img,bias) #Image - bias
         
         
