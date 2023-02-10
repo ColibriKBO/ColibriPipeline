@@ -598,7 +598,7 @@ if __name__ == '__main__':
     #matched_dir=archive_dir#09-21 Roman A. now this code runs on matched events
     #list of filepaths to .txt detection files
     day_files = [f for f in matched_dir.iterdir() if str(process_date) in f.name]
-    detect_files = [f for f in day_files if 'det' in f.name]
+    detect_files = [f for f in day_files if ('det' in f.name and 'png' not in f.name)]
     
     
 
