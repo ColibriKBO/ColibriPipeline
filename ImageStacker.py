@@ -410,6 +410,8 @@ if __name__ == '__main__':
         start_time = T.time()#time when i minute stacking starts
         files=[f for f in minute.iterdir() if ".rcd" in f.name] #list of files in a minute dir
         field=files[0].name.split('_')[0] #read field number from first image name
+        header = readRCD(files[-1])[1] #read header of the last image
+        stack_time=header['timestamp'] #get time for the stack
         
         # stacked=clippedMean(files,1,0,'high')
         
@@ -452,6 +454,8 @@ if __name__ == '__main__':
         Filepath = save_path.joinpath(minute.name+'_clippedmean.fits')
         
         hdu.writeto(Filepath, overwrite=True)
+        print("Stack time: ", stack_time)
+        fits.setval(Filepath, 'JD', value=stack_time)
         
         hdu = fits.PrimaryHDU(bias) #save used bias as .fits
         
