@@ -335,8 +335,7 @@ def fieldCoords(fieldname):
         coords=[184.631, -3.816]
     if fieldname == 'field24':
         coords=[172.488, 0.500]
-    else:
-        coords=[0.0, 0.0]
+
         
     return coords
 
