@@ -131,10 +131,12 @@ def ReadLogLine(log_list, pattern, Break=True):
             for pat in pattern:
                 if pat in line:
                     messages.append((line))
-                    if int(line.split(" ")[3].split(':')[0])>20:
-                        times.append(str(obs_date)+' '+line.split(" ")[3])
-                    else:
-                        times.append(str(tomorrowT)+' '+line.split(" ")[3])
+                    # if int(line.split(" ")[3].split(':')[0])>20:
+                    #     times.append(str(obs_date)+' '+line.split(" ")[3])
+                    # else:
+                    #     times.append(str(tomorrowT)+' '+line.split(" ")[3])
+                    times.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+line.split(" ")[3])
+        #times yyyy-mm-dd hh:mm:ss
         
         return messages, times
     
@@ -460,6 +462,7 @@ green_ACPpath=base_path.joinpath('/Logs','ACP')
 blue_ACPpath=Path('/','B:''/Logs','ACP')
 
 ACP_logpaths=[red_ACPpath,green_ACPpath,blue_ACPpath]
+
 color=['r','g','b'] #color list for ploting
 
     
@@ -582,7 +585,7 @@ now.format='jd'
 time_of_first_min=ToFM() #get hour time of observations.
 #This is needed in order to adjust times in cases when obs_date is 08-16 but observations started on 08-15 and oposite 
 
-if time_of_first_min>20:
+if time_of_first_min>20 or time_of_first_min==0:
     sunset=twilightTimes(now.value+0.5)[1]
 
     sunrise=twilightTimes(now.value+1.5)[0]
