@@ -234,18 +234,21 @@ def testGPSLock(filepath):
                         established for the given image
 
     """
+    cdef int ControlBlock2
+    cdef bint gpsLock
     
     ## Open .rcd file and extract the ControlBlock2 variable which represents
     ## the 8 boolean values following in the metadata (specifically the GPS
     ## lock and GPS error variables) as an int
     with open(filepath, 'rb') as fid:
         fid.seek(140,0)
-        cdef int ControlBlock2 = ord(fid.read(1))
+        ControlBlock2 = ord(fid.read(1))
         
     ## Compare ControlBlock2 variable with expected 96 == 0b01100000 sequence
     ## which represents a GPS locked, upper-left quadrant image with no GPS
     ## error.
-    cdef bint gpsLock = (ControlBlock2 == 96)
+    gpsLock = (ControlBlock2 == 96)
+    print("GPS Control Block: {}".format(ControlBlock2))
     
     return gpsLock
     
