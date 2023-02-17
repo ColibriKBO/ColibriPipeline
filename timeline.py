@@ -137,7 +137,7 @@ def ReadLogLine(log_list, pattern, Break=True):
                     #     times.append(str(tomorrowT)+' '+line.split(" ")[3])
                     times.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+line.split(" ")[3])
         #times yyyy-mm-dd hh:mm:ss
-        
+
         return messages, times
     
     else:
@@ -337,10 +337,13 @@ def ToFM():
     #reading first minute of the night on Red, if no data then switch to Green
     try:
         # first_min=[f for f in red_datapath.iterdir() if obs_date.replace('-','') in f.name][0]
-        first_min=[f for f in red_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
-    except:
-        # first_min=[f for f in green_datapath.iterdir() if obs_date.replace('-','') in f.name][0]
         first_min=[f for f in green_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
+        
+    except:
+        try:# first_min=[f for f in green_datapath.iterdir() if obs_date.replace('-','') in f.name][0]
+            first_min=[f for f in red_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
+        except:
+            first_min=[f for f in blue_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
     return int(first_min.name.split('_')[1].split('.')[0])
 
 #%% GETTING OBSERVATION TIMES    
