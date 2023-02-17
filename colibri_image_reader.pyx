@@ -222,6 +222,34 @@ def importFramesRCD(image_paths,
 ## Image Analysis
 ##############################
 
+def testGPSLock(filepath):
+    """
+    Check to see if there was a valid GPS lock established for the given image.
+
+    Args:
+        filepath (str/Path): Full filepath to the RCD image to be checked.
+
+    Returns:
+        gpsLock (bool): Returns true/false on whether a GPS lock was
+                        established for the given image
+
+    """
+    
+    ## Open .rcd file and extract the ControlBlock2 variable which represents
+    ## the 8 boolean values following in the metadata (specifically the GPS
+    ## lock and GPS error variables) as an int
+    with open(filepath, 'rb') as fid:
+        fid.seek(140,0)
+        cdef int ControlBlock2 = ord(fid.read(1))
+        
+    ## Compare ControlBlock2 variable with expected 96 == 0b01100000 sequence
+    ## which represents a GPS locked, upper-left quadrant image with no GPS
+    ## error.
+    cdef bint gpsLock = (ControlBlock2 == 96)
+    
+    return gpsLock
+    
+
 @cython.wraparound(False)
 def split_images(np.ndarray[UI16, ndim=1] data,
                  int X_PIX,

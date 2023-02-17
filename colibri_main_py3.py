@@ -129,8 +129,12 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     ## Check if there are enough images in the current directory 
     minNumImages = len(kernel.array)*3         #3x kernel length
     if num_images < minNumImages:
-        print (datetime.datetime.now(), "Insufficient number of images, skipping...")
+        print(datetime.datetime.now(), "Insufficient number of images, skipping...")
         return 0
+    
+    ## Check if there is a valid GPS lock
+    if not cir.testGPSLock(imagePaths[0]):
+        print(datetime.datetime.now(), "No GPS Lock established, skipping...")
     
 
 ###########################
