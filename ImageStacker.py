@@ -22,6 +22,46 @@ import multiprocessing
 from multiprocessing import Pool
 import logging
 
+import astrometrynet_funcs
+
+def getWCS(image):
+    """
+    Finds median image that best fits for the time of the detection and uses it to get Astrometry solution.
+    Required to have a list of median-combined images (median_combos)
+
+    Parameters
+    ----------
+    date : str
+        Time of the detection file HH.MM.SS.ms
+
+    Returns
+    -------
+    transform : file headers
+        Headers of the WCS file that contain transformation info.
+
+    """
+    
+    median_str="/mnt/"+str(image).replace(':', '/').replace('\\', '/') #10-12 Roman A.
+    median_str=median_str.lower()
+    
+    #get name of transformation header file to save
+    transform_file = image.with_name(image.name.strip('_medstacked.fits') + '_wcs.fits')
+    
+    transform_str=str(transform_file).split('\\')[-1] #10-12 Roman A.
+    
+
+    #get WCS header from astrometry.net plate solution
+    soln_order = 4
+    
+    try:
+        wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
+    except:
+        print('could not run localy')
+        wcs_header = astrometrynet_funcs.getSolution(image, transform_file, soln_order)
+
+    
+    return wcs_header
+
 def chooseBias(obs_folder, MasterBiasList):
     """ choose correct master bias by comparing time to the observation time
     input: filepath to current minute directory, 2D numpy array of [bias datetimes, bias filepaths]
@@ -462,10 +502,18 @@ if __name__ == '__main__':
         save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Bias')
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        Filepath = save_path.joinpath(minute.name+'_medianbias.fits')
+        Bias_Filepath = save_path.joinpath(minute.name+'_medianbias.fits')
         
-        hdu.writeto(Filepath, overwrite=True)
+        hdu.writeto(Bias_Filepath, overwrite=True)
         
         print("Finished stacking "+minute.name+" in %.2f seconds" % (T.time() - start_time))
+        
+        print("Calculating WCS for the image...")
+        
+        wcs_headers=getWCS(Filepath)
+
+        hdu = fits.open(Filepath, 'update')
+        hdu[0].header.update(wcs_headers)
+        hdu.close()
         
     print("Finished stacking night in %.2f seconds" % (T.time() - t1))
