@@ -453,8 +453,9 @@ if __name__ == '__main__':
         try:
             header = readRCD(files[-1])[1] #read header of the last image
         except:
-            header = readRCD(files[-10])[1]
             print("corrupted last frame!")
+            continue
+            
         stack_time=header['timestamp'] #get time for the stack
         
         # stacked=clippedMean(files,1,0,'high')
