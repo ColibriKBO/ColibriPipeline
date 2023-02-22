@@ -9,14 +9,14 @@ Updated: Thurs. June 23, 2022
 Script to make use of astrometry.net API - see online docs
 """
 import time, subprocess, os
-from astroquery.astrometry_net import AstrometryNet
+
 from astropy.io.fits import Header
 
 def getSolution(image_file, save_file, order):
     '''send request to solve image from astrometry.net
     input: path to the image file to submit, filepath to save the WCS solution header to, order of soln
     returns: WCS solution header'''
-
+    from astroquery.astrometry_net import AstrometryNet
     #astrometry.net API
     ast = AstrometryNet()
     
