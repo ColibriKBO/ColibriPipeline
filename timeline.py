@@ -33,6 +33,48 @@ from astropy.time import Time
 #!!!
 # import matplotlib as mpl
 # mpl.rcParams.update(mpl.rcParamsDefault)
+def ReadFiledList(log_list):
+    """
+    
+
+    Parameters
+    ----------
+    log_list : list of str.
+        List of Log lines.
+    pattern : str
+        Line with a specific string.
+
+    Returns
+    -------
+    Line that matched patter and time in Log of that line.
+
+    """
+    
+       
+    fields=[]
+    dates=[]
+    for line in log_list:
+        if 'Current LST' in line:
+            LST=float(line.split(': ')[2])
+            UTC=float(line.split(': ')[0].split(' ')[3].split(':')[0]) + float(line.split(': ')[0].split(' ')[3].split(':')[1])/60
+            
+            time_diff=UTC-LST
+            
+            
+        if 'starts' in line:
+            fields.append((line).split(': ')[1].split(' ')[0])
+            times=(float((line).split(': ')[1].split(' ')[2]))+time_diff
+
+            if times>24:
+                times=times-24
+            if times<0:
+                times=times+24
+            
+            dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(round(float('0.'+str(times).split('.')[1])*60))+':00')
+            
+            
+        
+    return fields, dates
 
 def getAirmass(time, RA, dec):
     '''get airmass of the field at the given time
@@ -741,6 +783,7 @@ ax2.set_xticks([])
 
 c=0#counter to loop through each telescope and colormap
 markers={}#markers on the plot
+field_markers={}
 for logpath in ACP_logpaths:
     #try reading ACP log
 
@@ -757,8 +800,10 @@ for logpath in ACP_logpaths:
     #list of events in log that are worth noting, this list can be expanded 
     pattern=['Weather unsafe!','Dome closed!','Field Name:']
     event_list=ReadLogLine(log, pattern, Break=False)
-    
-    
+    field_list=ReadFiledList(log)
+    for i in range(len(field_list[0])):
+        field_num=int(field_list[0][i].split("field")[1].strip("\n"))
+        field_markers[field_list[0][i]]=fr"${field_num}$"
     
     names=event_list[0]
 
@@ -802,8 +847,15 @@ for logpath in ACP_logpaths:
 #    ax3.plot(dates, np.zeros_like(dates), "-o",
 #            color="k", markerfacecolor="w")  # Baseline and markers on it.
     d=0
-    k=[0,1,2]
+    k=[1,2]
     i=0
+    print(field_markers)
+    for j in range(len(field_list[0])):
+        m = field_markers.get(field_list[0][j])
+        
+        ax3.plot(datetime.strptime(field_list[1][j], '%Y-%m-%d %H:%M:%S'), 0+c*2,
+                color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
+        ax3.axhline(y = 0+c*2, color = colors[c], linestyle = '-')
     for name in names:
 
         
@@ -814,7 +866,7 @@ for logpath in ACP_logpaths:
         ax3.axhline(y = 0+c*2+0.4*k[i], color = color[c], linestyle = '-')
         d+=1
         i+=1
-        if i>2:
+        if i>1:
             i=0
         
 
@@ -842,8 +894,11 @@ for logpath in ACP_logpaths:
     ax3.set_xticks([])
     ax3.margins(y=0.1)
     c+=1
-field_info=getStarHour('D:/',str(obs_date))
+try:
+    field_info=getStarHour('D:/',str(obs_date))
     #field_info=str(field_info)+'\n'+'$*$ - star collection '+'$x$ - bad weather '+'$D$ - dome close'
+except:
+    field_info=['no data']
 text=''
 for info in field_info:
     text+=info
