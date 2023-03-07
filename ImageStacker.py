@@ -9,18 +9,58 @@ Stacks 1-minute long images using clipped mean
 
 from pathlib import Path
 import numpy as np
-from datetime import datetime, date
+from datetime import datetime, date, time
 import argparse
-
+from astropy import stats
 from astropy.io import fits
 import  os
 
-import time
+import time as T
 import numba as nb
 
 import multiprocessing
 from multiprocessing import Pool
 import logging
+
+import astrometrynet_funcs
+
+def getWCS(image):
+    """
+    Finds median image that best fits for the time of the detection and uses it to get Astrometry solution.
+    Required to have a list of median-combined images (median_combos)
+
+    Parameters
+    ----------
+    date : str
+        Time of the detection file HH.MM.SS.ms
+
+    Returns
+    -------
+    transform : file headers
+        Headers of the WCS file that contain transformation info.
+
+    """
+    
+    median_str="/mnt/"+str(image).replace(':', '/').replace('\\', '/') #10-12 Roman A.
+    median_str=median_str.lower()
+    
+    #get name of transformation header file to save
+    transform_file = image.with_name(image.name.strip('_medstacked.fits') + '_wcs.fits')
+    
+    transform_str=str(transform_file).split('\\')[-1] #10-12 Roman A.
+    
+
+    #get WCS header from astrometry.net plate solution
+    soln_order = 4
+    
+    try:
+        wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
+    except:
+        print('could not run localy')
+        wcs_header = astrometrynet_funcs.getSolution(image, transform_file, soln_order)
+
+    
+    return wcs_header
 
 def chooseBias(obs_folder, MasterBiasList):
     """ choose correct master bias by comparing time to the observation time
@@ -42,6 +82,26 @@ def chooseBias(obs_folder, MasterBiasList):
         
     return bias
 
+def chooseBias_Med(img_median, MasterBiasList):
+    """ choose correct master bias by comparing time to the observation time
+    input: filepath to current minute directory, 2D numpy array of [bias datetimes, bias filepaths]
+    returns: bias image that is closest in time to observation"""
+    
+    
+    
+    '''make array of time differences between current and biases'''
+
+    bias_diffs = np.array(abs(MasterBiasList[:,2] - img_median))
+    bias_i = np.argmin(bias_diffs)    #index of best match
+    
+    '''select best master bias using above index'''
+    bias_image = MasterBiasList[bias_i][1]
+                
+    #load in new master bias image
+    bias = fits.getdata(bias_image)
+
+    return bias
+
 def getDateTime(folder):
     """function to get date and time of folder, then make into python datetime object
     input: filepath 
@@ -53,9 +113,9 @@ def getDateTime(folder):
     folderTime = str(folder.name).split('_')[1].split('.')
   # folderTime = '19.30.00.000'
    # folderTime = folderTime.split('.')
-    folderDate = datetime.date(int(folderDate[:4]), int(folderDate[4:6]), int(folderDate[-2:]))  #convert to date object
-    folderTime = datetime.time(int(folderTime[0]), int(folderTime[1]), int(folderTime[2]))       #convert to time object
-    folderDatetime = datetime.datetime.combine(folderDate, folderTime)                     #combine into datetime object
+    folderDate = date(int(folderDate[:4]), int(folderDate[4:6]), int(folderDate[-2:]))  #convert to date object
+    folderTime = time(int(folderTime[0]), int(folderTime[1]), int(folderTime[2]))       #convert to time object
+    folderDatetime = datetime.combine(folderDate, folderTime)                     #combine into datetime object
     
     return folderDatetime
 
@@ -194,7 +254,7 @@ def getBias(filepath, numOfBiases, gain):
     rcdbiases = importFramesRCD(filepath, rcdbiasFileList, 0, numOfBiases, np.zeros((2048,2048)), gain)[0]
     
     '''take median of bias images'''
-    biasMed = np.mean(rcdbiases, axis=0)
+    biasMed = np.median(rcdbiases, axis=0)
     
     return biasMed
 
@@ -229,7 +289,9 @@ def makeBiasSet(filepath, numOfBiases, savefolder, gain):
         
         folderDatetime = getDateTime(folder)
         
-        biasList.append((folderDatetime, biasFilepath))
+        biasMed=np.median(masterBiasImage)
+        
+        biasList.append((folderDatetime, biasFilepath, biasMed))
     
     #package times and filepaths into array, sort by time
     biasList = np.array(biasList)
@@ -279,6 +341,26 @@ def split_images(data,pix_h,pix_v,gain):
 
 
 def clippedMean(filelist, hiclips, loclips,gain):
+    '''
+    
+
+    Parameters
+    ----------
+    filelist : list
+        List of image file paths.
+    hiclips : int
+        Number of images with high values to cu.
+    loclips : int
+        Number of images with low values to cut.
+    gain : str
+        high or low.
+
+    Returns
+    -------
+    stack : numpy array
+        Array representing stacked image.
+
+    '''
     stackArray = np.zeros([2048,2048])
     hiArray = np.zeros([2048,2048,hiclips+1])
     loArray = np.zeros([2048,2048,loclips+1])
@@ -292,7 +374,7 @@ def clippedMean(filelist, hiclips, loclips,gain):
     vnumpix = 2048
     
     for f in filelist:
-        print(f.name)
+        # print(f.name)
         fid = open(f, 'rb')
         
         fid.seek(384,0)
@@ -340,30 +422,49 @@ if __name__ == '__main__':
 
     cml_args = arg_parser.parse_args()
     obsYYYYMMDD = cml_args.date
-    obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-    gain='high'
-    chunk=40
-    data_path=Path('/','D:','/ColibriData',str(obs_date).replace('-',''))
-    base_path=Path('/','D:')
-    NumBiasImages=50
-    bias_save_folder=base_path.joinpath('/StackedData','Biases')
+    obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+    
+    gain='high' #gain of images to read
+    chunk=40 #number of images to stack for each core
+    hiclip_value=1 #number of images with high values to cut (less than 5 is okay)
+    loclip_value=0 #number of images with low values to cut (usually don't need)
+    NumBiasImages=50 #median stack all biases
+    data_path=Path('/','D:','/ColibriData',str(obs_date).replace('-','')) #path for night
+    base_path=Path('/','D:') 
+    
+    bias_save_folder=base_path.joinpath('/StackedData','Biases') #folder to save median stacked biases
+    
     if not os.path.exists(bias_save_folder):
         os.makedirs(bias_save_folder)
     
-    MasterBiasList = makeBiasSet(base_path.joinpath('Bias'), NumBiasImages, bias_save_folder, 
-                                 gain)
+    print("Getting list of Biases...")
+    MasterBiasList = makeBiasSet(data_path.joinpath('Bias'), NumBiasImages, bias_save_folder, 
+                                 gain) #make list of available biases
     
     minutes=[f for f in data_path.iterdir() if (os.path.isdir(f) and "Bias" not in f.name)]
+    #list of minutes in the night
+    
+    t1=T.time()#time when it all starts
+    
     for minute in minutes:
-        start_time = time.time()
-        files=[f for f in minute.iterdir() if ".rcd" in f.name]
-        field=files[0].name.split('_')[0]
+        start_time = T.time()#time when i minute stacking starts
+        files=[f for f in minute.iterdir() if ".rcd" in f.name] #list of files in a minute dir
+        field=files[0].name.split('_')[0] #read field number from first image name
+        try:
+            header = readRCD(files[-1])[1] #read header of the last image
+        except:
+            print("corrupted last frame!")
+            continue
+            
+        stack_time=header['timestamp'] #get time for the stack
+        
         # stacked=clippedMean(files,1,0,'high')
+        
         print('Running in parallel...')
         
         pool_size = multiprocessing.cpu_count() -2
         pool = Pool(pool_size)
-        args = ((files[f:f+chunk],1,0,'high')for f in range(0,len(files),chunk))
+        args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
         # stacked=[]
         try:
             stacked= pool.starmap(clippedMean,args)
@@ -377,12 +478,20 @@ if __name__ == '__main__':
     
         stacked_img=np.mean(stacked,axis=0)
 
-        bias = chooseBias(minute, MasterBiasList)
+
+        flat_img=stacked_img.flatten()
         
-        reduced_image = np.subtract(stacked_img,bias)
+        stack_med=stats.sigma_clipped_stats(flat_img, sigma=3, maxiters=100,axis=0)[1]
+        print("Stack image median: ",stack_med)
+
+        bias = chooseBias_Med(stack_med, MasterBiasList) #choose best bias according to time
+        
+        print("Bias median: ", np.median(bias))
+
+        reduced_image = np.subtract(stacked_img,bias) #Image - bias
         
         
-        hdu = fits.PrimaryHDU(reduced_image)
+        hdu = fits.PrimaryHDU(reduced_image) #save stacked image as .fits
         
         save_path=base_path.joinpath('/StackedData',field,str(obs_date))
         if not os.path.exists(save_path):
@@ -390,14 +499,26 @@ if __name__ == '__main__':
         Filepath = save_path.joinpath(minute.name+'_clippedmean.fits')
         
         hdu.writeto(Filepath, overwrite=True)
+        print("Stack time: ", stack_time)
+        fits.setval(Filepath, 'JD', value=stack_time)
         
-        hdu = fits.PrimaryHDU(bias)
+        hdu = fits.PrimaryHDU(bias) #save used bias as .fits
         
         save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Bias')
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        Filepath = save_path.joinpath(minute.name+'_meanbias.fits')
+        Bias_Filepath = save_path.joinpath(minute.name+'_medianbias.fits')
         
-        hdu.writeto(Filepath, overwrite=True)
+        hdu.writeto(Bias_Filepath, overwrite=True)
         
-        print("Finished stacking minute in %s seconds" % (time.time() - start_time))
+        print("Finished stacking "+minute.name+" in %.2f seconds" % (T.time() - start_time))
+        
+        print("Calculating WCS for the image...")
+        
+        wcs_headers=getWCS(Filepath)
+
+        hdu = fits.open(Filepath, 'update')
+        hdu[0].header.update(wcs_headers)
+        hdu.close()
+        
+    print("Finished stacking night in %.2f seconds" % (T.time() - t1))

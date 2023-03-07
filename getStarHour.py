@@ -286,36 +286,56 @@ def fieldCoords(fieldname):
         A string of field coordinates.
 
     """
+
     if fieldname == 'field1':
-        coords=[273.735, -18.638]
+        coords=[273.736, -18.640]
     if fieldname == 'field2':
-        coords=[288.355, -7.992]
+        coords=[92.419,  23.902]
     if fieldname == 'field3':
-        coords=[87.510,  20.819]
+        coords=[287.740, -17.914]
     if fieldname == 'field4':
-        coords=[103.263, 24.329]
+        coords=[105.436, 22.379]
     if fieldname == 'field5':
-        coords=[129.869, 19.474]
+        coords=[254.789, -27.225]
     if fieldname == 'field6':
-        coords=[254.846, -27.353]
+        coords=[129.972, 19.312]
     if fieldname == 'field7':
-        coords=[56.684,  24.313]
+        coords=[75.678,  23.580]
+    if fieldname == 'field8':
+        coords=[306.006, -14.551]
+    if fieldname == 'field9':
+        coords=[239.923, -25.287]
+    if fieldname == 'field10':
+        coords=[56.973,  23.942]
+    if fieldname == 'field11':
+        coords=[318.700, -11.365]
     if fieldname == 'field12':
-        coords=[318.657, -13.830]
+        coords=[226.499, -22.274]
     if fieldname == 'field13':
-        coords=[222.785, -11.810]
+        coords=[334.365, -10.910]
     if fieldname == 'field14':
-        coords=[334.741, -12.383]
+        coords=[212.040, -17.675]
     if fieldname == 'field15':
-        coords=[39.791,  16.953]
+        coords=[39.313,  17.413]
     if fieldname == 'field16':
-        coords=[8.974,   1.834]
+        coords=[143.292, 10.261]
+    if fieldname == 'field17':
+        coords=[348.814, -0.699]
     if fieldname == 'field18':
-        coords=[142.138, 12.533]
+        coords=[155.530, 5.914]
     if fieldname == 'field19':
-        coords=[206.512, -10.259]
+        coords=[1.693,   3.707]
+    if fieldname == 'field20':
+        coords=[15.529,  2.557]
+    if fieldname == 'field21':
+        coords=[25.171,  14.130]
+    if fieldname == 'field22':
+        coords=[198.755, -11.953]
+    if fieldname == 'field23':
+        coords=[184.631, -3.816]
     if fieldname == 'field24':
-        coords=[167.269, 2.203]
+        coords=[172.488, 0.500]
+
         
     return coords
 
@@ -361,6 +381,7 @@ def getStarHour(main_path, obs_date, threshold=10, gain='high'):
         all_frames.extend(sublist)
         
     fields=list(dict.fromkeys(fields))
+    print(fields)
     
     summary=[]
     for field in fields:
