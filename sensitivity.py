@@ -398,7 +398,7 @@ plt.grid()
 
 plt.legend()
 plt.savefig(save_path.joinpath('magvSNR_' + gain  + '_' + minute_dir + '_' + str(detect_thresh) +'.png'), bbox_inches = 'tight')#, dpi = 3000)
-
+plt.close()
 
 
 '''----------------------make plot of mag vs mean value-----------'''
@@ -412,7 +412,7 @@ plt.ylabel('-2.5*log(median)')
 plt.grid()
 plt.legend()
 plt.savefig(save_path.joinpath('magvmed_' + gain + '_' + minute_dir + '_' + str(detect_thresh) + '.png'), bbox_inches = 'tight')
-
+plt.close()
 '''----------------Print Statements-----------------'''
 #get number of stars with SNR greater than 10
 high_SNR = final[final['SNR'] >= 10.]   #dataframe of results with SNR >= 10
