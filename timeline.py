@@ -171,7 +171,7 @@ def ReadLogLine(log_list, pattern, Break=True):
         for line in log_list:
             
             for pat in pattern:
-                if pat in line:
+                if (pat in line and 'LST' not in line):
                     messages.append((line))
                     # if int(line.split(" ")[3].split(':')[0])>20:
                     #     times.append(str(obs_date)+' '+line.split(" ")[3])
@@ -702,82 +702,88 @@ ax1.xaxis.tick_top()
 
 #%% CLOUD/TRANSPERANCY PLOT
 
-
-# today = pd.read_csv(cloud_logs[1])
-today = pd.read_csv(cloud_logs[1], header=None, usecols=[0,9])
-# today.columns = ['timestamp','SkyT','GroundT']
-today.columns = ['timestamp','Mag']
 # yesterday=pd.read_csv(cloud_logs[0])
 yesterday = pd.read_csv(cloud_logs[0], header=None, usecols=[0,9])
 # yesterday.columns = ['timestamp','SkyT','GroundT']
 yesterday.columns = ['timestamp','Mag']
-# tomorrow=pd.read_csv(cloud_logs[2])
+# today = pd.read_csv(cloud_logs[1])
+try:
+    today = pd.read_csv(cloud_logs[1], header=None, usecols=[0,9])
+    # today.columns = ['timestamp','SkyT','GroundT']
+    today.columns = ['timestamp','Mag']
+    # tomorrow=pd.read_csv(cloud_logs[2])
 
-try: #Polaris data for next day might not be available
-    tomorrow = pd.read_csv(cloud_logs[2], header=None, usecols=[0,9])
-    # tomorrow.columns = ['timestamp','SkyT','GroundT']
-    tomorrow.columns = ['timestamp','Mag']
-    data = pd.concat([yesterday,today,tomorrow],axis=0)
+    try: #Polaris data for next day might not be available
+        tomorrow = pd.read_csv(cloud_logs[2], header=None, usecols=[0,9])
+        # tomorrow.columns = ['timestamp','SkyT','GroundT']
+        tomorrow.columns = ['timestamp','Mag']
+        data = pd.concat([yesterday,today,tomorrow],axis=0)
+    except:
+        data = pd.concat([yesterday,today],axis=0)
 except:
-    data = pd.concat([yesterday,today],axis=0)
+    data = yesterday
 
 
-t = data['timestamp']
-# y = data['SkyT']-data['GroundT']
-y=data['Mag']+14.55
 
 
-samplerate = 6
-f = interpolate.interp1d(t,y)
-xnew = np.arange(min(data['timestamp']),max(data['timestamp']),samplerate)
-x=[]
-for i in range(len(xnew)):
-    
-    x.append(dt.datetime.utcfromtimestamp(xnew[i]).strftime('%Y-%m-%d %H:%M:%S'))
-
-ynew = f(xnew)
+try:
+    t = data['timestamp']
+    # y = data['SkyT']-data['GroundT']
+    y=data['Mag']+14.55
 
 
-Tformat='%Y-%m-%d %H:%M:%S'
-for i in range(len(x)):
-    
-    if dt.datetime.strptime(str(sunset).replace('T', ' ')[:-4], Tformat)<dt.datetime.strptime(x[i], Tformat):
-        start_idx=i
-        break
-    
-for i in range(len(x)):
-    if dt.datetime.strptime(str(sunrise).replace('T', ' ')[:-4], Tformat)<dt.datetime.strptime(x[i], Tformat):
-        end_idx=i
-        break
+    samplerate = 6
+    f = interpolate.interp1d(t,y)
+    xnew = np.arange(min(data['timestamp']),max(data['timestamp']),samplerate)
+    x=[]
+    for i in range(len(xnew)):
+        
+        x.append(dt.datetime.utcfromtimestamp(xnew[i]).strftime('%Y-%m-%d %H:%M:%S'))
 
-x=x[start_idx:end_idx]
-ynew=ynew[start_idx:end_idx]
-
-n = int(len(ynew))
-
-a = ynew[0:(n)].reshape(1,1,n)
-block = np.mean(a, axis=0)
-block=pd.DataFrame(block,columns=x,index=['transparency'])
-# ax2=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.016,-0.27,1,1), bbox_transform=ax1.transAxes)
-
-ax=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
-# ax2=sns.heatmap(block,cmap='Blues_r',vmax=-10,vmin=-20,cbar=False,zorder=1)
-
-ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=2)
-
-ax.axes.invert_yaxis()
-
-ax2=plt.twinx()
-sns.lineplot(x=x,y=ynew,color='k',ax=ax2, zorder=5)
-ax2.yaxis.set_ticks(np.arange(0, 5, 1))
-ax2.set_ylim([0,4])
-ax.set_yticklabels([])
-ax.set_xticklabels([])
-ax2.set_xticklabels([])
-ax2.set_xticks([])
-# ax2.patch.set_alpha(0.01)
+    ynew = f(xnew)
 
 
+    Tformat='%Y-%m-%d %H:%M:%S'
+    for i in range(len(x)):
+        
+        if dt.datetime.strptime(str(sunset).replace('T', ' ')[:-4], Tformat)<dt.datetime.strptime(x[i], Tformat):
+            start_idx=i
+            break
+        
+    for i in range(len(x)):
+        if dt.datetime.strptime(str(sunrise).replace('T', ' ')[:-4], Tformat)<dt.datetime.strptime(x[i], Tformat):
+            end_idx=i
+            break
+
+    x=x[start_idx:end_idx]
+    ynew=ynew[start_idx:end_idx]
+
+    n = int(len(ynew))
+
+    a = ynew[0:(n)].reshape(1,1,n)
+    block = np.mean(a, axis=0)
+    block=pd.DataFrame(block,columns=x,index=['transparency'])
+    # ax2=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.016,-0.27,1,1), bbox_transform=ax1.transAxes)
+
+    ax=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
+    # ax2=sns.heatmap(block,cmap='Blues_r',vmax=-10,vmin=-20,cbar=False,zorder=1)
+
+    ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=2)
+
+    ax.axes.invert_yaxis()
+
+    ax2=plt.twinx()
+    sns.lineplot(x=x,y=ynew,color='k',ax=ax2, zorder=5)
+    ax2.yaxis.set_ticks(np.arange(0, 5, 1))
+    ax2.set_ylim([0,4])
+    ax.set_yticklabels([])
+    ax.set_xticklabels([])
+    ax2.set_xticklabels([])
+    ax2.set_xticks([])
+    # ax2.patch.set_alpha(0.01)
+
+except:
+    print("no weather data!")
 
 #%% LOG EVENTS PLOT
 
@@ -849,7 +855,7 @@ for logpath in ACP_logpaths:
     d=0
     k=[1,2]
     i=0
-    print(field_markers)
+    
     for j in range(len(field_list[0])):
         m = field_markers.get(field_list[0][j])
         
@@ -860,14 +866,19 @@ for logpath in ACP_logpaths:
 
         
         m = markers.get(name)
+        if 'field' in name:
         
-        ax3.plot(dates[d], 0+c*2+0.4*k[i],
-                color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
-        ax3.axhline(y = 0+c*2+0.4*k[i], color = color[c], linestyle = '-')
-        d+=1
-        i+=1
-        if i>1:
-            i=0
+            ax3.plot(dates[d], 0+c*2+0.4,
+                    color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
+            ax3.axhline(y = 0+c*2+0.4, color = color[c], linestyle = '-')
+        else:
+            ax3.plot(dates[d], 0+c*2+0.8,
+                    color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
+            ax3.axhline(y = 0+c*2+0.8, color = color[c], linestyle = '-')
+        # d+=1
+        # i+=1
+        # if i>1:
+        #     i=0
         
 
 
