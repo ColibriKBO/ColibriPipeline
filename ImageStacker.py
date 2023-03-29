@@ -24,6 +24,9 @@ import logging
 
 import astrometrynet_funcs
 
+
+    
+
 def getWCS(image):
     """
     Finds median image that best fits for the time of the detection and uses it to get Astrometry solution.
@@ -339,6 +342,24 @@ def split_images(data,pix_h,pix_v,gain):
 
     return image
 
+def NumpyMean(filelist, gain):
+    chunk_stack=[]
+    hnumpix = 2048
+    vnumpix = 2048
+    imgain=gain
+    for f in filelist:
+        
+        fid = open(f, 'rb')
+        
+        fid.seek(384,0)
+        
+        table = np.fromfile(fid, dtype=np.uint8, count=12582912)
+        testimages=nb_read_data(table)
+
+        image = split_images(testimages, hnumpix, vnumpix, imgain)
+        chunk_stack.append(image)
+    
+    return np.array(np.average(chunk_stack, axis=0))
 
 def clippedMean(filelist, hiclips, loclips,gain):
     '''
@@ -450,6 +471,7 @@ if __name__ == '__main__':
         start_time = T.time()#time when i minute stacking starts
         files=[f for f in minute.iterdir() if ".rcd" in f.name] #list of files in a minute dir
         field=files[0].name.split('_')[0] #read field number from first image name
+    
         try:
             header = readRCD(files[-1])[1] #read header of the last image
         except:
@@ -464,10 +486,12 @@ if __name__ == '__main__':
         
         pool_size = multiprocessing.cpu_count() -2
         pool = Pool(pool_size)
-        args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
+        # args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
+        args = ((files[f:f+chunk],gain) for f in range(0,len(files),chunk))
         # stacked=[]
         try:
-            stacked= pool.starmap(clippedMean,args)
+            # stacked= pool.starmap(clippedMean,args)
+            stacked= pool.starmap(NumpyMean,args)
             # pool.starmap(clippedMean,args)
         except:
             logging.exception("failed to parallelize")
@@ -493,7 +517,7 @@ if __name__ == '__main__':
         
         hdu = fits.PrimaryHDU(reduced_image) #save stacked image as .fits
         
-        save_path=base_path.joinpath('/StackedData',field,str(obs_date))
+        save_path=base_path.joinpath('/StackedData',field,str(obs_date),'nonclipped')
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         Filepath = save_path.joinpath(minute.name+'_clippedmean.fits')
