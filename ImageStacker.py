@@ -517,7 +517,7 @@ if __name__ == '__main__':
         
         hdu = fits.PrimaryHDU(reduced_image) #save stacked image as .fits
         
-        save_path=base_path.joinpath('/StackedData',field,str(obs_date),'nonclipped')
+        save_path=base_path.joinpath('/StackedData',field,str(obs_date))
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         Filepath = save_path.joinpath(minute.name+'_clippedmean.fits')
