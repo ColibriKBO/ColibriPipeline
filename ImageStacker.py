@@ -524,7 +524,7 @@ if __name__ == '__main__':
         
         hdu.writeto(Filepath, overwrite=True)
         print("Stack time: ", stack_time)
-        fits.setval(Filepath, 'JD', value=stack_time)
+        fits.setval(Filepath, 'DATE-OBS', value=stack_time)
         
         hdu = fits.PrimaryHDU(bias) #save used bias as .fits
         
