@@ -339,7 +339,7 @@ def fieldCoords(fieldname):
         
     return coords
 
-def getStarHour(main_path, obs_date, threshold=10, gain='high'):
+def getStarHour(main_path, obs_date, threshold=4, gain='high'):
     """
     Get string that will tell you field coordinates and star-hours
 
@@ -400,17 +400,22 @@ def getStarHour(main_path, obs_date, threshold=10, gain='high'):
         except: #in case of corrupt images
             star_pos=[]
         i=0
-        while len(star_pos)<10: #in case of bad frames with no stars
+        while len(star_pos)<40: #in case of bad frames with no stars
             print("not enough stars!")
-            folder=stars[i].parent #iterate every 100th frame of the list to find enough stars
+            try:
+                folder=stars[i].parent #iterate every 100th frame of the list to find enough stars
+                bias = chooseBias(folder, MasterBiasList)
+                print(stars[i])
+                img=importFramesRCD([stars[i]], 0, 1, bias, gain)
+            
+                star_pos=list(initialFindFITS(img,threshold))
+                print(len(star_pos))
+                i+=1000
+            except IndexError:
+                
+                break
         
-            bias = chooseBias(folder, MasterBiasList)
-
-            img=importFramesRCD([stars[i]], 0, 1, bias, gain)
-        
-            star_pos=list(initialFindFITS(img,threshold))
-            print(len(star_pos))
-            i+=100
+            
 
 
         # print(len(list(star_pos)))
@@ -426,4 +431,4 @@ def getStarHour(main_path, obs_date, threshold=10, gain='high'):
         
 
 if __name__ == '__main__':
-    print(getStarHour('D:','2023-01-15'))
+    print(getStarHour('D:','2023-03-29'))
