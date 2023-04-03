@@ -120,7 +120,7 @@ def getAirmass(time, RA, dec):
     return airmass, alt, az
 
 def readSigma(filepath):
-   
+    
     with filepath.open() as f:
         
         #loop through each line of the file
@@ -863,7 +863,8 @@ for logpath in ACP_logpaths:
         
         ax3.plot(datetime.strptime(field_list[1][j], '%Y-%m-%d %H:%M:%S'), 0+c*2,
                 color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
-        ax3.axhline(y = 0+c*2, color = colors[c], linestyle = '-')
+        ax3.axhline(y = 0+c*2, color = color[c], linestyle = '-')
+        ax3.text(mdates.datestr2num(str(sunset)), 0+c*2, 'planned',fontsize=8, ha='right', va='center')
     for name in names:
 
         
@@ -873,10 +874,12 @@ for logpath in ACP_logpaths:
             ax3.plot(dates[d], 0+c*2+0.4,
                     color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
             ax3.axhline(y = 0+c*2+0.4, color = color[c], linestyle = '-')
+            ax3.text(mdates.datestr2num(str(sunset)), 0+c*2+0.4, 'observed',fontsize=8,ha='right', va='center')
         else:
             ax3.plot(dates[d], 0+c*2+0.8,
                     color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
             ax3.axhline(y = 0+c*2+0.8, color = color[c], linestyle = '-')
+            ax3.text(mdates.datestr2num(str(sunset)), 0+c*2+0.8, 'events',fontsize=8,ha='right', va='center')
         d+=1
         # i+=1
         # if i>1:
@@ -915,7 +918,7 @@ except:
 text=''
 for info in field_info:
     text+=info
-ax3.text(1, -0.5, text, ha='right',  fontsize=14,
+ax3.text(1, -1, text, ha='right',  fontsize=14,
     verticalalignment='bottom',transform=ax3.transAxes)
 ax3.plot([],[],label="X - bad weather \n ♦ - dome close")
 ax3.legend()
@@ -989,7 +992,8 @@ detections=green_det_list+red_det_list+blue_det_list
 
 sigmas=[]
 for file in detections:
-    sigmas.append(readSigma(file))
+    if '.txt' in file.name:
+        sigmas.append(readSigma(file))
 
 sigmas=np.array(sigmas)
 # q25, q75 = np.percentile(sigmas, [25, 75])
@@ -1039,7 +1043,8 @@ for match in matched_dirs:
 
         sigmas=[]
         for file in detected_files:
-            sigmas.append(readSigma(file))
+            if '.txt' in file.name:
+                sigmas.append(readSigma(file))
         
         sigmas=np.array(sigmas)
         # q25, q75 = np.percentile(sigmas, [25, 75])
@@ -1080,7 +1085,8 @@ for match in matched_dirs:
     elif len(detected_files)==3:
         sigmas=[]
         for file in detected_files:
-            sigmas.append(readSigma(file))
+            if '.txt' in file.name:
+                sigmas.append(readSigma(file))
         
         sigmas=np.array(sigmas)
         # q25, q75 = np.percentile(sigmas, [25, 75])
