@@ -835,6 +835,8 @@ for logpath in ACP_logpaths:
 
     dates=event_list[1]
 
+    
+
     dates = [datetime.strptime(d, '%Y-%m-%d %H:%M:%S') for d in dates]
     
     # levels = np.tile(np.random.choice([-2, -5, -1, -3, -4], size=(1, 5)),
@@ -875,7 +877,7 @@ for logpath in ACP_logpaths:
             ax3.plot(dates[d], 0+c*2+0.8,
                     color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
             ax3.axhline(y = 0+c*2+0.8, color = color[c], linestyle = '-')
-        # d+=1
+        d+=1
         # i+=1
         # if i>1:
         #     i=0
