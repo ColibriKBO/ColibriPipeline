@@ -574,28 +574,19 @@ if __name__ == '__main__':
 
     #load in pre-made kernel set
     # kernel_set = np.loadtxt(base_path.parent.joinpath('kernels', 'kernels_040622.txt')) # Commented out - MJM
-    kernel_set = np.loadtxt(base_path.joinpath('kernels', 'kernels.txt'))
+    kernel_set = list(np.loadtxt(base_path.joinpath('kernels', 'kernels.txt')))
     
     #check if each kernel has a detectable dip - moved out of dipdetection function RAB 031722
     noise = 0.8   #minimum kernel depth threshold RAB Mar 15 2022- detector noise levels (??) TODO: change - will depend on high/low
-    
-    for i in range(len(kernel_set)):
-        
-        #check if deepest dip in a kernel is greater than expected background noise 
-        if min(kernel_set[i]) > noise:
-            
-            #remove kernel with dips less than expected background noise
-            print('Removing kernel ', i)
-            del(kernel_set[i])
-            
-            continue
+
+    kernel_set=[k for k in kernel_set if min(k) > noise]#2023-03-04 Roman A. fixed cant delete array element
 
     '''get filepaths to required directories/files'''
     
     #directory containing detection .txt files
     archive_dir = base_path.joinpath('ColibriArchive', str(process_date))
     matched_dir=archive_dir.joinpath('matched')#09-21 Roman A. now this code runs on matched events
-    #matched_dir=archive_dir#09-21 Roman A. now this code runs on matched events
+    # matched_dir=archive_dir#09-21 Roman A. now this code runs on matched events
     #list of filepaths to .txt detection files
     day_files = [f for f in matched_dir.iterdir() if str(process_date) in f.name]
     detect_files = [f for f in day_files if ('det' in f.name and 'png' not in f.name)]
@@ -676,7 +667,7 @@ if __name__ == '__main__':
         scope= filepath.name.split('_')[5].split('.')[0]
         filename=filepath.name.split('.')[0]
         diff_results.append((star_num, eventData[2], eventData[3], eventData[4], 
-                              kernelMatch(eventData, kernel_set, star_num, matched_dir, star_df,scope,filename), 
+                              kernelMatch(eventData, np.array(kernel_set), star_num, matched_dir, star_df,scope,filename), 
                               star_df['Gaia_RA'], star_df['Gaia_dec'], star_df['GMAG'], star_df['Gaia_B-R']))
        
         # if event_type == 'geometric':
