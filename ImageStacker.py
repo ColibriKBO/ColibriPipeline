@@ -468,6 +468,7 @@ if __name__ == '__main__':
     t1=T.time()#time when it all starts
     
     for minute in minutes:
+        print(minute)
         start_time = T.time()#time when i minute stacking starts
         files=[f for f in minute.iterdir() if ".rcd" in f.name] #list of files in a minute dir
         field=files[0].name.split('_')[0] #read field number from first image name
@@ -482,25 +483,40 @@ if __name__ == '__main__':
         
         # stacked=clippedMean(files,1,0,'high')
         
-        print('Running in parallel...')
+        # print('Running in parallel...')
         
-        pool_size = multiprocessing.cpu_count() -2
-        pool = Pool(pool_size)
-        # args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
-        args = ((files[f:f+chunk],gain) for f in range(0,len(files),chunk))
-        # stacked=[]
-        try:
-            # stacked= pool.starmap(clippedMean,args)
-            stacked= pool.starmap(NumpyMean,args)
-            # pool.starmap(clippedMean,args)
-        except:
-            logging.exception("failed to parallelize")
+        # pool_size = multiprocessing.cpu_count() -2
+        # pool = Pool(pool_size)
+        # # args = ((files[f:f+chunk],hiclip_value,loclip_value,gain)for f in range(0,len(files),chunk))
+        # args = ((files[f:f+chunk],gain) for f in range(0,len(files),chunk))
+        # # stacked=[]
+        # try:
+        #     # stacked= pool.starmap(clippedMean,args)
+        #     stacked= pool.starmap(NumpyMean,args)
+        #     # pool.starmap(clippedMean,args)
+        # except:
+        #     logging.exception("failed to parallelize")
         
-        pool.close()
-        pool.join()
+        # pool.close()
+        # pool.join()
+        arr = np.zeros((2048, 2048))
+        for file in files:
+            fid = open(file, 'rb')
+            
+            fid.seek(384,0)
+            
+            table = np.fromfile(fid, dtype=np.uint8, count=12582912)
+            testimages=nb_read_data(table)
+
+            image = split_images(testimages, 2048, 2048, 'high')
+            
+            arr=np.add(arr,image)
+        
+        stacked_img=arr/len(files)
+        
         # print(len(stacked), stacked[0].shape)
     
-        stacked_img=np.mean(stacked,axis=0)
+        # stacked_img=np.mean(stacked,axis=0)
 
 
         flat_img=stacked_img.flatten()
