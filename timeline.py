@@ -73,7 +73,7 @@ def ReadFiledList(log_list):
             dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(round(float('0.'+str(times).split('.')[1])*60))+':00')
             
             
-        
+
     return fields, dates
 
 def getAirmass(time, RA, dec):
@@ -922,7 +922,7 @@ ax3.text(1, -1, text, ha='right',  fontsize=14,
     verticalalignment='bottom',transform=ax3.transAxes)
 ax3.plot([],[],label="X - bad weather \n ♦ - dome close")
 ax3.legend()
-    
+ 
 # fig3.savefig('Events.svg',dpi=800,bbox_inches='tight')
 
 #%% Combine plot 1 2 3 into one
@@ -988,14 +988,26 @@ except FileNotFoundError:
     print('no Blue data')
     blue_det_list=[]
 
-detections=green_det_list+red_det_list+blue_det_list
+# detections=green_det_list+red_det_list+blue_det_list
 
-sigmas=[]
-for file in detections:
+Gsigmas=[]
+Bsigmas=[]
+Rsigmas=[]
+for file in green_det_list:
     if '.txt' in file.name:
-        sigmas.append(readSigma(file))
+        Gsigmas.append(readSigma(file))
 
-sigmas=np.array(sigmas)
+for file in red_det_list:
+    if '.txt' in file.name:
+        Rsigmas.append(readSigma(file))
+
+for file in blue_det_list:
+    if '.txt' in file.name:
+        Bsigmas.append(readSigma(file))
+
+Gsigmas=np.array(Gsigmas)
+Bsigmas=np.array(Bsigmas)
+Rsigmas=np.array(Rsigmas)
 # q25, q75 = np.percentile(sigmas, [25, 75])
 # bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
 # bins = round((sigmas.max() - sigmas.min()) / bin_width)
@@ -1004,7 +1016,7 @@ fig, ax = plt.subplots()
 # We change the fontsize of minor ticks label 
 bins=np.arange(6,12.25,0.25)
 
-plt.hist(sigmas,bins=bins,log=False)
+plt.hist([Gsigmas, Bsigmas, Rsigmas],bins=bins,log=False, color=['g', 'b', 'r'])
 # ax.yaxis.set_ticks(np.arange(0, 3, 1))
 
 plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
@@ -1020,7 +1032,7 @@ formatter.set_scientific(False)
 ax.yaxis.set_major_formatter(formatter)
 
 #plt.ylim([1,600])
-plt.title('todays number of detections: '+str(np.size(sigmas)))
+plt.title('todays number of detections: '+str(np.size(Gsigmas)+np.size(Bsigmas)+np.size(Rsigmas)))
 # plt.title(' Number of occulatations: '+str(np.size(sigmas)))
 plt.grid(which='both',axis='x')
 
