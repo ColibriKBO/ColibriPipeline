@@ -554,11 +554,14 @@ if __name__ == '__main__':
         print("Finished stacking "+minute.name+" in %.2f seconds" % (T.time() - start_time))
         
         print("Calculating WCS for the image...")
-        
-        wcs_headers=getWCS(Filepath)
+        try:
+            wcs_headers=getWCS(Filepath)
 
-        hdu = fits.open(Filepath, 'update')
-        hdu[0].header.update(wcs_headers)
-        hdu.close()
+            hdu = fits.open(Filepath, 'update')
+            hdu[0].header.update(wcs_headers)
+            hdu.close()
+        except:
+            print('wcs fail')
+            continue
         
     print("Finished stacking night in %.2f seconds" % (T.time() - t1))
