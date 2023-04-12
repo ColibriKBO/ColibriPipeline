@@ -501,7 +501,7 @@ if __name__ == '__main__':
         # pool.join()
         arr = np.zeros((2048, 2048))
         for file in files:
-            f_time=T.time()
+            
             fid = open(file, 'rb')
             
             fid.seek(384,0)
@@ -509,10 +509,12 @@ if __name__ == '__main__':
             table = np.fromfile(fid, dtype=np.uint8, count=12582912)
             testimages=nb_read_data(table)
 
-            image = split_images(testimages, 2048, 2048, 'high')
+            # image = split_images(testimages, 2048, 2048, 'high')
+            interimg = np.reshape(testimages, [2*2048,2048])
+            image = interimg[::2]
             
             arr=np.add(arr,image)
-            print(T.time()-f_time)
+            
         stacked_img=arr/len(files)
         
         # print(len(stacked), stacked[0].shape)
