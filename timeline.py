@@ -29,6 +29,7 @@ from matplotlib.ticker import ScalarFormatter
 from matplotlib.ticker import MaxNLocator
 from getStarHour import getStarHour
 from astropy.time import Time 
+import math
 
 #!!!
 # import matplotlib as mpl
@@ -70,7 +71,7 @@ def ReadFiledList(log_list):
             if times<0:
                 times=times+24
             
-            dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(round(float('0.'+str(times).split('.')[1])*60))+':00')
+            dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(math.floor(float('0.'+str(times).split('.')[1])*60))+':00')
             
             
 
@@ -921,7 +922,12 @@ for info in field_info:
 ax3.text(1, -1, text, ha='right',  fontsize=14,
     verticalalignment='bottom',transform=ax3.transAxes)
 ax3.plot([],[],label="X - bad weather \n ♦ - dome close")
-ax3.legend()
+# ax3.legend()
+legend = ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1))
+
+# Moving the legend below the plot
+legend.get_frame().set_linewidth(0.0) # remove the box frame
+
  
 # fig3.savefig('Events.svg',dpi=800,bbox_inches='tight')
 

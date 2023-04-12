@@ -501,6 +501,7 @@ if __name__ == '__main__':
         # pool.join()
         arr = np.zeros((2048, 2048))
         for file in files:
+            f_time=T.time()
             fid = open(file, 'rb')
             
             fid.seek(384,0)
@@ -511,7 +512,7 @@ if __name__ == '__main__':
             image = split_images(testimages, 2048, 2048, 'high')
             
             arr=np.add(arr,image)
-        
+            print(T.time()-f_time)
         stacked_img=arr/len(files)
         
         # print(len(stacked), stacked[0].shape)
@@ -554,11 +555,14 @@ if __name__ == '__main__':
         print("Finished stacking "+minute.name+" in %.2f seconds" % (T.time() - start_time))
         
         print("Calculating WCS for the image...")
-        
-        wcs_headers=getWCS(Filepath)
+        try:
+            wcs_headers=getWCS(Filepath)
 
-        hdu = fits.open(Filepath, 'update')
-        hdu[0].header.update(wcs_headers)
-        hdu.close()
+            hdu = fits.open(Filepath, 'update')
+            hdu[0].header.update(wcs_headers)
+            hdu.close()
+        except:
+            print('wcs fail')
+            continue
         
     print("Finished stacking night in %.2f seconds" % (T.time() - t1))
