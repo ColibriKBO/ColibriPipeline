@@ -633,6 +633,8 @@ if __name__ == '__main__':
                 f.write(f'Ran for {end_time - start_time} seconds')
         except:
             logging.exception("failed to parallelize")
+            with open(finish_txt, 'w') as f:
+                f.write('done')
             
         pool.close()
         pool.join()
