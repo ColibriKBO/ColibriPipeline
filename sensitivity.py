@@ -232,12 +232,13 @@ else:
         desired_time = str(cml_args.minute)
         #desired_time =datetime.strptime(desired_time,"%H.%M.%S").time()
         for i in range(len(minute_dirs)):
-            print(minute_dirs[i])
+            # print(minute_dirs[i])
             # if (minute_names[i]>det_time and i==0):
             #     print('search lightcurve in ',minute_names[i])
             minute_time=datetime.strptime(minute_dirs[i].split('_')[1],"%H.%M.%S.%f").time()
-            print(minute_time)
-            if desired_time[:-2] in str(minute_time):
+            
+            
+            if desired_time[:-2] in minute_dirs[i]:
                 obs_time=str(minute_time).replace(':','.')[:-4]
                 print(obs_time)
                 break
