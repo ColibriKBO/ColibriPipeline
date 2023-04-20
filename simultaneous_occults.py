@@ -4,6 +4,8 @@ Created on Jul 29 10:04:14 2022
 
 @author: Roman A.
 
+Match dip detection txts through-out 3 telescopes based on time and coordinates, runs only on Green
+
 2022-09-21 Roman A. simplified some steps and added data removal output
 """
 
@@ -24,38 +26,9 @@ import sys
 import fnmatch
 import math
 import argparse
-#import datetime
 from datetime import datetime,date
 
 
-
-# def ReadTime(filepath):
-#     """
-#     Reads first frame time in the detection txt file 
-
-#     Parameters
-#     ----------
-#     filepath : path obj.
-#         DESCRIPTION.
-
-#     Returns
-#     -------
-#     event_time : TYPE
-#         DESCRIPTION.
-
-#     """
-    
-    
-    
-#     #get header info from file
-#     starData = pd.read_csv(filepath, delim_whitespace = True, 
-#            names = ['filename', 'time', 'flux','conv_flux'], comment = '#')
-
-#     event_time = str(starData['filename'][0].split('_')[1].split('\\')[0])
-            
-
-#     #return all event data from file as a tuple    
-#     return (event_time)
 
 def readRAdec(filepath):
     """
@@ -91,135 +64,6 @@ def readRAdec(filepath):
 
     
     return (star_ra,star_dec)
-  
-
-# def readFile(filepath):                                    
-#     '''read in a .txt detection file and get information from it'''
-    
-#     #make dataframe containing image name, time, and star flux value for the star
-#     starData = pd.read_csv(filepath, delim_whitespace = True, 
-#            names = ['filename', 'time', 'flux','conv_flux'], comment = '#')
-
-#     first_frame = int(starData['filename'][0].split('_')[-1].split('.')[0])
-    
-#     #get header info from file
-#     with filepath.open() as f:
-        
-#         #loop through each line of the file
-#         for i, line in enumerate(f):
-            
-
-#             #get event frame number
-#             if i == 4:
-#                 event_frame = int(line.split('_')[-1].split('.')[0])
-
-#             #get star coords
-#             elif i == 5:
-#                 star_coords = line.split(':')[1].split(' ')[1:3]
-#                 star_x = float(star_coords[0])
-#                 star_y = float(star_coords[1])
-            
-#             #get event time
-#             elif i == 7:
-#                 event_time = line.split('T')[2].split('\n')[0]
-                
-#             elif i == 10:
-#                 event_type = line.split(':')[1].split('\n')[0].strip(" ")
-                
-#             elif i == 11:
-#                 star_med = line.split(':')[1].split('\n')[0].strip(" ")
-                
-#             elif i == 12:
-#                 star_std = line.split(':')[1].split('\n')[0].strip(' ')
-                
-#         #reset event frame to match index of the file
-#         event_frame = event_frame - first_frame
-
-      
-#     return (starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std)
-    
-    
-# def getTransform(date):                                     #redifinition from Colibri Pipeline's function
-#     '''get astrometry.net transform for a given minute'''
-
-#     #if transformation has already been calculated, get from dictionary
-#     if date in transformations:
-#         return transformations[date]
-    
-#     #calculate new transformation from astrometry.net
-#     else:
-#         #get median combined image
-#         median_image = [f for f in median_combos if date in f.name][0]
-#         median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/') #10-12 Roman A.
-#         median_str=median_str.lower()
-        
-#         #get name of transformation header file to save
-#         transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
-        
-#         transform_str=str(transform_file).split('\\')[-1] #10-12 Roman A.
-        
-#         #check if the tranformation has already been calculated and saved
-#         if transform_file.exists():
-            
-#             #open file and get transformation
-#             wcs_header = fits.open(transform_file)
-#             transform = wcs.WCS(wcs_header[0])
-
-#         #calculate new transformation
-#         else:
-#             #get WCS header from astrometry.net plate solution
-#             soln_order = 4
-            
-#             wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
-        
-#             #calculate coordinate transformation
-#             transform = wcs.WCS(wcs_header)
-        
-#         #add to dictionary
-#         transformations[date] = transform
-        
-#         return transform
-
-# def getTransform(date):                                     #redifinition from Colibri Pipeline's function
-#     '''get astrometry.net transform for a given minute'''
-
-#     #if transformation has already been calculated, get from dictionary
-#     if date in transformations:
-#         return transformations[date]
-    
-#     #calculate new transformation from astrometry.net
-#     else:
-#         #get median combined image
-#         median_image = [f for f in median_combos if date in f.name][0]
-#         median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/') #10-12 Roman A.
-#         median_str=median_str.lower()
-        
-#         #get name of transformation header file to save
-#         transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
-        
-#         transform_str=str(transform_file).split('\\')[-1] #10-12 Roman A.
-        
-#         #check if the tranformation has already been calculated and saved
-#         if transform_file.exists():
-            
-#             #open file and get transformation
-#             wcs_header = fits.open(transform_file)
-#             transform = wcs.WCS(wcs_header[0])
-
-#         #calculate new transformation
-#         else:
-#             #get WCS header from astrometry.net plate solution
-#             soln_order = 4
-            
-#             wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
-        
-#             #calculate coordinate transformation
-#             transform = wcs.WCS(wcs_header)
-        
-#         #add to dictionary
-#         transformations[date] = transform
-        
-#         return transform
     
 '''---------------------------------------------SCRIPT STARTS HERE--------------------------------------'''
 
@@ -267,7 +111,7 @@ coords_unmatched=green_path.joinpath('coords_unmatched')
 
 
 
-#take star index and occultation time from each txt file from each telescope
+#take occultation time from each txt file from each telescope
 print("Reading data...")# 21-09 Roman A. commented out unnecessary lines
 Green_minutes=[minute for file in sorted(os.listdir(green_path)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]
 # Green_stars=[minute for file in sorted(os.listdir(green_path)) if 'det' in file for minute in re.findall("(star\w{3})", file)]
@@ -292,7 +136,7 @@ RB=set(Red_minutes).intersection(Blue_minutes)
 BG=set(Blue_minutes).intersection(Green_minutes)
 
 
-pattern=sorted(GR | RB | BG)
+pattern=sorted(GR | RB | BG) #a list to store hhmmss that are common for telescopes
 
 if len(pattern)==0:
    print("No time matches today!")
@@ -302,11 +146,11 @@ if len(pattern)==0:
 '''loop through each telescope dir and copy time matched events to Matched directory'''
 
 for root, subdirs, filename in os.walk(red_path):
-
+    #loop through all detection files and find hhmmss pattern in them
     for i in range(len(filename)):
         if 'det_' in filename[i]:
             for k in range(len(pattern)):
-                if pattern[k] in re.findall("_(\d{6})_", str(filename[i]))[0]:
+                if pattern[k] in re.findall("_(\d{6})_", str(filename[i]))[0]: #copy det_ txts that have specific hhmmss
                     try:
                         shutil.copy(red_path.joinpath(filename[i]), matched_dir)
                     except FileNotFoundError:
@@ -348,7 +192,7 @@ for root, subdirs, filename in os.walk(blue_path):
 '''------------------------------------millisecond MATCHING--------------------------------'''
 print("Matching in milliseconds...")
 
-milsec_match=[[]]
+milsec_match=[[]] #list to store 
 
 
 ##loop through each pattern of hhmmss and compare their milliseconds time with combinatorics
@@ -389,66 +233,11 @@ print('')
 
 '''---------------------------------------Coordinates Calculation-----------------------------------------'''
 
-##skipped because coordinates are now calculated using different code after main_pipeline
-
-# if not os.path.exists(green_path.joinpath('solution_failure')):
-#     os.mkdir(green_path.joinpath('solution_failure')) #a folder for fields that didn't get astrnet solution
-
-# solution_failure=green_path.joinpath('solution_failure')
-    
-# start_time = time.time()
-
-# telescope_tuple=[['REDBIRD',red_path], #for looping convinience
-#                  ['GREENBIRD',green_path],
-#                  ['BLUEBIRD',blue_path]]
-
-# #telescope_tuple=[['REDBIRD',red_path], #for looping convinience
-# #                 ['GREENBIRD',green_path]]
-
-# for i in range(len(telescope_tuple)):
-
-#     detect_files = [f for f in matched_dir.iterdir() if str(telescope_tuple[i][0]) in f.name] #list of time matches
-    
-#     ''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
-#     median_combos = [f for f in telescope_tuple[i][1].iterdir() if 'medstacked' in f.name]
-    
-#     #dictionary to hold WCS transformations for each transform file
-#     transformations = {}
-    
-#     for filepath in detect_files:
-        
-        
-    
-        
-#         #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
-#         eventData = readFile(filepath)
-    
-#         #get corresponding WCS transformation
-#         date = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
-    
-#         try: 
-#             transform = getTransform(date)
-#         except TimeoutError:
-#             shutil.move(str(filepath), str(solution_failure)) 
-#             break
-        
-#         #get star coords in RA/dec
-#         star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
-#         star_RA = star_wcs[0]
-#         star_DEC = star_wcs[1]
-        
-#         #write a line with RA dec in each file
-#         with open(filepath, 'r') as filehandle:
-#             lines = filehandle.readlines()
-#             lines[6] = '#    RA Dec Coords: %f %f\n' %(star_RA, star_DEC)
-#         with open(filepath, 'w') as filehandle:
-#             filehandle.writelines( lines )
-            
-# print("Coordinates calculated in --- %s seconds ---" % (time.time() - start_time))
-# print('')
+##skipped because coordinates are now calculated using coordsfinder.py after main_pipeline
 
 '''---------------------------------------Coordinates Matching-----------------------------------------'''
 
+#list of matched time patterns
 pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
 
 start_time = time.time()
@@ -461,11 +250,11 @@ matched_files = os.listdir(matched_dir) #list of time matched files
 
 #read RA and dec from each file
 for times in time_keys:
-    time_matched_tuple=sorted(matched_dir.glob('*%s*'%(times)))
+    time_matched_tuple=sorted(matched_dir.glob('*%s*'%(times))) #list of matched det_s
     star_ra=[]
     star_dec=[]
     for star_path in time_matched_tuple:
-        ra,dec=readRAdec(star_path)
+        ra,dec=readRAdec(star_path) #read star coords from file
         star_ra.append(ra)
         star_dec.append(dec)
         star_radec=list(zip(star_ra,star_dec)) #array of Ra and dec
@@ -546,7 +335,7 @@ print("done")
 
 '''-------------------------------CREATING A LIST TO DELETE DATA WITHOUT EVENTS-------------------------'''    
     
-##Path to COlibriData of 3 telescopes
+##Path to ColibriData of 3 telescopes
 green_minutesdir=Path('/','D:','/ColibriData',str(night_dir).replace('-', ''))
 blue_minutesdir=Path('/','B:',str(night_dir).replace('-', ''))
 red_minutesdir=Path('/','R:',str(night_dir).replace('-', ''))
@@ -616,7 +405,6 @@ print('DONE!')
         
             
     
-
 
 
 
