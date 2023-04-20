@@ -42,26 +42,33 @@ Gets the median flux / stddev for all stars in a minute. Matches the stars to th
 ### timingplots.py
 Checks files for timestamp issues and corrupted files.
 
-### biasPlots.py - script to quickly see bias and sensor temperature values for specific night, runs on Green ONLY
-	I think it can be deleted
+### biasPlots.py
+script to quickly see bias and sensor temperature values for specific night, runs on Green ONLY
+I think it can be deleted
 
-### coordsfinder.py - writes Ra Dec coordinates into dip detection txt file by performing AstrometryNet transformation
-	Is part of pipeline, runs after colibri_main_pipeline
+### coordsfinder.py
+writes Ra Dec coordinates into dip detection txt file by performing AstrometryNet transformation
+Is part of pipeline, runs after colibri_main_pipeline
 	
-### cumulative_stats.py - Cumulative statistics for detections and occultations, runs only on Green
+### cumulative_stats.py
+Cumulative statistics for detections and occultations, runs only on Green
 
-### data_clean.py - Cleans observed minute dirs in specific night that are not in the list called to_be_saved.txt
-	Not implemented yet
+### data_clean.py 
+Cleans observed minute dirs in specific night that are not in the list called to_be_saved.txt
+Not implemented yet
 	
-### getStarHour.py - Return star-hours for each field observed in the night directory based 
-	on number of frames of certain fields and number of stars in the mid-frame
-	This script is used by timeline.py
-	Must be updated if our fields change
+### getStarHour.py
+Return star-hours for each field observed in the night directory based on number of frames of certain fields and number of stars in the mid-frame
+This script is used by timeline.py
+Must be updated if our fields change
 	
-### readnoise.py - just delete it. It's completely implemented and documented in image_stats_bias.py
+### readnoise.py
+just delete it. It's completely implemented and documented in image_stats_bias.py
 
-### simultaneous_occults.py - Match dip detection txts through-out 3 telescopes based on time and coordinates
-	Runs only on Green. Is part of pipeline. I hope one day it will be renamed to colibri_secondary.py
+### simultaneous_occults.py
+Match dip detection txts through-out 3 telescopes based on time and coordinates
+Runs only on Green. Is part of pipeline. I hope one day it will be renamed to colibri_secondary.py
 
-### timeline.py - Create a bunch of observatory operation plots, more description in separate file,
+### timeline.py
+Create a bunch of observatory operation plots, more description in separate file,
 	Runs only on Green
