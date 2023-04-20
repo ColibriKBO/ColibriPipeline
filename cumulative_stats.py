@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 22 14:39:39 2022
 
-Cummulative statistics for detections and occultations
+Cumulative statistics for detections and occultations, runs only on Green
 
 @author: Roman A.
 """
@@ -69,52 +69,53 @@ def readSigma(filepath):
     return (sigma)
 
 base_path=Path('/','D:')
-#archive pathes
+#ColibriArchive pathes
 green_arch=base_path.joinpath('/ColibriArchive')
 red_arch=Path('/','Z:',)
 blue_arch=Path('/','Y:')
 
-#create directories that will store all the data needed
+#create directories that will store all detections
 
-cumm_dets=green_arch.joinpath('cummulative_detections')
+cumm_dets=green_arch.joinpath('cummulative_detections') #single telescope detections
 
 if not os.path.exists(cumm_dets):
     os.mkdir(cumm_dets)
     
-cumm_occults2=green_arch.joinpath('cummulative_occultations2')
+cumm_occults2=green_arch.joinpath('cummulative_occultations2') #matched detections 2 telescopes
 
 if not os.path.exists(cumm_occults2):
     os.mkdir(cumm_occults2)
     
-cumm_occults3=green_arch.joinpath('cummulative_occultations3')
+cumm_occults3=green_arch.joinpath('cummulative_occultations3') #matched detections 3 telescopes
 
 if not os.path.exists(cumm_occults3):
     os.mkdir(cumm_occults3)
     
-archives=[green_arch,red_arch,blue_arch]
+archives=[green_arch,red_arch,blue_arch] #list of archives
 
-#%% cummulative detections
+#%% cumulative detections for single telescope
 for archive in archives:
     #sort out night dirs to reduce time
     nights=[f for f in archive.iterdir() if ('diagnostics' not in f.name and getNightTime(f)>date(2022, 9, 19) and 'cummulative' not in f.name and f.is_dir())]
     for night in nights:
         print(night)
         detections=[f for f in night.iterdir() if 'det' in f.name]
-        if len(detections)==0:
+        if len(detections)==0: #some directories don't have detection txts
             continue
         else:
             for detection in detections:
                 with open(detection) as f:
-                    if 'significance' in f.read():
+                    if 'significance' in f.read(): #check if detection txt has significance
                         try:
                             shutil.copy2(detection,os.path.join(cumm_dets,detection.name)) #copy detection files
                         except shutil.SameFileError:
                             pass
 
         print(night)
-#%%  cummulative telescope matches    
+#%%  cummulative telescope matches that are stored on Green
 
 #sort out night dirs to reduce time
+#os.path.getctime(f)>1663609502 - after that time significance was implemented
 nights=[f for f in green_arch.iterdir() if ('diagnostics' not in f.name and os.path.getctime(f)>1663609502 and 'cummulative' not in f.name and f.is_dir())]
 for night in nights:
     if os.path.exists(night.joinpath('matched')):
