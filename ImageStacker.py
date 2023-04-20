@@ -303,6 +303,8 @@ def makeBiasSet(filepath, numOfBiases, savefolder, gain):
     
     return biasList
 
+'''---------------------------------RCD section---------------------------------'''
+
 def readxbytes(fid,numbytes):
     for i in range(1):
         data = fid.read(numbytes)
@@ -342,7 +344,25 @@ def split_images(data,pix_h,pix_v,gain):
 
     return image
 
+'''---------------------------------RCD section end---------------------------------'''
+
 def NumpyMean(filelist, gain):
+    '''
+    
+
+    Parameters
+    ----------
+    filelist : list of path objects
+        Chunk of frames.
+    gain : str
+        Gain to read.
+
+    Returns
+    -------
+    array
+        mean stack of frames.
+
+    '''
     chunk_stack=[]
     hnumpix = 2048
     vnumpix = 2048
@@ -363,7 +383,7 @@ def NumpyMean(filelist, gain):
 
 def clippedMean(filelist, hiclips, loclips,gain):
     '''
-    
+    M. Mazur code for clipped mean
 
     Parameters
     ----------
@@ -483,6 +503,8 @@ if __name__ == '__main__':
         
         # stacked=clippedMean(files,1,0,'high')
         
+        #%% uncomment to run in paralel
+        
         # print('Running in parallel...')
         
         # pool_size = multiprocessing.cpu_count() -2
@@ -499,9 +521,12 @@ if __name__ == '__main__':
         
         # pool.close()
         # pool.join()
-        arr = np.zeros((2048, 2048))
-        for file in files:
+        
+        #%%
+        arr = np.zeros((2048, 2048)) #array to stack on top
+        for file in files:#loop through each frame in minute dir
             
+        #read rcd bytes, this part can be a function
             fid = open(file, 'rb')
             
             fid.seek(384,0)
@@ -511,23 +536,23 @@ if __name__ == '__main__':
 
             # image = split_images(testimages, 2048, 2048, 'high')
             interimg = np.reshape(testimages, [2*2048,2048])
-            image = interimg[::2]
+            image = interimg[1::2] #high gain
             
-            arr=np.add(arr,image)
+            arr=np.add(arr,image)#add up each frame
             
-        stacked_img=arr/len(files)
+        stacked_img=arr/len(files)#devide sum of all frames by num of frames
         
         # print(len(stacked), stacked[0].shape)
     
         # stacked_img=np.mean(stacked,axis=0)
 
 
-        flat_img=stacked_img.flatten()
+        flat_img=stacked_img.flatten()#flatten for statistics
         
-        stack_med=stats.sigma_clipped_stats(flat_img, sigma=3, maxiters=100,axis=0)[1]
+        stack_med=stats.sigma_clipped_stats(flat_img, sigma=3, maxiters=100,axis=0)[1] #get sigma clipped median
         print("Stack image median: ",stack_med)
 
-        bias = chooseBias_Med(stack_med, MasterBiasList) #choose best bias according to time
+        bias = chooseBias_Med(stack_med, MasterBiasList) #choose best bias according to median, not time
         
         print("Bias median: ", np.median(bias))
 
@@ -536,18 +561,18 @@ if __name__ == '__main__':
         
         hdu = fits.PrimaryHDU(reduced_image) #save stacked image as .fits
         
-        save_path=base_path.joinpath('/StackedData',field,str(obs_date))
+        save_path=base_path.joinpath('/StackedData',field,str(obs_date))#save location for specific field and date
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         Filepath = save_path.joinpath(minute.name+'_clippedmean.fits')
         
         hdu.writeto(Filepath, overwrite=True)
         print("Stack time: ", stack_time)
-        fits.setval(Filepath, 'DATE-OBS', value=stack_time)
+        fits.setval(Filepath, 'DATE-OBS', value=stack_time)#add fits header with time
         
         hdu = fits.PrimaryHDU(bias) #save used bias as .fits
         
-        save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Bias')
+        save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Bias')#save master bias file just in case
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         Bias_Filepath = save_path.joinpath(minute.name+'_medianbias.fits')
@@ -558,10 +583,10 @@ if __name__ == '__main__':
         
         print("Calculating WCS for the image...")
         try:
-            wcs_headers=getWCS(Filepath)
+            wcs_headers=getWCS(Filepath)#get WCS transformation for current mean stacked image
 
             hdu = fits.open(Filepath, 'update')
-            hdu[0].header.update(wcs_headers)
+            hdu[0].header.update(wcs_headers) #add WCS solution to fits headers
             hdu.close()
         except:
             print('wcs fail')
