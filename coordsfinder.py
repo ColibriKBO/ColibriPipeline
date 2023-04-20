@@ -7,6 +7,8 @@ Created:    Thu Oct 20 16:58:29 2022
 Updated:    Thu Oct 20 16:58:29 2022
     
 Usage: python coordsfinder.py [-d]
+
+Description: writes Ra Dec coordinates into dip detection txt file by performing AstrometryNet transformation
 """
 
 # Module Imports
@@ -51,14 +53,17 @@ def getTransform(date):
     #calculate new transformation from astrometry.net
     else:
         #get median combined image
-        median_image = [f for f in median_combos if date in f.name][0]
-        median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/') #10-12 Roman A.
+        median_image = [f for f in median_combos if date in f.name][0] #this is to run web version of Astrometry
+        #10-12 Roman A. to run astrometry localy using Linux subsystem
+        median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/')
         median_str=median_str.lower()
         
         #get name of transformation header file to save
+        #this is to run web version of Astrometry
         transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
         
-        transform_str=str(transform_file).split('\\')[-1] #10-12 Roman A.
+        #10-12 Roman A. to run astrometry localy using Linux subsystem
+        transform_str=str(transform_file).split('\\')[-1]
         
         #check if the tranformation has already been calculated and saved
         if transform_file.exists():
@@ -73,6 +78,7 @@ def getTransform(date):
             soln_order = 4
             
             try:
+                #try if local Astrometry can solve it
                 wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, soln_order) #10-12 Roman A.
             except:
                 wcs_header = astrometrynet_funcs.getSolution(median_image, transform_file, soln_order)
@@ -172,20 +178,17 @@ obsYYYYMMDD = cml_args.date
 obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     
 print(obs_date)
-data_path=Path('/','D:','/ColibriArchive',str(obs_date))
+data_path=Path('/','D:','/ColibriArchive',str(obs_date)) #path to archive with dip detection txts
 
-detect_files = [f for f in data_path.iterdir() if 'det' in f.name] #list of time matches
+detect_files = [f for f in data_path.iterdir() if 'det' in f.name] #list of txts
 
 ''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
-median_combos = [f for f in data_path.iterdir() if 'medstacked' in f.name]
+median_combos = [f for f in data_path.iterdir() if 'medstacked' in f.name] #list of median combined images to use for WCS
 
 #dictionary to hold WCS transformations for each transform file
 transformations = {}
 
 for filepath in detect_files:
-    
-    
-
     
     #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
     eventData = readFile(filepath)
