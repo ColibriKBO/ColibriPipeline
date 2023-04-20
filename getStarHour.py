@@ -6,6 +6,8 @@ Created on Tue Dec 20 11:06:40 2022
 
 Return star-hours for each field observed in the night directory based on number of frames of certain fields and
 number of stars in the mid-frame
+
+This script is used by timeline.py
 """
 from pathlib import Path
 import sep
@@ -17,6 +19,7 @@ from copy import deepcopy
 from astropy.io import fits
 
 
+#----------------------------------------M. Mazur's stuff to read .rcd files------------------------------------------
 
 def readxbytes(fid, numbytes):
     for i in range(1):
@@ -123,6 +126,8 @@ def importFramesRCD(filenames, start_frame, num_frames, bias, gain):
         
     return imagesData
 
+#---------------------------------------end of RCD stuff-----------------------------------------------
+
 def initialFindFITS(data, detect_thresh):
     """ Locates the stars in the initial time slice 
     input: flux data in 2D array for a fits image, star detection threshold (float)
@@ -152,34 +157,7 @@ def initialFindFITS(data, detect_thresh):
 def getBias(filepath, numOfBiases, gain):
     """ get median bias image from a set of biases (length =  numOfBiases) from filepath
     input: bias image directory (path object), number of bias images to take median from (int), gain level ('low' or 'high')
-    return: median bias image"""
-    
-    #FOR FITS:
-    # Added a check to see if the fits conversion has been done.
-    # Comment out if you only want to check for presence of fits files.
-    # If commented out, be sure to uncomment the 'if not glob(...)' below
-  #  if filepath.joinpath('converted.txt').is_file == False:
-  #      with open(filepath + 'converted.txt', 'a'):
- #            os.utime(filepath + 'converted.txt')
-            
- #            if gain == 'high':
- #                os.system("python .\\RCDtoFTS.py " + str(filepath) + ' ' + gain)
- #            else:
- #                os.system("python .\\RCDtoFTS.py " + str(filepath))
- # #   else:
- # #       print('Already converted raw files to fits format.')
- # #       print('Remove file converted.txt if you want to overwrite.')
-
- #    #for .fits files
- #    '''get list of bias images to combine'''
- #   biasFileList = sorted(filepath.glob('*.fits'))
- #   biases = []   #list to hold bias data
-    
- #    '''append data from each bias image to list of biases'''
- #   for i in range(0, numOfBiases):
- #        biases.append(fits.getdata(biasFileList[i]))
- 
-     
+    return: median bias image"""    
         
     #for rcd files:
     '''get list of images to combine'''
@@ -278,12 +256,12 @@ def fieldCoords(fieldname):
     Parameters
     ----------
     fieldname : str
-        Index name of the field.
+        Name of the field.
 
     Returns
     -------
-    coords : str
-        A string of field coordinates.
+    coords : array
+        A 1D array of field coordinates [Ra, dec].
 
     """
 
@@ -350,7 +328,7 @@ def getStarHour(main_path, obs_date, threshold=4, gain='high'):
     obs_date : str
         Observation date eg 2022-11-27.
     threshold : int, optional
-        Star-finding threshold for SEP. The default is 10.
+        Star-finding threshold for SEP. The default is 4.
     gain : str, optional
         Image reading gain. The default is 'high'.
 
@@ -360,8 +338,6 @@ def getStarHour(main_path, obs_date, threshold=4, gain='high'):
         A list of strings with fields, coordinates and starhours.
 
     """
-    # gain='high'
-    # threshold=10
 
     main_path=Path(main_path)
     data_path=main_path.joinpath('/ColibriData',str(obs_date).replace('-', '')) #path of observed night
@@ -394,16 +370,16 @@ def getStarHour(main_path, obs_date, threshold=4, gain='high'):
         bias = chooseBias(folder, MasterBiasList)
         #read mid frame in the list
         try:
-            img=importFramesRCD([stars[int(len(stars) / 2)]], 0, 1, bias, gain)
+            img=importFramesRCD([stars[int(len(stars) / 2)]], 0, 1, bias, gain) #import bias reduced frame as 2d array
         
-            star_pos=list(initialFindFITS(img,threshold))
+            star_pos=list(initialFindFITS(img,threshold)) #find stars on 2D array 
         except: #in case of corrupt images
             star_pos=[]
         i=0
-        while len(star_pos)<40: #in case of bad frames with no stars
+        while len(star_pos)<20: #in case of bad frames with no stars
             print("not enough stars!")
             try:
-                folder=stars[i].parent #iterate every 100th frame of the list to find enough stars
+                folder=stars[i].parent #iterate every 1000th frame of the list to find enough stars
                 bias = chooseBias(folder, MasterBiasList)
                 print(stars[i])
                 img=importFramesRCD([stars[i]], 0, 1, bias, gain)
@@ -418,11 +394,10 @@ def getStarHour(main_path, obs_date, threshold=4, gain='high'):
             
 
 
-        # print(len(list(star_pos)))
-        # get field coordinates
-        coords=fieldCoords(field)
-        #assuming exposure time is 25ms
 
+        coords=fieldCoords(field)
+        
+        #assuming exposure time is 25ms
         output=f'{field} observed  {len(stars)*0.025/60/60*len(star_pos):.1f}  star-hours, Ra: {coords[0]} dec: {coords[1]}\n'
         print(output)
         summary.append(output)
