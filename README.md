@@ -75,3 +75,9 @@ Runs only on Green
 	
 ### ImageStacker.py
 Make mean-stacks of 1-minute long data for whole night and save them to Stackeddata according to field and time
+
+### stacked_lightcurve.py
+Perform multiaperture photometry of 1-minute stacked frames
+
+### stacked_lightcurve_looker.py
+Display results of stacked_lightcurve.py
