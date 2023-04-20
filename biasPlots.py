@@ -3,29 +3,32 @@
 Created on Thu Aug 11 19:36:31 2022
 
 @author: Roman A. used Rachel's bias graphing scripts
+
+script to quickly see bias and sensor temperature values for specific night
+
+It is suposed to run on Green only 
 """
 
 import numpy as np
-
 import pandas as pd
-
-
-
-
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-#scope = 'Green'
-night = '2022-08-06'
-#night=obs_date
+
+night = '2022-08-06' #night you want to analyze
+
+
+#ColibriArchive directories of 3 telescopes
 Green_data=Path('/','D:','/ColibriArchive',night.replace('-', '')+'_diagnostics','Bias_Stats')
 Red_data=Path('/','Y:',night.replace('-', '')+'_diagnostics','Bias_Stats')
 Blue_data=Path('/','Z:',night.replace('-', '')+'_diagnostics','Bias_Stats')
 
+#read txt files with bias and temperature stats using pandas
 Green_bias = pd.read_csv(Green_data.joinpath(night+'_stats.txt'), delim_whitespace = True)
 Red_bias = pd.read_csv(Red_data.joinpath(night+'_stats.txt'), delim_whitespace = True)
 Blue_bias = pd.read_csv(Blue_data.joinpath(night+'_stats.txt'), delim_whitespace = True)
 
+#locate and write time columns
 Green_bias[['day','hour']] = Green_bias['time'].str.split('T', expand = True)
 Red_bias[['day','hour']] = Red_bias['time'].str.split('T', expand = True)
 Blue_bias[['day','hour']] = Blue_bias['time'].str.split('T', expand = True)
@@ -178,7 +181,6 @@ ax3.set_xticklabels(Blue_labels,rotation=20,fontsize=10)
 #ax1.ylim(lower-0.2, upper+0.2)
 
 plt.legend()
-
 
 plt.savefig(Green_data.joinpath('Green-Red-Blue' + '.png'),dpi=300)
 plt.show()
