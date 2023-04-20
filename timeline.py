@@ -3,6 +3,9 @@
 Created on Tue Nov 22 14:39:39 2022
 
 @author: Roman A.
+
+Create a bunch of observatory operation plots, more description in separate file, runs only on Green
+
 """
 import datetime as dt
 from datetime import datetime, timedelta, date
@@ -14,13 +17,11 @@ from scipy import interpolate
 import numpy as np
 import seaborn as sns
 from matplotlib.dates import DateFormatter
-# import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pathlib import Path
 import os
 import csv
 import numba as nb
-# from datetime import timezone
 from astropy import time
 import shutil
 import argparse
@@ -31,9 +32,6 @@ from getStarHour import getStarHour
 from astropy.time import Time 
 import math
 
-#!!!
-# import matplotlib as mpl
-# mpl.rcParams.update(mpl.rcParamsDefault)
 def ReadFiledList(log_list):
     """
     
@@ -121,7 +119,17 @@ def getAirmass(time, RA, dec):
     return airmass, alt, az
 
 def readSigma(filepath):
-    
+    """
+   Read sigma from det.txt file
+   Parameters
+   ----------
+   filepath : path type
+       Txt file of the detections.
+   Returns
+   -------
+   sigma : float
+       Event significance.
+   """
     with filepath.open() as f:
         
         #loop through each line of the file
@@ -135,6 +143,24 @@ def readSigma(filepath):
     return (sigma)
 
 def twilightTimes(julian_date, site=[43.0,-81.0]):
+    '''
+    M. Mazur's code to calculate sunrise and sunset time for specified JD time'
+
+    Parameters
+    ----------
+    julian_date : float
+        Juliad Date (2460055.24633).
+    site : TYPE, optional
+        Observatory location. The default is [43.0,-81.0].
+
+    Returns
+    -------
+    Jrise : float
+        Sunrise time.
+    Jset : float
+        Sunset time.
+
+    '''
     n = np.floor(julian_date -2451545.0 + 0.0008)
     Jstar = n - (site[1]/360.0)
     M = (357.5291 + 0.98560028 * Jstar) % 360.0
@@ -216,6 +242,8 @@ def ReadLog(file):
 
     
     return(log_list)
+
+'''--------------------------------------------------RCD section----------------------------------'''
 
 def readxbytes(fid, numbytes):
     for i in range(1):
@@ -345,6 +373,8 @@ def importTimesRCD(imagePaths, startFrameNum, numFrames):
         
     return imagesTimes
 
+'''--------------------------------------------------RCD section end----------------------------------'''
+
 def getPrevDate(path):
     """
     Get date of previous results that are present in the log folder
@@ -377,13 +407,13 @@ def ToFM():
         hour number.
 
     """
-    #reading first minute of the night on Red, if no data then switch to Green
+    #reading first minute of the night on Red, if no data then switch to Green or Blue
     try:
-        # first_min=[f for f in red_datapath.iterdir() if obs_date.replace('-','') in f.name][0]
+        
         first_min=[f for f in green_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
         
     except:
-        try:# first_min=[f for f in green_datapath.iterdir() if obs_date.replace('-','') in f.name][0]
+        try:
             first_min=[f for f in red_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
         except:
             first_min=[f for f in blue_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
@@ -490,7 +520,6 @@ with open(filename, 'w',newline='') as csvfile:
         
  #%% GETTING CLOUD/TRANSPERENCY DATA   
 
-# Cloud_logpath=base_path.joinpath('/Logs','Weather','CloudMonitor')
 Cloud_logpath=base_path.joinpath('/Logs','Weather','Weather') #path for Polaris data on Green
 
 todayT=datetime.strptime(obs_date, '%Y-%m-%d').date() #date of tonight's observations
@@ -649,11 +678,6 @@ sunrise.format='fits'
 sunset=time.Time(sunset, format='jd') #sunset time for this night
 sunset.format='fits'
 
-#add sunrise and sunset time to the timeline csv for future ploting
-# with open(filename, 'a',newline='') as csvfile:
-#     csvwriter = csv.writer(csvfile)
-#     csvwriter.writerow([sunset, sunrise,'nighting','Night']) 
-
 
 # %% 
 
@@ -672,7 +696,7 @@ colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b"}
 
 verts = []
 colors = []
-for d in data:
+for d in data:#convert start and end times to matplotlib date number
     
     v =  [(mdates.datestr2num(d[0]), telescopes[d[3]]-.4),
           (mdates.datestr2num(d[0]), telescopes[d[3]]+.4),
@@ -730,11 +754,11 @@ except:
 try:
     t = data['timestamp']
     # y = data['SkyT']-data['GroundT']
-    y=data['Mag']+14.55
+    y=data['Mag']+14.55 #transeprancy
 
 
     samplerate = 6
-    f = interpolate.interp1d(t,y)
+    f = interpolate.interp1d(t,y) #data smoothing
     xnew = np.arange(min(data['timestamp']),max(data['timestamp']),samplerate)
     x=[]
     for i in range(len(xnew)):
@@ -756,24 +780,24 @@ try:
             end_idx=i
             break
 
-    x=x[start_idx:end_idx]
+    x=x[start_idx:end_idx] #only get data between sunset and sunrise
     ynew=ynew[start_idx:end_idx]
 
     n = int(len(ynew))
 
     a = ynew[0:(n)].reshape(1,1,n)
     block = np.mean(a, axis=0)
-    block=pd.DataFrame(block,columns=x,index=['transparency'])
-    # ax2=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.016,-0.27,1,1), bbox_transform=ax1.transAxes)
-
+    block=pd.DataFrame(block,columns=x,index=['transparency']) #combine time and sky values
+    
+    #stick this plot to previous
     ax=inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
-    # ax2=sns.heatmap(block,cmap='Blues_r',vmax=-10,vmin=-20,cbar=False,zorder=1)
 
-    ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=2)
+    ax=sns.heatmap(block,cmap='Blues_r',vmin=0,vmax=5,cbar=False,zorder=2) #transperancy heatmap
 
     ax.axes.invert_yaxis()
 
     ax2=plt.twinx()
+    #transperancy line plot over heatmap
     sns.lineplot(x=x,y=ynew,color='k',ax=ax2, zorder=5)
     ax2.yaxis.set_ticks(np.arange(0, 5, 1))
     ax2.set_ylim([0,4])
@@ -806,15 +830,15 @@ for logpath in ACP_logpaths:
 
     #list of events in log that are worth noting, this list can be expanded 
     pattern=['Weather unsafe!','Dome closed!','Field Name:']
-    event_list=ReadLogLine(log, pattern, Break=False)
-    field_list=ReadFiledList(log)
+    event_list=ReadLogLine(log, pattern, Break=False)#get list of important events from ACP log file
+    field_list=ReadFiledList(log)#get list of planned fields
     for i in range(len(field_list[0])):
         field_num=int(field_list[0][i].split("field")[1].strip("\n"))
         field_markers[field_list[0][i]]=fr"${field_num}$"
     
     names=event_list[0]
 
-    for i in range(len(names)):
+    for i in range(len(names)): #loop through events and asign markers
         
         if pattern[0] in names[i]:
             names[i]='bad weather'
@@ -834,31 +858,19 @@ for logpath in ACP_logpaths:
 
 
 
-    dates=event_list[1]
+    dates=event_list[1] #date of events
 
     
 
-    dates = [datetime.strptime(d, '%Y-%m-%d %H:%M:%S') for d in dates]
+    dates = [datetime.strptime(d, '%Y-%m-%d %H:%M:%S') for d in dates] #convert to time variables
     
-    # levels = np.tile(np.random.choice([-2, -5, -1, -3, -4], size=(1, 5)),
-    #                  int(np.ceil(len(dates)/6)))[:len(dates)]
-#    length=[[-1,-2,-3,-4,-5],[-5,-3,-4,-2,-1],[-2,-4,-2,-5,-3]]
     length=np.random.randint(-5,-1,len(names))
     levels = np.tile(length,
                      int(np.ceil(len(dates)/6)))[:len(dates)]
 
+    d=0 #counter to loop dates
     
-    # Create figure and plot a stem plot with the date
-    # fig, ax = plt.subplots(figsize=(8.8, 4), constrained_layout=True)
-    # ax4.set(title="Observatory events")
-
-#    ax3.vlines(dates, 0, levels, color=color[c])  # The vertical stems.
-#    ax3.plot(dates, np.zeros_like(dates), "-o",
-#            color="k", markerfacecolor="w")  # Baseline and markers on it.
-    d=0
-    k=[1,2]
-    i=0
-    
+    #plot planned fields
     for j in range(len(field_list[0])):
         m = field_markers.get(field_list[0][j])
         
@@ -870,21 +882,20 @@ for logpath in ACP_logpaths:
 
         
         m = markers.get(name)
-        if 'field' in name:
+        
+        if 'field' in name:#plot observed fields
         
             ax3.plot(dates[d], 0+c*2+0.4,
                     color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
             ax3.axhline(y = 0+c*2+0.4, color = color[c], linestyle = '-')
             ax3.text(mdates.datestr2num(str(sunset)), 0+c*2+0.4, 'observed',fontsize=8,ha='right', va='center')
-        else:
+        else: #plot other stuff
             ax3.plot(dates[d], 0+c*2+0.8,
                     color=color[c], marker=m, markersize=9,markerfacecolor='k',markeredgecolor='k')  # Baseline and markers on it.
             ax3.axhline(y = 0+c*2+0.8, color = color[c], linestyle = '-')
             ax3.text(mdates.datestr2num(str(sunset)), 0+c*2+0.8, 'events',fontsize=8,ha='right', va='center')
         d+=1
-        # i+=1
-        # if i>1:
-        #     i=0
+  
         
 
 
@@ -897,7 +908,7 @@ for logpath in ACP_logpaths:
 
     # format xaxis with 4 month intervals
 
-    ax3.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
+    ax3.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])#limit plot to sunrise and sunset
     ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
     ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     
@@ -911,9 +922,8 @@ for logpath in ACP_logpaths:
     ax3.set_xticks([])
     ax3.margins(y=0.1)
     c+=1
-try:
+try: #include a legend with observed field info (star-hour and coords)
     field_info=getStarHour('D:/',str(obs_date))
-    #field_info=str(field_info)+'\n'+'$*$ - star collection '+'$x$ - bad weather '+'$D$ - dome close'
 except:
     field_info=['no data']
 text=''
@@ -928,8 +938,6 @@ legend = ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1))
 # Moving the legend below the plot
 legend.get_frame().set_linewidth(0.0) # remove the box frame
 
- 
-# fig3.savefig('Events.svg',dpi=800,bbox_inches='tight')
 
 #%% Combine plot 1 2 3 into one
 
@@ -960,7 +968,7 @@ except:
 ax4.set_xlabel('Gmag')
 ax4.set_ylabel('Temporal SNR')
 
-#plt.title()#!!!
+#plt.title()#!!! I think I had to add here something
 # snr_info='Airmass: %.2f Time: %s \n' % (red_airmass, red_snrtime)+'Airmass: %.2f Time: %s /n' % (blue_airmass, blue_snrtime)+'Airmass: %.2f Time: %s' % (green_airmass, green_snrtime)
 # ax4.text(1, -2, field_info, ha='right',  fontsize=14,
 #     verticalalignment='bottom',transform=ax3.transAxes)
@@ -973,11 +981,15 @@ plt.close()
 
 #%% PLOT STATISTICS FOR SINGLE DETECTIONS FOR 3 TELESCOPES
 
-matched_dir=base_path.joinpath('/ColibriArchive',str(obs_date),'matched')
+#basivally cumulative_stats.py  but for single night detections
 
+matched_dir=base_path.joinpath('/ColibriArchive',str(obs_date),'matched') #directory with matched events
+
+#3 telescope Archive dirs with detections for the night
 green_dets=base_path.joinpath('/ColibriArchive',str(obs_date))
 red_dets=Path('/','Y:/',str(obs_date))
 blue_dets=Path('/','Z:/',str(obs_date))
+#try to get list of single telescope detections
 try:
     green_det_list=[f for f in green_dets.iterdir() if 'det' in f.name]
 except FileNotFoundError:
@@ -994,11 +1006,11 @@ except FileNotFoundError:
     print('no Blue data')
     blue_det_list=[]
 
-# detections=green_det_list+red_det_list+blue_det_list
-
+#read significances from det_ files and append them to lists
 Gsigmas=[]
 Bsigmas=[]
 Rsigmas=[]
+
 for file in green_det_list:
     if '.txt' in file.name:
         Gsigmas.append(readSigma(file))
@@ -1014,16 +1026,12 @@ for file in blue_det_list:
 Gsigmas=np.array(Gsigmas)
 Bsigmas=np.array(Bsigmas)
 Rsigmas=np.array(Rsigmas)
-# q25, q75 = np.percentile(sigmas, [25, 75])
-# bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
-# bins = round((sigmas.max() - sigmas.min()) / bin_width)
-fig, ax = plt.subplots()
 
-# We change the fontsize of minor ticks label 
-bins=np.arange(6,12.25,0.25)
+fig, ax = plt.subplots() #make a histogram
 
-plt.hist([Gsigmas, Bsigmas, Rsigmas],bins=bins,log=False, color=['g', 'b', 'r'])
-# ax.yaxis.set_ticks(np.arange(0, 3, 1))
+bins=np.arange(6,12.25,0.25) #bins parameters for histogram
+
+plt.hist([Gsigmas, Bsigmas, Rsigmas],bins=bins,log=False, color=['g', 'b', 'r']) #each bin is made of 3 bins
 
 plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
 # ax.tick_params(axis='both', which='major', labelsize=7)
@@ -1050,6 +1058,10 @@ plt.savefig(operations_savepath.joinpath("sigma_det_today.svg"),dpi=800)
 plt.close()  
 
 #%% PLOT OCCULTATION CANDIDATES ON 2 AND 3 TELSCOPES
+
+#same as cumulative_stats.py but for single night; work only if we have detections and after running ...
+#... lightcurve_finder.py 
+
 try:
     matched_dirs=[d for d in matched_dir.iterdir() if d.is_dir()] 
 except:
@@ -1065,9 +1077,7 @@ for match in matched_dirs:
                 sigmas.append(readSigma(file))
         
         sigmas=np.array(sigmas)
-        # q25, q75 = np.percentile(sigmas, [25, 75])
-        # bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
-        # bins = round((sigmas.max() - sigmas.min()) / bin_width)
+
         fig, ax = plt.subplots()
         
         # We change the fontsize of minor ticks label 
@@ -1107,9 +1117,7 @@ for match in matched_dirs:
                 sigmas.append(readSigma(file))
         
         sigmas=np.array(sigmas)
-        # q25, q75 = np.percentile(sigmas, [25, 75])
-        # bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
-        # bins = round((sigmas.max() - sigmas.min()) / bin_width)
+
         fig, ax = plt.subplots()
         
         # We change the fontsize of minor ticks label 
@@ -1148,7 +1156,7 @@ for match in matched_dirs:
 
 matched_dir=green_sens.parent.parent #!!!
 
-dirs=[d for d in matched_dir.iterdir() if d.is_dir()]
+dirs=[d for d in matched_dir.iterdir() if d.is_dir()] #this part adds lightcurves of matched events
 
 for d in dirs:
     try:
@@ -1158,31 +1166,32 @@ for d in dirs:
 #        print("no occultations!")
         continue
     
-from bs4 import BeautifulSoup
-with open(operations_savepath.joinpath('observation_results.html')) as inf:
+from bs4 import BeautifulSoup #edit html files
+#all plots are already typed in html file. here only events are added and generated
+with open(operations_savepath.joinpath('observation_results.html')) as inf: #html file where all stuff above is displayed
     txt = inf.read()
 soup=BeautifulSoup(txt,'html.parser')
     
 event_svg=[f for f in operations_savepath.iterdir() if '_star_' in f.name ]
 
 prev_svg=soup.find_all('img', class_="occult")
-for i in range(len(prev_svg)):
+for i in range(len(prev_svg)): 
     prev_svg[i].decompose()
     
 if len(event_svg)!=0:
 
-    for event in event_svg:
+    for event in event_svg:#add image in html file if there are occultation events
         new_tag = soup.new_tag('img', src=str(event),attrs={'class':'occult'}) #add candidate plots to the html
         
         # soup.find('img', class_='SNR').append(new_tag)
         soup.center.append(new_tag)
     
     
-new_br=soup.new_tag('br')
-images=soup.find_all('img')
+new_br=soup.new_tag('br') #create tag variable
+images=soup.find_all('img') #create tag variable
 
 
-for i in range(len(images)):
+for i in range(len(images)): #skip line after each plot
     images[i].append(new_br)
 
 
