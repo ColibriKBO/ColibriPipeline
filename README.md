@@ -71,4 +71,7 @@ Runs only on Green. Is part of pipeline. I hope one day it will be renamed to co
 
 ### timeline.py
 Create a bunch of observatory operation plots, more description in separate file,
-	Runs only on Green
+Runs only on Green
+	
+### ImageStacker.py
+Make mean-stacks of 1-minute long data for whole night and save them to Stackeddata according to field and time
