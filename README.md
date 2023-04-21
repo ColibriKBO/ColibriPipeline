@@ -35,6 +35,10 @@ Creates plots of star light curves.
 ### lightcurve_maker.py
 Modified from colibri_main.py. Finds stars in an image set, does photometry on stars and returns their light curves over the minute.
 
+### lightcurve_finder.py
+Reads time and coordinates from existing occultation detection file, performs photometry, saves data file and plots
+lightcurve of 3 telescopes at specific event. Must run after second tier pipeline. Helps to compare fluxes at detected dip
+
 ### sensitivity.py
 For estimating the sensitivity of our instruments.
 Gets the median flux / stddev for all stars in a minute. Matches the stars to the Gaia catalog and compares SNR vs Gaia magnitude. 
@@ -81,3 +85,5 @@ Perform multiaperture photometry of 1-minute stacked frames
 
 ### stacked_lightcurve_looker.py
 Display results of stacked_lightcurve.py
+
+
