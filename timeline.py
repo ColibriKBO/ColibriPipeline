@@ -802,6 +802,7 @@ try:
     ax2.yaxis.set_ticks(np.arange(0, 5, 1))
     ax2.set_ylim([0,4])
     ax.set_yticklabels([])
+    ax2.set_ylabel('mag')
     ax.set_xticklabels([])
     ax2.set_xticklabels([])
     ax2.set_xticks([])
@@ -963,6 +964,7 @@ except:
 try:
     ax4.scatter(x=green_table['GMAG'],y=green_table['SNR'],color='g',s=3, alpha=0.4,label='Airmass: %.2f Time: %s' % (green_airmass, green_snrtime))
 except:
+    print('error readin sensitivity')
     pass
 # ax4.set_ylim([0,15])
 ax4.set_xlabel('Gmag')

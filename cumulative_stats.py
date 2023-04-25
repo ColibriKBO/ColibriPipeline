@@ -96,10 +96,10 @@ archives=[green_arch,red_arch,blue_arch] #list of archives
 #%% cumulative detections for single telescope
 for archive in archives:
     #sort out night dirs to reduce time
-    nights=[f for f in archive.iterdir() if ('diagnostics' not in f.name and getNightTime(f)>date(2022, 9, 19) and 'cummulative' not in f.name and f.is_dir())]
+    nights=[f for f in archive.iterdir() if ('diagnostics' not in f.name and getNightTime(f)>date(2022, 11, 5) and 'cummulative' not in f.name and f.is_dir())]
     for night in nights:
         print(night)
-        detections=[f for f in night.iterdir() if 'det' in f.name]
+        detections=[f for f in night.iterdir() if ('det' in f.name and 'txt' in f.name)]
         if len(detections)==0: #some directories don't have detection txts
             continue
         else:
@@ -116,7 +116,7 @@ for archive in archives:
 
 #sort out night dirs to reduce time
 #os.path.getctime(f)>1663609502 - after that time significance was implemented
-nights=[f for f in green_arch.iterdir() if ('diagnostics' not in f.name and os.path.getctime(f)>1663609502 and 'cummulative' not in f.name and f.is_dir())]
+nights=[f for f in green_arch.iterdir() if ('diagnostics' not in f.name and os.path.getctime(f)>1667606400 and 'cummulative' not in f.name and f.is_dir())]
 for night in nights:
     if os.path.exists(night.joinpath('matched')):
         matched_dirs=[d for d in night.joinpath('matched').iterdir() if d.is_dir()]
