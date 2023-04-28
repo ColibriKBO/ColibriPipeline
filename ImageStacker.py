@@ -344,6 +344,7 @@ def split_images(data,pix_h,pix_v,gain):
 
     return image
 
+
 '''---------------------------------RCD section end---------------------------------'''
 
 def NumpyMean(filelist, gain):
@@ -363,6 +364,7 @@ def NumpyMean(filelist, gain):
         mean stack of frames.
 
     '''
+
     chunk_stack=[]
     hnumpix = 2048
     vnumpix = 2048
@@ -505,6 +507,7 @@ if __name__ == '__main__':
         
         #%% uncomment to run in paralel
         
+
         # print('Running in parallel...')
         
         # pool_size = multiprocessing.cpu_count() -2
@@ -541,6 +544,7 @@ if __name__ == '__main__':
             arr=np.add(arr,image)#add up each frame
             
         stacked_img=arr/len(files)#devide sum of all frames by num of frames
+
         
         # print(len(stacked), stacked[0].shape)
     
@@ -561,7 +565,9 @@ if __name__ == '__main__':
         
         hdu = fits.PrimaryHDU(reduced_image) #save stacked image as .fits
         
+
         save_path=base_path.joinpath('/StackedData',field,str(obs_date))#save location for specific field and date
+
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         Filepath = save_path.joinpath(minute.name+'_clippedmean.fits')

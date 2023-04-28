@@ -129,7 +129,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     ## Check if there are enough images in the current directory 
     minNumImages = len(kernel.array)*3         #3x kernel length
     if num_images < minNumImages:
-        print (datetime.datetime.now(), "Insufficient number of images, skipping...")
+        print(datetime.datetime.now(), "Insufficient number of images, skipping...")
         return 0
     
 
@@ -585,7 +585,18 @@ if __name__ == '__main__':
     minute_dirs.sort()
     
     print ('folders', [f.name for f in minute_dirs])
-         
+    
+    ## Check if there is a valid GPS lock
+    imagePaths = sorted(minute_dirs[0].glob('*.rcd'))
+    print(imagePaths[0])
+    if not cir.testGPSLock(imagePaths[0]):
+        print(datetime.datetime.now(), "No GPS Lock established, skipping...")
+        
+        with open(os.path.join(night_dir,"error.txt"),"w") as f:
+            f.write("")
+        
+        sys.exit()
+    
     
     '''get median bias image to subtract from all frames'''
     
