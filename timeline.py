@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 22 14:39:39 2022
-
-@author: Roman A.
-
-Create a bunch of observatory operation plots, more description in separate file, runs only on Green
-
+Filename:   timeline.py
+Author(s):  Roman Akhmetshyn, Peter Quigley
+Contact:    pquigley@uwo.ca
+Created:    Tue Nov 22 14:39:39 2022
+Updated:    Mon May  1 14:35:58 2023
+    
+Description:
+Create a series of diagnostic plots from ACP logs to help summarize the
+nightly operations of the Colibri project. Runs only on Greenbird.
 """
+
 
 import datetime as dt
 from datetime import datetime, timedelta, date
@@ -35,6 +39,10 @@ import math
 
 
 #--------------------------------functions------------------------------------#
+
+#############################
+## Old Functions
+#############################
 
 def ReadFiledList(log_list):
     """
@@ -247,7 +255,55 @@ def ReadLog(file):
     
     return(log_list)
 
-'''--------------------------------------------------RCD section----------------------------------'''
+
+def getPrevDate(path):
+    """
+    Get date of previous results that are present in the log folder
+
+    Parameters
+    ----------
+    path : path type
+        Path of the observation logging.
+
+    Returns
+    -------
+    time of previous observations results
+
+    """
+    try:
+        timeline_file=[f for f in path.iterdir() if '.csv' in f.name][0]
+        
+    except:
+        return -1
+    return(timeline_file.name.split('_')[0])
+
+    
+def ToFM():
+    """
+    get first hour of observations
+
+    Returns
+    -------
+    int
+        hour number.
+
+    """
+    #reading first minute of the night on Red, if no data then switch to Green or Blue
+    try:
+        
+        first_min=[f for f in green_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
+        
+    except:
+        try:
+            first_min=[f for f in red_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
+        except:
+            first_min=[f for f in blue_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
+
+    return int(first_min.name.split('_')[1].split('.')[0])
+
+#############################
+## RCD I/O Functions
+#############################
 
 def readxbytes(fid, numbytes):
     for i in range(1):
@@ -377,51 +433,10 @@ def importTimesRCD(imagePaths, startFrameNum, numFrames):
         
     return imagesTimes
 
-'''--------------------------------------------------RCD section end----------------------------------'''
 
-def getPrevDate(path):
-    """
-    Get date of previous results that are present in the log folder
+#------------------------------------main-------------------------------------#
 
-    Parameters
-    ----------
-    path : path type
-        Path of the observation logging.
 
-    Returns
-    -------
-    time of previous observations results
-
-    """
-    try:
-        timeline_file=[f for f in path.iterdir() if '.csv' in f.name][0]
-        
-    except:
-        return -1
-    return(timeline_file.name.split('_')[0])
-
-    
-def ToFM():
-    """
-    get first hour of observations
-
-    Returns
-    -------
-    int
-        hour number.
-
-    """
-    #reading first minute of the night on Red, if no data then switch to Green or Blue
-    try:
-        
-        first_min=[f for f in green_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
-        
-    except:
-        try:
-            first_min=[f for f in red_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
-        except:
-            first_min=[f for f in blue_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
-    return int(first_min.name.split('_')[1].split('.')[0])
 
 # GETTING OBSERVATION TIMES    
 
