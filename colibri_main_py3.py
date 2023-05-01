@@ -1,14 +1,14 @@
+
 """
-Created 2018 by Emily Pass
-
-Update: March 1, 2022 - Rachel Brown
-Update: Sept. 21, 2022 - Peter Quigley
-
-Update: September 19, 2022 - Roman Akhmetshyn - changed output txt file contents and added a significance calculation
-
-
--initial Colibri data processing pipeline for flagging candidate
-KBO occultation events
+Filename:   colibri_main_py3.py
+Author(s):  Emily Pass, Rachel Brown, Roman Akhmetshyn, Peter Quigley
+Contact:    pquigley@uwo.ca
+Created:    2018
+Updated:    Mon May  1 14:35:58 2023
+    
+Description:
+Initial Colibri data processing pipeline for flagging candidate KBO occultation
+events.
 """
 
 # Module Imports

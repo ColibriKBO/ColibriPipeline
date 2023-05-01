@@ -11,32 +11,41 @@ Create a series of diagnostic plots from ACP logs to help summarize the
 nightly operations of the Colibri project. Runs only on Greenbird.
 """
 
-
-import datetime as dt
-from datetime import datetime, timedelta, date
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.collections import PolyCollection
-import pandas as pd
-from scipy import interpolate
-import numpy as np
-import seaborn as sns
-from matplotlib.dates import DateFormatter
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from pathlib import Path
+# Module Imports
 import os
 import csv
-import numba as nb
-from astropy import time
+import math
 import shutil
 import argparse
+import datetime as dt
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import numba as nb
+from datetime import datetime, timedelta, date
+from getStarHour import getStarHour
+from astropy.time import Time
+from scipy import interpolate
+from pathlib import Path
+from astropy import time
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from matplotlib.collections import PolyCollection
+from matplotlib.dates import DateFormatter
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 from matplotlib.ticker import ScalarFormatter
 from matplotlib.ticker import MaxNLocator
-from getStarHour import getStarHour
-from astropy.time import Time 
-import math
 
+# Custom Script Imports
+import colibri_image_reader as cir
+import colibri_photometry as cp
+
+
+#-------------------------------global vars-----------------------------------#
+
+SITE_LAT  = 43.1933116667
+SITE_LON = -81.3160233333
 
 #--------------------------------functions------------------------------------#
 
@@ -154,14 +163,15 @@ def readSigma(filepath):
  
     return (sigma)
 
-def twilightTimes(julian_date, site=[43.0,-81.0]):
+def twilightTimes(julian_date, site=(SITE_LAT,SITE_LON)):
     '''
-    M. Mazur's code to calculate sunrise and sunset time for specified JD time'
+    M. Mazur's code to calculate sunrise and sunset time for specified JD time
+    See: https://en.wikipedia.org/wiki/Sunrise_equation
 
     Parameters
     ----------
     julian_date : float
-        Juliad Date (2460055.24633).
+        Julian Date (2460055.24633).
     site : TYPE, optional
         Observatory location. The default is [43.0,-81.0].
 
@@ -199,7 +209,7 @@ def ReadLogLine(log_list, pattern, Break=True):
 
     Returns
     -------
-    Line that matched patter and time in Log of that line.
+    Line that matched pattern and time in Log of that line.
 
     """
     
