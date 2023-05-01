@@ -7,6 +7,7 @@ Created on Tue Nov 22 14:39:39 2022
 Create a bunch of observatory operation plots, more description in separate file, runs only on Green
 
 """
+
 import datetime as dt
 from datetime import datetime, timedelta, date
 import matplotlib.pyplot as plt
@@ -31,6 +32,9 @@ from matplotlib.ticker import MaxNLocator
 from getStarHour import getStarHour
 from astropy.time import Time 
 import math
+
+
+#--------------------------------functions------------------------------------#
 
 def ReadFiledList(log_list):
     """
@@ -60,13 +64,13 @@ def ReadFiledList(log_list):
             time_diff=UTC-LST
             
             
-        if 'starts' in line:
+        elif 'starts' in line:
             fields.append((line).split(': ')[1].split(' ')[0])
             times=(float((line).split(': ')[1].split(' ')[2]))+time_diff
 
             if times>24:
                 times=times-24
-            if times<0:
+            elif times<0:
                 times=times+24
             
             dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(math.floor(float('0.'+str(times).split('.')[1])*60))+':00')
@@ -419,7 +423,7 @@ def ToFM():
             first_min=[f for f in blue_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
     return int(first_min.name.split('_')[1].split('.')[0])
 
-#%% GETTING OBSERVATION TIMES    
+# GETTING OBSERVATION TIMES    
 
 arg_parser = argparse.ArgumentParser(description=""" Run timeline process
     Usage:
@@ -518,7 +522,7 @@ with open(filename, 'w',newline='') as csvfile:
     # writing the data rows 
         csvwriter.writerows(table)
         
- #%% GETTING CLOUD/TRANSPERENCY DATA   
+ # GETTING CLOUD/TRANSPERENCY DATA   
 
 Cloud_logpath=base_path.joinpath('/Logs','Weather','Weather') #path for Polaris data on Green
 
@@ -529,7 +533,7 @@ tomorrowT=todayT+timedelta(days=1) #date of tomorrow
 
 cloud_logs=[log for log in Cloud_logpath.iterdir() if obs_date in log.name or str(yesterdayT) in log.name or str(tomorrowT) in log.name]
 
-#%% GETTING LOG EVENTS
+# GETTING LOG EVENTS
 
 #pathes for ACP logs created by RunColibri.js for 3 telescopes
 red_ACPpath=Path('/','R:','/Logs','ACP')
@@ -541,7 +545,7 @@ ACP_logpaths=[red_ACPpath,green_ACPpath,blue_ACPpath]
 color=['r','g','b'] #color list for ploting
 
     
-#%% SNR V GMAG 
+# SNR V GMAG 
 
 #pathes for sensitivity measurements of 3 telescopes
 
@@ -652,7 +656,7 @@ except (FileNotFoundError, IndexError):
     print("Green sensitivity data is not available!")
 
 
-# %% Sunset Sunrise Time
+# Sunset Sunrise Time
 
 now=time.Time(obs_date)
 now.format='jd'
@@ -679,11 +683,11 @@ sunset=time.Time(sunset, format='jd') #sunset time for this night
 sunset.format='fits'
 
 
-# %% 
+#
 
 '''--------------------------------------------------PLOTTING PART--------------------------------------------'''
 
-#%% 1st GRAPH OF THE TIMELINE
+# 1st GRAPH OF THE TIMELINE
 fig123, (ax1, ax3) = plt.subplots(2, 1) #create a plot that will contain timeline bars + transperancy + log events
 
 df = pd.read_csv(filename, delimiter=',')
@@ -725,7 +729,7 @@ ax1.xaxis.set_tick_params(labelsize=9)
 ax1.xaxis.grid(True)
 ax1.xaxis.tick_top()
 
-#%% CLOUD/TRANSPERANCY PLOT
+# CLOUD/TRANSPERANCY PLOT
 
 # yesterday=pd.read_csv(cloud_logs[0])
 yesterday = pd.read_csv(cloud_logs[0], header=None, usecols=[0,9])
@@ -811,7 +815,7 @@ try:
 except:
     print("no weather data!")
 
-#%% LOG EVENTS PLOT
+# LOG EVENTS PLOT
 
 c=0#counter to loop through each telescope and colormap
 markers={}#markers on the plot
@@ -940,7 +944,7 @@ legend = ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1))
 legend.get_frame().set_linewidth(0.0) # remove the box frame
 
 
-#%% Combine plot 1 2 3 into one
+# Combine plot 1 2 3 into one
 
 fig123.subplots_adjust(hspace=0)
 plt.title(' UT'+'\n'+str(sunset).replace('T', ' ')[:-4]+' - '+str(sunrise).replace('T', ' ')[:-4],pad=20)
@@ -950,7 +954,7 @@ plt.title(' UT'+'\n'+str(sunset).replace('T', ' ')[:-4]+' - '+str(sunrise).repla
 fig123.savefig(operations_savepath.joinpath("event.svg"),dpi=800,bbox_inches='tight')
 plt.close()
 
-#%% PLOT SNR VS GMAG
+# PLOT SNR VS GMAG
 
 fig4, ax4=plt.subplots()
 try:
@@ -981,7 +985,7 @@ plt.grid()
 fig4.savefig(operations_savepath.joinpath('SNR.svg'),dpi=800,bbox_inches='tight')
 plt.close()
 
-#%% PLOT STATISTICS FOR SINGLE DETECTIONS FOR 3 TELESCOPES
+# PLOT STATISTICS FOR SINGLE DETECTIONS FOR 3 TELESCOPES
 
 #basivally cumulative_stats.py  but for single night detections
 
@@ -1059,7 +1063,7 @@ plt.savefig(operations_savepath.joinpath("sigma_det_today.svg"),dpi=800)
 
 plt.close()  
 
-#%% PLOT OCCULTATION CANDIDATES ON 2 AND 3 TELSCOPES
+# PLOT OCCULTATION CANDIDATES ON 2 AND 3 TELSCOPES
 
 #same as cumulative_stats.py but for single night; work only if we have detections and after running ...
 #... lightcurve_finder.py 
@@ -1154,7 +1158,7 @@ for match in matched_dirs:
         plt.close()
 
 
-#%% Edit HTML file with new events
+# Edit HTML file with new events
 
 matched_dir=green_sens.parent.parent #!!!
 
