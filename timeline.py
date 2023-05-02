@@ -12,7 +12,8 @@ nightly operations of the Colibri project. Runs only on Greenbird.
 """
 
 # Module Imports
-import os
+import os,sys
+import re
 import csv
 import math
 import shutil
@@ -44,10 +45,173 @@ import colibri_photometry as cp
 
 #-------------------------------global vars-----------------------------------#
 
+# Site longitude/latitude
 SITE_LAT  = 43.1933116667
 SITE_LON = -81.3160233333
 
+# Noteable log patterns
+LOG_PATTERNS  = ['Weather unsafe!','Dome closed!','Field Name:']
+DATETIME_STRP = '%a %b %d %H:%M:%S %Z %Y'
+
+# Directory structure
+BASE_PATH = Path('/', 'D:')
+ACP_LOG_PATH = BASE_PATH.joinpath('Logs', 'ACP') 
+OP_LOG_PATH  = BASE_PATH.joinpath('Logs', 'Operations')
+
+# Plotting constants
+TELESCOPE_ID = {"REDBIRD" : 1, "GREENBIRD" : 2, "BLUEBIRD" : 3}
+COLOURMAPPING = {"REDBIRD" : "r", "GREENBIRD" : "#66ff66", "BLUEBIRD" : "b"}
+
+
 #--------------------------------functions------------------------------------#
+
+#############################
+## New Functions
+#############################
+
+def getImportantLines(log_path, log_patterns):
+    
+    
+    # Break if the log_path is invalid
+    if not os.path.isfile(log_path):
+        print("ERROR: Log file does not exist!")
+        sys.exit()
+        
+    # Read the log line-by-line and save lines matching log_pattern substrings
+    matched_line = []
+    with open(log_path, "r") as log:
+        for line in log.readlines():
+            if any(pattern in line for pattern in log_patterns):
+                matched_line.append(line)
+                
+    return matched_line
+
+
+#############################
+## Handling Times
+#############################
+
+def convUTCtoLST(timestamp, value_only=True):
+    
+    
+    # Strip leading/trailing whitespace
+    given_time = timestamp.strip()
+    
+    # Create a datetime object which can then be used to calculate the
+    # equivalent sidereal time
+    datetime_t = datetime.strptime(given_time, DATETIME_STRP)
+    astro_time = Time(datetime_t)
+    
+    # Calculate sidereal time
+    sidereal_time = astro_time.sidereal_time('mean', SITE_LON)
+    
+    
+    # If value_only, give the magnitude of the sidereal time only
+    if value_only:
+        return sidereal_time.value
+    else:
+        return sidereal_time
+    
+    
+def setLSTtoUTC(log_lines):
+    
+    
+    
+    global UTC_REF,LST_REF
+    
+    # Find the log line with the current LST. Use that as a conversion
+    # factor between LST and UTC.
+    curr_LST_regex = "INFO: Current LST"
+    for line in log_lines:
+        if curr_LST_regex in line:
+            # Split line into UTC and LST times
+            UTC_and_LST = line.split(curr_LST_regex)
+            
+            # Convert to appropriate types and assign to globals
+            UTC_REF = datetime.strptime(UTC_and_LST[0], DATETIME_STRP)
+            LST_REF = float(UTC_and_LST[1])
+            
+            return True
+    else:
+        return False
+
+
+def convLSTtoUTC(LST):
+    
+    # Check if reference times are set
+    if ('UTC_REF' not in globals()) or ('LST_REF' not in globals()):
+        print("ERROR: LST and UTC references not set!")
+        return
+    
+    # Calculate the difference between the LST reference and given LST and
+    # find the difference to the reference UTC.
+    LST_diff = LST - LST_REF
+    UTC = UTC_REF + timedelta(hours=(LST_diff/1.0027379))
+    
+    return UTC
+
+
+#############################
+## Analyze Logs
+#############################
+
+def getObservingPlan(log_lines):
+    
+    # Get shortlist lines and extract LST start time
+    plan_info = []
+    for line in log_lines:
+        if 'starts' in line:
+            # Split the line into individual words
+            shortlist_seg = line.split(' ')
+            
+            # Get from the line segments the field number, start LST time, and
+            # the number of stars.
+            field_id  = shortlist_seg[7]
+            field_num = int(field_id.strip('field'))
+            start_LST = float(shortlist_seg[9])
+            num_stars = int(shortlist_seg[16])
+            
+            # Save the tuple to the list
+            plan_info.append((field_num, start_LST, num_stars))
+            
+    # Eliminate duplicates in list
+    return list(set(plan_info))
+
+
+def getWeatherUnsafe(log_lines):
+    
+    # Find weather aborts and save the times
+    weather_abort_time = []
+    weather_regex = "INFO: Weather unsafe!"
+    for line in log_lines:
+        if weather_regex in line:
+            # Get time from weather abort line
+            line_time  = line.split(weather_regex)[0]
+            abort_time = datetime.strptime(line_time.strip(), DATETIME_STRP)
+            
+            # Save time to list
+            weather_abort_time.append(abort_time)
+            
+    return weather_abort_time
+
+
+def getFieldsObserved(log_lines):
+    
+    # Find which fields were actually observed and record their start time
+    fields_observed = []
+    field_regex = "INFO: Field Name: "
+    for line in log_lines:
+        if field_regex in line:
+            # Identify start time of the field and get the field number
+            split_line = line.split(field_regex)
+            field_time = datetime.strptime(split_line[0], DATETIME_STRP)
+            field_num  = int(split_line[1].strip('field'))
+            
+            # Save the tuple to the list
+            fields_observed.append((field_time, field_num))
+    
+    return fields_observed
+    
 
 #############################
 ## Old Functions
@@ -92,30 +256,23 @@ def ReadFiledList(log_list):
             
             dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(math.floor(float('0.'+str(times).split('.')[1])*60))+':00')
             
-            
-
     return fields, dates
 
-def getAirmass(time, RA, dec):
+
+def getAirmass(time, RA, DEC):
     '''get airmass of the field at the given time
     input: time [isot format string], field coordinates [RA, Dec]
     returns: airmass, altitude [degrees], and azimuth [degrees]'''
     
-    #latitude and longitude of Elginfield
-    siteLat = 43.1933116667
-    siteLong = -81.3160233333
-    
-    #get J2000 day
-    
     #get local sidereal time
-    LST = Time(time, format='isot', scale='utc').sidereal_time('mean', longitude = siteLong)
+    LST = Time(time, format='isot', scale='utc').sidereal_time('mean', longitude = SITE_LON)
 
     #get hour angle of field
     HA = LST.deg - RA
     
     #convert angles to radians for sin/cos funcs
-    dec = np.radians(dec)
-    siteLat = np.radians(siteLat)
+    dec = np.radians(DEC)
+    siteLat = np.radians(SITE_LAT)
     HA = np.radians(HA)
     
     #get altitude (elevation) of field
@@ -138,6 +295,7 @@ def getAirmass(time, RA, dec):
     airmass = 1./np.cos(np.radians(ZA))
     
     return airmass, alt, az
+
 
 def readSigma(filepath):
     """
@@ -162,6 +320,7 @@ def readSigma(filepath):
                 sigma = float(line.split(':')[1])
  
     return (sigma)
+
 
 def twilightTimes(julian_date, site=(SITE_LAT,SITE_LON)):
     '''
@@ -195,6 +354,7 @@ def twilightTimes(julian_date, site=(SITE_LAT,SITE_LON)):
     Jset = Jtransit + (np.degrees(np.arccos(cosHA)))/360.0
 
     return Jrise, Jset
+
 
 def ReadLogLine(log_list, pattern, Break=True):
     """
@@ -242,7 +402,8 @@ def ReadLogLine(log_list, pattern, Break=True):
     
         
         return message, Time
-    
+
+
 def ReadLog(file):
     """
     
@@ -447,6 +608,7 @@ def importTimesRCD(imagePaths, startFrameNum, numFrames):
 #------------------------------------main-------------------------------------#
 
 
+#if __name__ == '__main__':
 
 # GETTING OBSERVATION TIMES    
 
@@ -457,7 +619,7 @@ arg_parser = argparse.ArgumentParser(description=""" Run timeline process
     formatter_class=argparse.RawTextHelpFormatter)
 
 
-arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', required=True)
 
 
 cml_args = arg_parser.parse_args()
@@ -720,20 +882,19 @@ df = pd.read_csv(filename, delimiter=',')
 data = [list(row) for row in df.values]
 
 
-telescopes = {"GREENBIRD" : 1, "REDBIRD" : 2, "BLUEBIRD" : 3} #bars are located in ascending order
-colormapping = {"GREENBIRD" : "#66ff66", "REDBIRD" : "r", "BLUEBIRD" : "b"}
+
 
 verts = []
 colors = []
 for d in data:#convert start and end times to matplotlib date number
     
-    v =  [(mdates.datestr2num(d[0]), telescopes[d[3]]-.4),
-          (mdates.datestr2num(d[0]), telescopes[d[3]]+.4),
-          (mdates.datestr2num(d[1]), telescopes[d[3]]+.4),
-          (mdates.datestr2num(d[1]), telescopes[d[3]]-.4),
-          (mdates.datestr2num(d[0]), telescopes[d[3]]-.4)]
+    v =  [(mdates.datestr2num(d[0]), TELESCOPE_ID[d[3]]-.4),
+          (mdates.datestr2num(d[0]), TELESCOPE_ID[d[3]]+.4),
+          (mdates.datestr2num(d[1]), TELESCOPE_ID[d[3]]+.4),
+          (mdates.datestr2num(d[1]), TELESCOPE_ID[d[3]]-.4),
+          (mdates.datestr2num(d[0]), TELESCOPE_ID[d[3]]-.4)]
     verts.append(v)
-    colors.append(colormapping[d[3]])
+    colors.append(COLOURMAPPING[d[3]])
 
 bars = PolyCollection(verts, facecolors=colors)
 bars.set_alpha(0.7)
@@ -1069,7 +1230,7 @@ plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
 ax.tick_params(axis='both', which='minor', labelsize=8)
 ax.xaxis.set_minor_locator(AutoMinorLocator(2))
 # plt.xlim([min(sigmas),12])
-ax.set_xlabel('Signisifance')
+ax.set_xlabel('Significance')
 ax.set_ylabel('number of events')
 # ax.set_ylim([0,2])
 formatter = ScalarFormatter()
