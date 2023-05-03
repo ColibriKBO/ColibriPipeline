@@ -28,6 +28,10 @@ import numba as nb
 from datetime import datetime, timedelta, date
 from getStarHour import getStarHour
 from astropy.time import Time
+from astropy.coordinates import Angle,EarthLocation,SkyCoord
+from astropy.time import Time
+from astropy import units
+from astropy.coordinates import AltAz
 from scipy import interpolate
 from pathlib import Path
 from astropy import time
@@ -48,6 +52,11 @@ import colibri_photometry as cp
 # Site longitude/latitude
 SITE_LAT  = 43.1933116667
 SITE_LON = -81.3160233333
+SITE_HGT = 224
+SITE_LOC  = EarthLocation(lat=SITE_LAT,
+                         lon=SITE_LON,
+                         height=SITE_HGT)
+
 
 # Noteable log patterns
 LOG_PATTERNS = ['starts', 'Weather unsafe!', 'Dome closed!', 'Field Name:']
@@ -55,10 +64,7 @@ ACPLOG_STRP  = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S'
 
 # Directory structure
-RED_BASE_PATH   = Path('/', 'R:')
-GREEN_BASE_PATH = Path('/', 'D:')
-BLUE_BASE_PATH  = Path('/', 'B:')
-OP_LOG_DIR = GREEN_BASE_PATH.joinpath('Logs', 'Operations')
+BASE_PATH  = Path('/', 'D:')
 
 # Plotting constants
 TELESCOPE_ID = {"REDBIRD" : 1, "GREENBIRD" : 2, "BLUEBIRD" : 3}
@@ -75,10 +81,16 @@ class Telescope:
         self.name   = name
         self.colour = colour
 
+        # Error logging
+        self.errors = []
+
         # Path variables
         self.base_path = Path(base_path)
         self.log_path  = self.base_path.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
         self.data_path = self.base_path.joinpath("ColibriData", obs_date)
+        sensitivity_dir = self.base_path.joinpath("ColibriArchive", 
+                                                  "{}_diagnostics".format(obs_date), 
+                                                  "Sensitivity")
         
         # Check if log and data directories exist
         self.log_exists  = True if self.log_path.exists() else False
@@ -88,15 +100,57 @@ class Telescope:
         if self.log_exists:
             self.log_lines = getImportantLines(self.log_path, LOG_PATTERNS)
         else:
-            print("ERROR: {} has no valid ACP log for {}!".format(name, obs_date))
+            self.addError("ERROR: {} has no valid ACP log for {}!".format(name, obs_date))
             self.log_lines = []
 
         # Get observation minute directory times
         if self.data_exists:
             self.data_times = getDataTimes(self.data_path)
         else:
-            print("ERROR: {} has no data for {}!".format(name, obs_date))
+            self.addError("ERROR: {} has no data for {}!".format(name, obs_date))
             self.data_times = []
+
+        # Get sensitivity data
+        if sensitivity_dir.exists():
+            try:
+                self.sensitivity_path = [folder for folder in sensitivity_dir.iterdir() if folder.is_dir()][0]
+            except:
+                self.addError("ERROR: {} has no sensitivity data for {}!".format(name, obs_date))
+                self.sensitivity_path = None
+        else:
+            self.addError("ERROR: {} has no sensitivity data for {}!".format(name, obs_date))
+            self.sensitivity_path = None
+
+
+    def addError(self, error_msg):
+
+        self.errors.append(error_msg)
+        print(error_msg)
+
+
+    def analyzeSensitivity(self):
+
+        # Check if sensitivity data exists
+        if self.sensitivity_path is None:
+            print("WARNING: {} has no sensitivity data. Skipping...\n".format(self.name))
+            return
+        
+        # Load sensitivity data in pandas dataframe
+        column_names = [ 'X', 'Y', 'ra', 'dec', 'GMAG',
+                        'Gaia_RA' ,'Gaia_dec', 'Gaia_B-R',
+                        'med' ,'std', 'SNR']
+        star_table = pd.read_csv(self.sensitivity_path.glob("starTable*.txt")[0],
+                                 names=column_names, sep=' ',
+                                 header=0, index_col=0)
+        
+        # Read in data from sample star light curves
+        star_txt_file = (self.sensitivity_path.joinpath('high_4sig_lightcurves').glob('*.txt'))[0]
+        with star_txt_file.open() as file:
+            for i,line in enumerate(file):
+                if i == 6:
+                    sample_star_time = line.split(' ')[-1].strip('\n')
+                    break
+        
 
 
 #--------------------------------functions------------------------------------#
@@ -281,6 +335,29 @@ def getDataTimes(data_dir_path):
         directory_times.append(dir_datetime)
         
     return directory_times
+
+
+#############################
+## Coordinate Functions
+#############################
+
+def calculateAlt(ra, dec, time):
+    
+    # Convert RA and Dec to SkyCoord object
+    coord = SkyCoord(ra, dec, unit=(units.hourangle, units.deg))
+    
+    # Calculate the altitude at the given time
+    alt = coord.transform_to(AltAz(obstime=time, location=SITE_LOC)).alt
+    
+    return alt
+
+
+def calculateAirmass(alt):
+    
+    # Calculate the airmass
+    airmass = 1/np.cos(np.radians(90-alt))
+    
+    return airmass
 
 
 #############################
@@ -696,6 +773,7 @@ if __name__ == '__main__':
     # Extract date from command line arguments
     cml_args = arg_parser.parse_args()
     obs_date = cml_args.date
+    obs_date_dashed = "{}-{}-{}".format(obs_date[0:4], obs_date[4:6], obs_date[6:8])
     
     # Check if this date has a valid format
     regex_match = re.fullmatch("[0-9]{8}", obs_date)
@@ -713,12 +791,23 @@ if __name__ == '__main__':
         print("ERROR: No logs exist for this date!")
         sys.exit()
 
+    # Create a directory for diagnostic files
+    diagnostic_dir = BASE_PATH.joinpath('Logs', 'Operations', obs_date)
+    if diagnostic_dir.exists():
+        for old_file in diagnostic_dir.iterdir():
+            old_file.unlink()
+    else:
+        diagnostic_dir.mkdir()
+
+    # Link to the cloud log
+    weather_log_name = "weather.log.{}".format(obs_date_dashed)
+    weather_log_path = BASE_PATH.joinpath("Logs", "Weather", "Weather", weather_log_name)
+
 
 ###########################
 ## 
 ###########################
 
-    
 
 
 #---------------------------------old main------------------------------------#
