@@ -50,7 +50,7 @@ SITE_LAT  = 43.1933116667
 SITE_LON = -81.3160233333
 
 # Noteable log patterns
-LOG_PATTERNS = ['Weather unsafe!','Dome closed!','Field Name:']
+LOG_PATTERNS = ['starts', 'Weather unsafe!', 'Dome closed!', 'Field Name:']
 ACPLOG_STRP  = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S'
 
@@ -63,6 +63,40 @@ OP_LOG_DIR = GREEN_BASE_PATH.joinpath('Logs', 'Operations')
 # Plotting constants
 TELESCOPE_ID = {"REDBIRD" : 1, "GREENBIRD" : 2, "BLUEBIRD" : 3}
 COLOURMAPPING = {"REDBIRD" : "r", "GREENBIRD" : "#66ff66", "BLUEBIRD" : "b"}
+
+
+#----------------------------------class--------------------------------------#
+
+class Telescope:
+
+    def __init__(self, name, colour, base_path, obs_date):
+        
+        # Telescope identifiers
+        self.name   = name
+        self.colour = colour
+
+        # Path variables
+        self.base_path = Path(base_path)
+        self.log_path  = self.base_path.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
+        self.data_path = self.base_path.joinpath("ColibriData", obs_date)
+        
+        # Check if log and data directories exist
+        self.log_exists  = True if self.log_path.exists() else False
+        self.data_exists = True if self.data_path.exists() else False
+
+        # Get important lines from the appropriate log
+        if self.log_exists:
+            self.log_lines = getImportantLines(self.log_path, LOG_PATTERNS)
+        else:
+            print("ERROR: {} has no valid ACP log for {}!".format(name, obs_date))
+            self.log_lines = []
+
+        # Get observation minute directory times
+        if self.data_exists:
+            self.data_times = getDataTimes(self.data_path)
+        else:
+            print("ERROR: {} has no data for {}!".format(name, obs_date))
+            self.data_times = []
 
 
 #--------------------------------functions------------------------------------#
@@ -95,7 +129,6 @@ def getImportantLines(log_path, log_patterns):
 
 def convUTCtoLST(timestamp, value_only=True):
     
-    
     # Strip leading/trailing whitespace
     given_time = timestamp.strip()
     
@@ -116,8 +149,6 @@ def convUTCtoLST(timestamp, value_only=True):
     
     
 def setLSTtoUTC(log_lines):
-    
-    
     
     global UTC_REF,LST_REF
     
@@ -250,8 +281,6 @@ def getDataTimes(data_dir_path):
         directory_times.append(dir_datetime)
         
     return directory_times
-        
-
 
 
 #############################
@@ -668,37 +697,28 @@ if __name__ == '__main__':
     cml_args = arg_parser.parse_args()
     obs_date = cml_args.date
     
-    # ACP log paths
-    red_log_path   = RED_BASE_PATH.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
-    green_log_path = GREEN_BASE_PATH.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
-    blue_log_path  = BLUE_BASE_PATH.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
+    # Check if this date has a valid format
+    regex_match = re.fullmatch("[0-9]{8}", obs_date)
+    if regex_match is None:
+        print("ERROR: Invalid date given.")
+        sys.exit()
 
-    # Data directory paths
-    red_data_path   = RED_BASE_PATH.joinpath("ColibriData", obs_date)
-    green_data_path = GREEN_BASE_PATH.joinpath("ColibriData", obs_date)
-    blue_data_path  = BLUE_BASE_PATH.joinpath("ColibriData", obs_date)
-    
-    # Check which log files exist
-    RLog_exists = True if red_log_path.exists() else False
-    GLog_exists = True if green_log_path.exists() else False
-    BLog_exists = True if blue_log_path.exists() else False
-    
-    # Check which data files exist
-    RData_exists = True if red_data_path.exists() else False
-    GData_exists = True if green_data_path.exists() else False
-    BData_exists = True if blue_data_path.exists() else False
+    # Initialize telescopes
+    Red = Telescope("RED", "r", "R:", obs_date)
+    Green = Telescope("GREEN", "#66ff66", "D:", obs_date)
+    Blue  = Telescope("BLUE", "b", "B:", obs_date)
     
     # Check that at least one log file exists
-    if not (RLog_exists | GLog_exists | BLog_exists):
+    if not (Red.log_exists | Green.log_exists | Blue.log_exists):
         print("ERROR: No logs exist for this date!")
         sys.exit()
 
 
 ###########################
-## Data/Log Analysis
+## 
 ###########################
 
-
+    
 
 
 #---------------------------------old main------------------------------------#
