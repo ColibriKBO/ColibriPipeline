@@ -50,13 +50,15 @@ SITE_LAT  = 43.1933116667
 SITE_LON = -81.3160233333
 
 # Noteable log patterns
-LOG_PATTERNS  = ['Weather unsafe!','Dome closed!','Field Name:']
-DATETIME_STRP = '%a %b %d %H:%M:%S %Z %Y'
+LOG_PATTERNS = ['Weather unsafe!','Dome closed!','Field Name:']
+ACPLOG_STRP  = '%a %b %d %H:%M:%S %Z %Y'
+MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S'
 
 # Directory structure
-BASE_PATH = Path('/', 'D:')
-ACP_LOG_PATH = BASE_PATH.joinpath('Logs', 'ACP') 
-OP_LOG_PATH  = BASE_PATH.joinpath('Logs', 'Operations')
+RED_BASE_PATH   = Path('/', 'R:')
+GREEN_BASE_PATH = Path('/', 'D:')
+BLUE_BASE_PATH  = Path('/', 'B:')
+OP_LOG_DIR = GREEN_BASE_PATH.joinpath('Logs', 'Operations')
 
 # Plotting constants
 TELESCOPE_ID = {"REDBIRD" : 1, "GREENBIRD" : 2, "BLUEBIRD" : 3}
@@ -75,7 +77,7 @@ def getImportantLines(log_path, log_patterns):
     # Break if the log_path is invalid
     if not os.path.isfile(log_path):
         print("ERROR: Log file does not exist!")
-        sys.exit()
+        return []
         
     # Read the log line-by-line and save lines matching log_pattern substrings
     matched_line = []
@@ -99,7 +101,7 @@ def convUTCtoLST(timestamp, value_only=True):
     
     # Create a datetime object which can then be used to calculate the
     # equivalent sidereal time
-    datetime_t = datetime.strptime(given_time, DATETIME_STRP)
+    datetime_t = datetime.strptime(given_time, ACPLOG_STRP)
     astro_time = Time(datetime_t)
     
     # Calculate sidereal time
@@ -128,7 +130,7 @@ def setLSTtoUTC(log_lines):
             UTC_and_LST = line.split(curr_LST_regex)
             
             # Convert to appropriate types and assign to globals
-            UTC_REF = datetime.strptime(UTC_and_LST[0], DATETIME_STRP)
+            UTC_REF = datetime.strptime(UTC_and_LST[0], ACPLOG_STRP)
             LST_REF = float(UTC_and_LST[1])
             
             return True
@@ -178,23 +180,6 @@ def getObservingPlan(log_lines):
     return list(set(plan_info))
 
 
-def getWeatherUnsafe(log_lines):
-    
-    # Find weather aborts and save the times
-    weather_abort_time = []
-    weather_regex = "INFO: Weather unsafe!"
-    for line in log_lines:
-        if weather_regex in line:
-            # Get time from weather abort line
-            line_time  = line.split(weather_regex)[0]
-            abort_time = datetime.strptime(line_time.strip(), DATETIME_STRP)
-            
-            # Save time to list
-            weather_abort_time.append(abort_time)
-            
-    return weather_abort_time
-
-
 def getFieldsObserved(log_lines):
     
     # Find which fields were actually observed and record their start time
@@ -204,14 +189,70 @@ def getFieldsObserved(log_lines):
         if field_regex in line:
             # Identify start time of the field and get the field number
             split_line = line.split(field_regex)
-            field_time = datetime.strptime(split_line[0], DATETIME_STRP)
+            field_time = datetime.strptime(split_line[0], ACPLOG_STRP)
             field_num  = int(split_line[1].strip('field'))
             
             # Save the tuple to the list
             fields_observed.append((field_time, field_num))
     
     return fields_observed
+
+
+def getWeatherUnsafe(log_lines):
     
+    # Find weather aborts and save the times
+    weather_abort_time = []
+    weather_regex = "INFO: Weather unsafe!"
+    for line in log_lines:
+        if weather_regex in line:
+            # Get time from weather abort line
+            line_time  = line.split(weather_regex)[0]
+            abort_time = datetime.strptime(line_time.strip(), ACPLOG_STRP)
+            
+            # Save time to list
+            weather_abort_time.append(abort_time)
+            
+    return weather_abort_time
+
+
+def getDomeClosure(log_lines):
+    
+    # Find weather aborts and save the times
+    dome_closure_time = []
+    dome_regex = 'ALERT: Dome closed!'
+    for line in log_lines:
+        if dome_regex in line:
+            # Get time from weather abort line
+            line_time  = line.split(dome_regex)[0]
+            closure_time = datetime.strptime(line_time.strip(), ACPLOG_STRP)
+            
+            # Save time to list
+            dome_closure_time.append(closure_time)
+            
+    return dome_closure_time
+
+
+#############################
+## Analyze Data Directory
+#############################
+
+def getDataTimes(data_dir_path):
+    
+    # Get all minute directories in the given data directory
+    minute_dirs = [folder.name for folder in data_dir_path.iterdir() \
+                   if ((folder.is_dir()) and (folder.name != 'Bias'))]
+    minute_dirs.sort()
+
+    # Get timestamps from the directory names
+    directory_times = []
+    for timestamp in minute_dirs:
+        dir_datetime = datetime.strptime(timestamp, MINUTEDIR_STRP)
+        directory_times.append(dir_datetime)
+        
+    return directory_times
+        
+
+
 
 #############################
 ## Old Functions
@@ -608,7 +649,60 @@ def importTimesRCD(imagePaths, startFrameNum, numFrames):
 #------------------------------------main-------------------------------------#
 
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
+    
+    
+###########################
+## Argument Parser & Setup
+###########################
+
+    # Generate argument parser
+    arg_parser = argparse.ArgumentParser(description="Generate diagnostic plots from the ACP logs of a night.",
+                                         formatter_class=argparse.RawTextHelpFormatter)
+    
+    # Available argument functionality
+    arg_parser.add_argument('date', help='Observation date (as YYYYMMDD) to be analyzed.')
+
+
+    # Extract date from command line arguments
+    cml_args = arg_parser.parse_args()
+    obs_date = cml_args.date
+    
+    # ACP log paths
+    red_log_path   = RED_BASE_PATH.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
+    green_log_path = GREEN_BASE_PATH.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
+    blue_log_path  = BLUE_BASE_PATH.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
+
+    # Data directory paths
+    red_data_path   = RED_BASE_PATH.joinpath("ColibriData", obs_date)
+    green_data_path = GREEN_BASE_PATH.joinpath("ColibriData", obs_date)
+    blue_data_path  = BLUE_BASE_PATH.joinpath("ColibriData", obs_date)
+    
+    # Check which log files exist
+    RLog_exists = True if red_log_path.exists() else False
+    GLog_exists = True if green_log_path.exists() else False
+    BLog_exists = True if blue_log_path.exists() else False
+    
+    # Check which data files exist
+    RData_exists = True if red_data_path.exists() else False
+    GData_exists = True if green_data_path.exists() else False
+    BData_exists = True if blue_data_path.exists() else False
+    
+    # Check that at least one log file exists
+    if not (RLog_exists | GLog_exists | BLog_exists):
+        print("ERROR: No logs exist for this date!")
+        sys.exit()
+
+
+###########################
+## Data/Log Analysis
+###########################
+
+
+
+
+#---------------------------------old main------------------------------------#
+
 
 # GETTING OBSERVATION TIMES    
 
