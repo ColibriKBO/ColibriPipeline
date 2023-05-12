@@ -62,6 +62,7 @@ SITE_LOC  = EarthLocation(lat=SITE_LAT,
 LOG_PATTERNS = ['starts', 'Weather unsafe!', 'Dome closed!', 'Field Name:']
 ACPLOG_STRP  = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S'
+TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 
 # Directory structure
 BASE_PATH  = Path('/', 'D:')
@@ -149,8 +150,22 @@ class Telescope:
             for i,line in enumerate(file):
                 if i == 6:
                     sample_star_time = line.split(' ')[-1].strip('\n')
+                    sample_star_time = Time(sample_star_time, format='isot', scale='utc')
                     break
-        
+            else:
+                print("ERROR: Could not find sample star time in {}!".format(star_txt_file))
+                return
+            
+        # Get field airmass
+        field_alt = calculateAlt(star_table['ra'][len(red_table['ra'] // 2)],
+                                 star_table['dec'][len(red_table['dec'] // 2)],
+                                 sample_star_time)
+        field_airmass = calculateAirmass(field_alt)
+
+        print("SUCCESS: Sensitivity data loaded for {}!".format(self.name))
+        return star_table, field_airmass
+    
+    ##TODO: determine if the directory date agrees with the timestamp date
 
 
 #--------------------------------functions------------------------------------#
@@ -361,12 +376,76 @@ def calculateAirmass(alt):
 
 
 #############################
+## Plotting Functions
+#############################
+
+def plotTimeBlockVertices(times, height):
+
+    # Create vertices for the time blocks
+    addMinute = timedelta(minutes=1)
+    vertices  = []
+    for time in times:
+        v = [(time, height - 0.4),
+             (time, height + 0.4),
+             (time + addMinute, height + 0.4),
+             (time + addMinute, height - 0.4),
+             (time, height - 0.4)]
+        
+        vertices.append(v)
+
+    return vertices
+
+
+def plotObservations(red=[], green=[], blue=[]):
+
+    # Create figure and axes
+    timeline_fig, (ax1, ax2) = plt.subplots(2, 1)
+    loc = mdates.HourLocator(interval=1)
+    xfmt = DateFormatter('%H')
+
+    # Get red/green/blue time blocks
+    red_vertices   = plotTimeBlockVertices(red, 1)
+    green_vertices = plotTimeBlockVertices(green, 2)
+    blue_vertices  = plotTimeBlockVertices(blue, 3)
+
+    # Plot the time blocks
+    ##TODO: append these blocks together?
+    red_bars   = PolyCollection(red_vertices, facecolors=COLOURMAPPING['red'])
+    green_bars = PolyCollection(green_vertices, facecolors=COLOURMAPPING['green'])
+    blue_bars  = PolyCollection(blue_vertices, facecolors=COLOURMAPPING['blue'])
+
+    # Set transparency of the blocks
+    red_bars.set_alpha(0.7)
+    green_bars.set_alpha(0.7)
+    blue_bars.set_alpha(0.7)
+
+    # Plot time blocks to the axes
+    ax1.add_collection(red_bars)
+    ax1.add_collection(green_bars)
+    ax1.add_collection(blue_bars)
+
+    # Set the axes limits and labels
+    ax1.autoscale()
+    ax1.zorder=1
+    ax1.patch.set_alpha(0.01)
+    ax1.xaxis.set_major_locator(loc)
+    ax1.xaxis.set_major_formatter(xfmt)
+    ax1.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
+    ax1.set_yticks([1,2,3])
+    ax1.set_ylim(top=3+.4)
+    ax1.set_yticklabels(['Green','Red','Blue'])
+    ax1.xaxis.set_tick_params(labelsize=9)
+    ax1.xaxis.grid(True)
+    ax1.xaxis.tick_top()
+
+
+#############################
 ## Old Functions
 #############################
 
 def ReadFiledList(log_list):
     """
-    
+     
 
     Parameters
     ----------
