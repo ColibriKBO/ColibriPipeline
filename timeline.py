@@ -252,6 +252,16 @@ def convLSTtoUTC(LST):
     
     return UTC
 
+def convJDtoUTC(JD):
+    
+    # Convert to datetime object
+    datetime_JD = Time(JD, format='jd', scale='utc')
+    
+    # Convert to UTC
+    UTC = datetime_JD.to_datetime()
+    
+    return UTC
+
 
 #############################
 ## Analyze Logs
