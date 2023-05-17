@@ -92,6 +92,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
                        of images to be saved
             __ (int/float): time of saved occultation event images
             __ (float): flux of occulted star in saved images
+            star_count (int): Number of detected stars in the given minuteDir
     """
 
 
@@ -130,7 +131,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     minNumImages = len(kernel.array)*3         #3x kernel length
     if num_images < minNumImages:
         print(datetime.datetime.now(), "Insufficient number of images, skipping...")
-        return 0
+        return minuteDir.name, 0
     
 
 ###########################
@@ -162,7 +163,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         print(f"Insufficient stars in minute: {minuteDir}")
         print (f"{datetime.datetime.now()} Closing: {minuteDir}")
         print ("\n")
-        return
+        return minuteDir.name, len(star_find_results)
         
     
     ## Save the array of star positions as an .npy file
@@ -217,7 +218,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     driftTolerance = 2.5e-2     # threshold for drift compensation
     if abs(x_drift) > driftErrorThresh or abs(y_drift) > driftErrorThresh:
         print (f"{datetime.datetime.now()} Significant drift. Skipping {minuteDir}...") 
-        return 0
+        return minuteDir.name, num_stars
     elif abs(x_drift) > driftTolerance or abs(y_drift) > driftTolerance:
         drift = True # variable to check whether stars have drifted since last frame
     else:
@@ -503,9 +504,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     #print("Drift calcs",c3)
     
-    #update star-minutes
+    # return number of stars in field
     gc.collect()
-    return num_stars*num_images
+    return minuteDir.name, num_stars
     
 
 #------------------------------------main-------------------------------------#
@@ -633,15 +634,20 @@ if __name__ == '__main__':
                  base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(len(minute_dirs)))
         
         try:
-            star_minutes = pool.starmap(firstOccSearch,args)
+            star_counts = pool.starmap(firstOccSearch,args)
             end_time = timer.time()
-            starhours = sum(star_minutes)/(2399*60.0)
-            print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
+            #starhours = sum(star_minutes)/(2399*60.0)
+            #print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
             print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
             
             with open(finish_txt, 'w') as f:
-                f.write(f'Calculated {starhours} star-hours\n')
-                f.write(f'Ran for {end_time - start_time} seconds')
+                f.write(f'Ran for {end_time - start_time} seconds\n')
+
+                #f.write(f'Calculated {starhours} star-hours\n')
+                f.write("time, star count\n")
+                f.write("--------------------\n")
+                for results in star_counts:
+                    f.write(f"{results[0]}, {results[1]}\n")
         except:
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
