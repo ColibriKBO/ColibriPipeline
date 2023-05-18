@@ -32,7 +32,7 @@ import colibri_photometry as cp
 #-------------------------------global vars-----------------------------------#
 
 # Path variables
-BASE_PATH = pathlib.Path('/D:/')
+BASE_PATH = pathlib.Path('D:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     # Identify minute to save
     if cml_args.time is None:
         # Read starlist
-        starlist = np.loadtxt(STARLIST_PATH, dtype=str)
+        starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
 
         # Get minute with most stars
         minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
