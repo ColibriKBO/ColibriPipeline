@@ -38,6 +38,7 @@ IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
 
 # Timestamp format
+OBSDATE_FORMAT = '%Y%m%d'
 TIMESTAMP_FORMAT = '%Y%m%d_%H.%M.%S'
 
 # Get name of telescope
@@ -104,6 +105,9 @@ if __name__ == '__main__':
 ## Path management
 ###########################
 
+    # Format date as datetime object
+    obs_date = datetime.strptime(cml_args.date, OBSDATE_FORMAT)
+
     # Relevant paths
     DATE_PATH = DATA_PATH / cml_args.date
     MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'masterBiases'
@@ -152,7 +156,7 @@ if __name__ == '__main__':
 
     # Select bias image
     bias_timestamps = get_bias_timestamps(MBIAS_PATH)
-    best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), minute)
+    best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
     
     # Read in science images one at a time and save bias-subtracted images as fits files
     image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
