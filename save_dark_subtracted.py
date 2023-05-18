@@ -73,7 +73,7 @@ def get_bias_timestamps(bias_path):
 
 def process_science_images(image_path_list, start_frame, bias_data, save_dir_path):
     """Read in science images one at a time and save bias-subtracted images as fits files"""
-    print(f'Processing image {start_frame+1} of {len(image_path_list)}')
+    #print(f'Processing image {start_frame+1} of {len(image_path_list)}')
 
     # Read in image and subtract bias
     subtracted_img,_ = cir.importFramesRCD(image_path_list, start_frame, 1, bias_data)
