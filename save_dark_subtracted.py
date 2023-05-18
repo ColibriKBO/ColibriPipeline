@@ -16,7 +16,7 @@ import re
 import numpy as np
 from datetime import datetime
 from astropy.io import fits
-from multiprocessing import Pool
+from multiprocessing import cpu_count,Pool
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -81,7 +81,7 @@ def process_science_images(image_path_list, start_frame, bias_data, save_dir_pat
     # Save image as fits file
     fits_image_filename = save_dir_path / (image_path_list[start_frame].name).replace('.rcd', '.fits')
     hdu = fits.PrimaryHDU(subtracted_img)
-    hdu.writeto(fits_image_filename.name, overwrite=True)
+    hdu.writeto(fits_image_filename, overwrite=True)
 
 
 #------------------------------------main-------------------------------------#
@@ -168,8 +168,8 @@ if __name__ == '__main__':
     image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
 
     # Set up multiprocessing
-    pool_size = multiprocessing.cpu_count() - 2
-    pool - Pool(pool_size)
+    pool_size = cpu_count() - 2
+    pool = Pool(pool_size)
     args = ((image_paths, i, best_bias, SAVE_PATH) for i in range(len(image_paths)))
 
     # Process images in parallel
