@@ -32,7 +32,7 @@ import colibri_photometry as cp
 #-------------------------------global vars-----------------------------------#
 
 # Path variables
-BASE_PATH = pathlib.Path('D:')
+BASE_PATH = pathlib.Path('/D:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
