@@ -9,19 +9,13 @@ Usage: python save_dark_subtracted_images.py <path_to_dark_subtracted_images> <p
 """
 
 # Module Imports
-import os,sys
+import os
 import argparse
 import pathlib
-import multiprocessing
-import gc
-import sep
 import re
 import numpy as np
-import time as timer
 from datetime import datetime
 from astropy.io import fits
-from astropy.time import Time
-from copy import deepcopy
 from multiprocessing import Pool
 
 # Custom Script Imports
@@ -76,6 +70,18 @@ def get_bias_timestamps(bias_path):
                   for image in bias_images]
 
     return timestamps
+
+def process_science_images(image_path_list, start_frame, bias_data, save_dir_path):
+    """Read in science images one at a time and save bias-subtracted images as fits files"""
+    print(f'Processing image {start_frame+1} of {len(image_path_list)}')
+
+    # Read in image and subtract bias
+    subtracted_img,_ = cir.importFramesRCD(image_path_list, start_frame, 1, bias_data)
+
+    # Save image as fits file
+    fits_image_filename = save_dir_path / (image_path_list[start_frame].name).replace('.rcd', '.fits')
+    hdu = fits.PrimaryHDU(subtracted_img)
+    hdu.writeto(fits_image_filename.name, overwrite=True)
 
 
 #------------------------------------main-------------------------------------#
@@ -158,18 +164,18 @@ if __name__ == '__main__':
     bias_timestamps = get_bias_timestamps(MBIAS_PATH)
     best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
     
-    # Read in science images one at a time and save bias-subtracted images as fits files
+    # Get list of all files in directory
     image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
-    for i in range(len(image_paths)):
-        print(f'Processing image {i+1} of {len(image_paths)}')
 
-        # Read in image and subtract bias
-        subtracted_img,_ = cir.importFramesRCD(image_paths, i, 1, best_bias)
+    # Set up multiprocessing
+    pool_size = multiprocessing.cpu_count() - 2
+    pool - Pool(pool_size)
+    args = ((image_paths, i, best_bias, SAVE_PATH) for i in range(len(image_paths)))
 
-        # Save image as fits file
-        fits_image_filename = SAVE_PATH / (image_paths[i].name).replace('.rcd', '.fits')
-        hdu = fits.PrimaryHDU(subtracted_img)
-        hdu.writeto(fits_image_filename, overwrite=True)
+    # Process images in parallel
+    pool.starmap(process_science_images, args)
 
-
+    # Close multiprocessing
+    pool.close()
+    pool.join()
     print('Done.')
