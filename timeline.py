@@ -267,7 +267,7 @@ def convJDtoUTC(JD):
 ## Analyze Logs
 #############################
 
-def getObservingPlan(log_lines):
+def getObservingPlan_LST(log_lines):
     
     # Get shortlist lines and extract LST start time
     plan_info = []
@@ -283,9 +283,38 @@ def getObservingPlan(log_lines):
             start_LST = float(shortlist_seg[9])
             num_stars = int(shortlist_seg[16])
             
+            # Convert LST to UTC
+            start_UTC = convLSTtoUTC(start_LST)
+
             # Save the tuple to the list
             plan_info.append((field_num, start_LST, num_stars))
+    
+    # Eliminate duplicates in list
+    return list(set(plan_info))
+
+
+def getObservingPlan_JD(log_lines):
+
+    # Get shortlist lines and extract JD start time
+    plan_info = []
+    for line in log_lines:
+        if 'starts' in line:
+            # Split the line into individual words
+            shortlist_seg = line.split(' ')
             
+            # Get from the line segments the field number, start LST time, and
+            # the number of stars.
+            field_id  = shortlist_seg[7]
+            field_num = int(field_id.strip('field'))
+            start_JD  = float(shortlist_seg[11])
+            num_stars = int(shortlist_seg[16])
+            
+            # Convert JD to UTC
+            start_UTC = convJDtoUTC(start_JD)
+
+            # Save the tuple to the list
+            plan_info.append((field_num, start_UTC, num_stars))
+
     # Eliminate duplicates in list
     return list(set(plan_info))
 
