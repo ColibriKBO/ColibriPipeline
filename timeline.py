@@ -512,15 +512,18 @@ def ReadFiledList(log_list):
             
         elif 'starts' in line:
             fields.append((line).split(': ')[1].split(' ')[0])
-            times=(float((line).split(': ')[1].split(' ')[2]))+time_diff
+            #times=(float((line).split(': ')[1].split(' ')[2]))+time_diff
+            times=(float((line).split(': ')[1].split(' ')[2]))
 
-            if times>24:
-                times=times-24
-            elif times<0:
-                times=times+24
+#            if times>24:
+#                times=times-24
+#            if times<0:
+#                times=times+24
+#            dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(math.floor(float('0.'+str(times).split('.')[1])*60))+':00')
+
+            dates.append(Time(JD, format='jd', scale='utc'))           
             
-            dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(math.floor(float('0.'+str(times).split('.')[1])*60))+':00')
-            
+
     return fields, dates
 
 

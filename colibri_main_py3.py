@@ -641,11 +641,11 @@ if __name__ == '__main__':
             print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
             
             with open(finish_txt, 'w') as f:
-                f.write(f'Ran for {end_time - start_time} seconds\n')
+                f.write(f'# Ran for {end_time - start_time} seconds\n')
 
-                #f.write(f'Calculated {starhours} star-hours\n')
-                f.write("time, star count\n")
-                f.write("--------------------\n")
+                #f.write(f'#Calculated {starhours} star-hours\n')
+                f.write("# time, star count\n")
+                f.write("#--------------------#\n")
                 for results in star_counts:
                     f.write(f"{results[0]}, {results[1]}\n")
         except:
