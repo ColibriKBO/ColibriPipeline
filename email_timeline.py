@@ -39,7 +39,7 @@ HOSTNAME  = 'localhost'
 
 #-------------------------------functions-------------------------------------#
 
-def sendMail(send_from, send_to, subject, text, files=[], 
+def sendMail(send_from, send_to, subject, message, files=[], 
               server=HOSTNAME, port=587, username='', password='',
               use_tls=True):
     """
