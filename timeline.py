@@ -66,6 +66,7 @@ TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 
 # Directory structure
 BASE_PATH  = Path('/', 'D:')
+CLOUD_PATH = BASE_PATH / 'Logs' / 'Weather' / 'Weather'
 
 # Plotting constants
 TELESCOPE_ID = {"REDBIRD" : 1, "GREENBIRD" : 2, "BLUEBIRD" : 3}
@@ -442,6 +443,8 @@ def plotObservations(red=[], green=[], blue=[]):
     loc = mdates.HourLocator(interval=1)
     xfmt = DateFormatter('%H')
 
+    ## Plot actual observations
+
     # Get red/green/blue time blocks
     red_vertices   = plotTimeBlockVertices(red, 1)
     green_vertices = plotTimeBlockVertices(green, 2)
@@ -476,6 +479,13 @@ def plotObservations(red=[], green=[], blue=[]):
     ax1.xaxis.set_tick_params(labelsize=9)
     ax1.xaxis.grid(True)
     ax1.xaxis.tick_top()
+
+    ## Plot cloud/transparency data
+
+    # Read in data from the cloud log
+    weatherlog_name = "weather.log.{}".format(obs_date)
+    cloud_log_path  = CLOUD_PATH / weatherlog_name
+    cloud_data = pd.read_csv()
 
 
 #############################
@@ -513,7 +523,6 @@ def ReadFiledList(log_list):
         elif 'starts' in line:
             fields.append((line).split(': ')[1].split(' ')[0])
             #times=(float((line).split(': ')[1].split(' ')[2]))+time_diff
-            times=(float((line).split(': ')[1].split(' ')[2]))
 
 #            if times>24:
 #                times=times-24
@@ -521,6 +530,7 @@ def ReadFiledList(log_list):
 #                times=times+24
 #            dates.append(str(obs_date)[:-2]+line.split(" ")[2]+' '+str(times).split('.')[0]+':'+str(math.floor(float('0.'+str(times).split('.')[1])*60))+':00')
 
+            JD=(float((line).split(': ')[1].split(' ')[2]))
             dates.append(Time(JD, format='jd', scale='utc'))           
             
 
