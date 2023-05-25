@@ -4,7 +4,7 @@ Created on Jul 29 10:04:14 2022
 
 @author: Roman A.
 
-Match dip detection txts through-out 3 telescopes based on time and coordinates, runs only on Green
+Match dip detection txts throughout 3 telescopes based on time and coordinates, runs only on Green
 
 2022-09-21 Roman A. simplified some steps and added data removal output
 """

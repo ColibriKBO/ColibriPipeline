@@ -131,7 +131,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     minNumImages = len(kernel.array)*3         #3x kernel length
     if num_images < minNumImages:
         print(datetime.datetime.now(), "Insufficient number of images, skipping...")
-        return minuteDir.name, 0
+        return minuteDir.name, 0, 0
     
 
 ###########################
@@ -164,7 +164,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         print(f"Insufficient stars in minute: {minuteDir}")
         print (f"{datetime.datetime.now()} Closing: {minuteDir}")
         print ("\n")
-        return minuteDir.name, len(star_find_results)
+        return minuteDir.name, len(star_find_results), 0
         
     
     ## Save the array of star positions as an .npy file
@@ -219,7 +219,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     driftTolerance = 2.5e-2     # threshold for drift compensation
     if abs(x_drift) > driftErrorThresh or abs(y_drift) > driftErrorThresh:
         print (f"{datetime.datetime.now()} Significant drift. Skipping {minuteDir}...") 
-        return minuteDir.name, num_stars
+        return minuteDir.name, num_stars, 0
     elif abs(x_drift) > driftTolerance or abs(y_drift) > driftTolerance:
         drift = True # variable to check whether stars have drifted since last frame
     else:
@@ -507,7 +507,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
     # return number of stars in field
     gc.collect()
-    return minuteDir.name, num_stars
+    return minuteDir.name, num_stars, len(save_frames)
     
 
 #------------------------------------main-------------------------------------#
@@ -648,11 +648,11 @@ if __name__ == '__main__':
                 f.write("# time, star count\n")
                 f.write("#--------------------#\n")
                 for results in star_counts:
-                    f.write(f"{results[0]}, {results[1]}\n")
+                    f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
         except:
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
-                f.write('done')
+                f.write('failed')
             
         pool.close()
         pool.join()
