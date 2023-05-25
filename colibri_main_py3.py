@@ -523,7 +523,7 @@ if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(description="First-level data analysis for the Colibri telescopes",
                                          formatter_class=argparse.RawTextHelpFormatter)
     
-    ## Available argument functionality
+    ## Add argument functionality
     arg_parser.add_argument('path', help='Path to base directory')
     arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed')
     arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=6.0,type=float)
