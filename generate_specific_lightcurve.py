@@ -41,6 +41,11 @@ DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
 
+# Timestamp format
+OBSDATE_FORMAT = '%Y%m%d'
+MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%u'
+TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%u'
+
 # Processing parameters
 POOL_SIZE  = multiprocessing.cpu_count() - 2  # cores to use for multiprocessing
 CHUNK_SIZE = 10  # images to process at once
@@ -59,7 +64,7 @@ DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift corre
 #--------------------------------functions------------------------------------#
 
 def trackStar(minuteDir, MasterBiasList, kernel, exposure_time, sigma_threshold,
-              base_path, obs_date, telescope='TEST', RCDfiles = True, gain_high = True)
+              base_path, obs_date, telescope='TEST', RCDfiles = True, gain_high = True):
 
     print (f"{datetime.datetime.now()} Opening: {minuteDir}")
 
@@ -424,3 +429,23 @@ def trackStar(minuteDir, MasterBiasList, kernel, exposure_time, sigma_threshold,
     # return number of stars in field
     gc.collect()
     return minuteDir.name, num_stars
+
+
+
+def findMinute(obsdate, timestamp):
+
+    # Get all minute directories for the given date
+    obs_path = DATA_PATH / obsdate
+    if not obs_path.exists():
+        print(f"ERROR: {obs_path} does not exist")
+        return None
+    else:
+        minute_dirs = [item for item in obs_path.iterdir() if item.is_dir()]
+        dir_timestamps = [datetime.datetime.strptime(item.name+'000', MINDIR_FORMAT)
+                          for item in minute_dirs]
+
+    # Find the minute directory that contains the timestamp
+    timestamp = datetime.datetime.strptime(timestamp, TIMESTAMP_FORMAT)
+    for dir_timestamp in dir_timestamps:
+        if dir_timestamp <= timestamp < dir_timestamp + datetime.timedelta(minutes=1):
+            return minute_dirs[dir_timestamps.index(dir_timestamp)]
