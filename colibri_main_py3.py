@@ -144,11 +144,12 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     ## Create median combined image for star finding
     startIndex = 1          # which image to start stack at (vignetting in 0th image)
     numtoStack = 9          # number of images to include in stack
+    scaledThres = detect_thresh*numtoStack**0.1 # detection threshold scaled to number of images stacked
     stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
 
     ## Make list of star coords and half light radii using a conservative
     ## threshold scaled to the number of images stacked
-    star_find_results = tuple(cp.initialFind(stacked, detect_thresh*numtoStack**0.5))
+    star_find_results = tuple(cp.initialFind(stacked, scaledThres))
 
     ## Remove stars where centre is too close to edge of frame
     edge_buffer = 10     #number of pixels between edge of star aperture and edge of image
