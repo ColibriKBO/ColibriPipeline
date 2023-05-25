@@ -58,7 +58,8 @@ DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift corre
 
 #--------------------------------functions------------------------------------#
 
-def trackStar()
+def trackStar(minuteDir, MasterBiasList, kernel, exposure_time, sigma_threshold,
+              base_path, obs_date, telescope='TEST', RCDfiles = True, gain_high = True)
 
     print (f"{datetime.datetime.now()} Opening: {minuteDir}")
 
