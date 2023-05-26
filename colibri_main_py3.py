@@ -104,7 +104,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     ## Define adjustable parameters
     ap_r = 3.  # radius of aperture for flux measuremnets
-    detect_thresh = 4.  # threshold for star detection
+    detect_thresh = 3.3  # threshold for star detection
     #sigma_threshold = 5.  # threshold for event candidacy
     #exposure_time = 0.025  # duration of exposure (from settings) in s
 
@@ -144,7 +144,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     ## Create median combined image for star finding
     startIndex = 1          # which image to start stack at (vignetting in 0th image)
     numtoStack = 9          # number of images to include in stack
-    scaledThres = detect_thresh*numtoStack**0.1 # detection threshold scaled to number of images stacked
+    scaledThres = detect_thresh*numtoStack**0.5 # detection threshold scaled to number of images stacked
     stacked = cir.stackImages(minuteDir, savefolder, startIndex, numtoStack, bias)
 
     ## Make list of star coords and half light radii using a conservative
