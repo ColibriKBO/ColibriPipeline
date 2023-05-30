@@ -28,7 +28,7 @@ import getRAdec
 
 #--------------------------------functions------------------------------------#
 
-def getTransform(timestamp):
+def getTransform(timestamp, median_stacks):
     """
     Finds median image that best fits for the time of the detection and uses it to get Astrometry solution.
     Required to have a list of median-combined images (median_combos)
@@ -53,7 +53,7 @@ def getTransform(timestamp):
     #calculate new transformation from astrometry.net
     else:
         #get median combined image
-        median_image = [f for f in median_combos if timestamp in f.name][0] #this is to run web version of Astrometry
+        median_image = [f for f in median_stacks if timestamp in f.name][0] #this is to run web version of Astrometry
         #10-12 Roman A. to run astrometry localy using Linux subsystem
         median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/')
         median_str=median_str.lower()
@@ -199,7 +199,7 @@ if __name__ == '__main__':
         timestamp = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
 
     
-        transform = getTransform(timestamp)
+        transform = getTransform(timestamp, median_combos)
         
         
         #get star coords in RA/dec

@@ -24,8 +24,10 @@ from copy import deepcopy
 from multiprocessing import Pool
 
 # Custom Script Imports
+import getRAdec
 import colibri_image_reader as cir
 import colibri_photometry as cp
+from coordsfinder import getTransform
 
 # Disable Warnings
 import warnings
@@ -65,12 +67,12 @@ DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift corre
 
 #--------------------------------functions------------------------------------#
 
-def lightcurveSetup(minute_dir, central_frame, master_bias_list, obs_date):
+def generateLightcurve(minute_dir, central_frame, master_bias_list, obsdate):
 
     ## Setup image pathing ## 
 
     # Get the dark image data
-    dark = cir.chooseBias(minute_dir, master_bias_list, obs_date)
+    dark = cir.chooseBias(minute_dir, master_bias_list, obsdate)
 
     # Get image dimensions & number of images
     x_length, y_length, num_images = cir.getSizeRCD(image_paths)
@@ -115,8 +117,23 @@ def lightcurveSetup(minute_dir, central_frame, master_bias_list, obs_date):
     final_frame, final_time = cir.importFramesRCD(image_paths, num_images-1, 1, dark)
 
     # Refine star positions for first and final frames
-    first_positions = cp.refineCentroid(first_frame, first_time[0], mean_guass_sigma)
-    final_positions = cp.refineCentroid(final_frame, final_time[0], mean_guass_sigma)
+    first_positions, _ = cp.refineCentroid(first_frame, first_time[0], mean_guass_sigma)
+    final_positions, _ = cp.refineCentroid(final_frame, final_time[0], mean_guass_sigma)
+
+    # Calculate median drift rate [px/s] in x and y over the minute
+    x_drift, y_drift = cp.averageDrift(first_positions, final_positions, first_time, final_time)
+
+    # Check if drift is within tolerance and if a correction is needed
+    if (abs(x_drift) > DRIFT_TOLERANCE) or (abs(y_drift) > DRIFT_TOLERANCE):
+        print(f"WARNING: Drift rate is too high for {minute_dir.name}")
+        return None
+    elif (abs(x_drift) > DRIFT_THRESHOLD) or (abs(y_drift) > DRIFT_THRESHOLD):
+        drift = True
+    else:
+        drift = False
+
+    
+    ## Generate WCS transformations ##
 
     
 
@@ -145,3 +162,20 @@ def findMinute(obsdate, timestamp):
             break
 
     return target_dir, skip_frame
+
+
+def reversePixelMapping(minute_dir, star_radec, obsdate):
+
+    # Get the list of medstacked images
+    # TODO: Add a way to generate a medstack if it doesn't exist
+    medstack_list_path = (ARCHIVE_PATH / str(obs_date)).glob('*_medstacked.fits')
+
+    # Get the WCS transformation
+    transform = getTransform(minute_dir.name, medstack_list_path)
+
+    # Find the coordinates of the stars in the medstack 
+    star_wcs = getRAdec.getXYSingle(transform, star_radec)
+    star_X   = star_wcs[0]
+    star_Y   = star_wcs[1]
+
+    return star_X, star_Y
