@@ -16,6 +16,7 @@ import multiprocessing
 import datetime
 import gc
 import sep
+import re
 import numpy as np
 import time as timer
 from astropy.convolution import RickerWavelet1DKernel
@@ -67,7 +68,8 @@ DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift corre
 
 #--------------------------------functions------------------------------------#
 
-def generateLightcurve(minute_dir, central_frame, master_bias_list, obsdate):
+def generateLightcurve(minute_dir, central_frame, master_bias_list, 
+                       obsdate, radec):
 
     ## Setup image pathing ## 
 
@@ -89,6 +91,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list, obsdate):
     image_paths = sorted(minute_dir.glob('*.rcd'))
     num_images = len(image_paths)
     lightcurve_paths = image_paths[min_frame:max_frame]
+    num_frames = len(image_paths)
 
 
     ## Star identification ##
@@ -117,6 +120,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list, obsdate):
     final_frame, final_time = cir.importFramesRCD(image_paths, num_images-1, 1, dark)
 
     # Refine star positions for first and final frames
+    # TODO: Fix the arguments here!!!
     first_positions, _ = cp.refineCentroid(first_frame, first_time[0], mean_guass_sigma)
     final_positions, _ = cp.refineCentroid(final_frame, final_time[0], mean_guass_sigma)
 
@@ -134,6 +138,63 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list, obsdate):
 
     
     ## Generate WCS transformations ##
+
+    # Get XY pixel coordinates for star of interest
+    star_X, star_Y = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
+
+    # Determine if star is visible in field of view
+    if (star_X < 0) or (star_X > x_length) or (star_Y < 0) or (star_Y > y_length):
+        print(f"WARNING: Star is not visible in {minute_dir.name}")
+        return None
+    elif (abs(first_positions[0] - star_X) > APERTURE_RADIUS) or \
+         (abs(first_positions[1] - star_Y) > APERTURE_RADIUS):
+        print(f"WARNING: Star was not found by SEP in {minute_dir.name}")
+        return None
+
+    ## Generate lightcurve ##
+
+    # Initialize lightcurve container
+    # [0] x coorinate; [1] y coordinate; [2] flux; [3] frame time
+    star_data = np.empty((num_images, 4), dtype=np.float64)
+
+    # Seed lightcurve with first frame data
+    star_initial_flux = sep.sum_circle(first_frame, star_X, star_Y, initial_radii)[0]
+    star_data[0] = [star_X, star_Y, star_initial_flux, first_time[0].unix]
+
+    # Loop through each frame and calculate flux
+    header_times = [first_time]
+    if drift: # If drift correction is needed
+
+        for i in range(num_frames):
+            # Raw frame data
+            image_data,image_time = cir.importFramesRCD(lightcurve_paths,i,1,dark)
+
+            # Analyze data
+            star_data[i+1] = cp.timeEvolve(image_data,
+                                           deepcopy(star_data[i]),
+                                           image_time[0],
+                                           APERTURE_RADIUS,
+                                           num_stars,
+                                           (x_length,y_length),
+                                           (x_drift,y_drift))
+            header_times = header_times + image_time
+
+    else: # if drift correction is not needed
+
+        for i in range(num_frames):
+            # Raw frame data
+            image_data,image_time = cir.importFramesRCD(lightcurve_paths,i,1,dark)
+
+            # Analyze data
+            star_data[i+1] = cp.getStationaryFlux(image_data,
+                                                  deepcopy(star_data[i]),
+                                                  image_time[0],
+                                                  APERTURE_RADIUS,
+                                                  num_stars,
+                                                  (x_length,y_length),
+                                                  (x_drift,y_drift))
+            header_times = header_times + image_time
+
 
     
 
@@ -164,18 +225,30 @@ def findMinute(obsdate, timestamp):
     return target_dir, skip_frame
 
 
-def reversePixelMapping(minute_dir, star_radec, obsdate):
+def reversePixelMapping(minute_dir, obsdate, RA, DEC):
 
     # Get the list of medstacked images
     # TODO: Add a way to generate a medstack if it doesn't exist
-    medstack_list_path = (ARCHIVE_PATH / str(obs_date)).glob('*_medstacked.fits')
+    obsdate = hyphonateDate(obsdate)
+    medstack_list_path = (ARCHIVE_PATH / str(obsdate)).glob('*_medstacked.fits')
 
     # Get the WCS transformation
     transform = getTransform(minute_dir.name, medstack_list_path)
 
     # Find the coordinates of the stars in the medstack 
-    star_wcs = getRAdec.getXYSingle(transform, star_radec)
+    star_wcs = getRAdec.getXYSingle(transform, (RA, DEC))
     star_X   = star_wcs[0]
     star_Y   = star_wcs[1]
 
     return star_X, star_Y
+
+
+def hyphonateDate(obsdate):
+
+    # Convert the date to a datetime object
+    obsdate = datetime.datetime.strptime(obsdate, OBSDATE_FORMAT)
+
+    # Convert the date to a hyphonated string
+    obsdate = obsdate.strftime('%Y-%m-%d')
+
+    return obsdate
