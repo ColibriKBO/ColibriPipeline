@@ -48,6 +48,7 @@ ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
 OBSDATE_FORMAT = '%Y%m%d'
 MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%u'
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%u'
+BARE_FORMAT = '%Y-%m-%d_%H%M%S_%u'
 
 # Processing parameters
 POOL_SIZE  = multiprocessing.cpu_count() - 2  # cores to use for multiprocessing
@@ -69,7 +70,7 @@ DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift corre
 #--------------------------------functions------------------------------------#
 
 def generateLightcurve(minute_dir, central_frame, master_bias_list, 
-                       obsdate, radec):
+                       obsdate, radec, matchtype):
 
     ## Setup image pathing ## 
 
@@ -121,8 +122,8 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
 
     # Refine star positions for first and final frames
     # TODO: Fix the arguments here!!!
-    first_positions, _ = cp.refineCentroid(first_frame, first_time[0], mean_guass_sigma)
-    final_positions, _ = cp.refineCentroid(final_frame, final_time[0], mean_guass_sigma)
+    first_positions, _ = cp.refineCentroid(first_frame, first_time[0], initial_positions[:,0], mean_guass_sigma)
+    final_positions, _ = cp.refineCentroid(final_frame, final_time[0], initial_positions[:,1], mean_guass_sigma)
 
     # Calculate median drift rate [px/s] in x and y over the minute
     x_drift, y_drift = cp.averageDrift(first_positions, final_positions, first_time, final_time)
@@ -146,8 +147,8 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     if (star_X < 0) or (star_X > x_length) or (star_Y < 0) or (star_Y > y_length):
         print(f"WARNING: Star is not visible in {minute_dir.name}")
         return None
-    elif (abs(first_positions[0] - star_X) > APERTURE_RADIUS) or \
-         (abs(first_positions[1] - star_Y) > APERTURE_RADIUS):
+    elif np.all(abs(first_positions[0] - star_X) > APERTURE_RADIUS) or \
+         np.all(abs(first_positions[1] - star_Y) > APERTURE_RADIUS):
         print(f"WARNING: Star was not found by SEP in {minute_dir.name}")
         return None
 
@@ -163,6 +164,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
 
     # Loop through each frame and calculate flux
     header_times = [first_time]
+    bkg_medians  = []
     if drift: # If drift correction is needed
 
         for i in range(num_frames):
@@ -178,6 +180,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
                                            (x_length,y_length),
                                            (x_drift,y_drift))
             header_times = header_times + image_time
+            bkg_medians = bkg_medians.append(np.median(image_data))
 
     else: # if drift correction is not needed
 
@@ -194,9 +197,67 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
                                                   (x_length,y_length),
                                                   (x_drift,y_drift))
             header_times = header_times + image_time
+            bkg_medians = bkg_medians.append(np.median(image_data))
 
 
-    
+    # Return relevant data, optionally background median
+    #return lightcurve_paths, star_data, header_times, np.median(bkg_medians)
+    return lightcurve_paths, star_data, header_times
+
+
+def saveLightcurve(lightcurve_paths, star_data, header_times,
+                   obsdate, radec, xy):
+
+    ## Analyze lightcurve ##
+
+    # Get statistical parameters of lightcurve
+    lightcurve_flux = star_data[:,2]
+    lightcurve_mean = np.mean(lightcurve_flux)
+    lightcurve_std  = np.std(lightcurve_flux)
+
+
+    ## Save lightcurve data ##
+
+    # Telescope name
+    try:
+        telescope = os.environ['COMPUTERNAME']
+    except KeyError:
+        telescope = "TEST"
+
+    # Naming/indexing parameters
+    center_index = len(lightcurve_paths)//2
+    obsdate_hyphon = hyphonateDate(obsdate)
+    timestamp_bare = header_times[center_index].strftime(BARE_FORMAT)
+    field_name = lightcurve_paths[center_index].split("_")[0]
+
+    # Save names
+    save_path = ARCHIVE_PATH / obsdate_hyphon
+    save_file = save_path / "det_{}_{}_FORCED_{}.txt".format(obsdate_hyphon,
+                                                             timestamp_bare,
+                                                             telescope)
+
+    # Write header
+    with open(save_file, 'w') as filehandle:
+        filehandle.write('#\n#\n#\n#\n')
+        filehandle.write('#    Event File: %s\n' %(lightcurve_paths[center_index]))
+        filehandle.write('#    Star Coords: %f %f\n' %(xy[0], xy[1]))
+        filehandle.write('#    RA Dec Coords: %f %f\n' %(radec[0], radec[1]))
+        filehandle.write('#    DATE-OBS: %s\n' %(header_times[center_index]))
+        filehandle.write('#    Telescope: %s\n' %(telescope))
+        filehandle.write('#    Field: %s\n' %(field_name))
+        filehandle.write('#    significance: ARTICICAL\n')
+        filehandle.write('#    Raw lightcurve std: %.4f\n' %(lightcurve_std))
+        filehandle.write('#    Raw lightcurve mean: %.4f\n' %(lightcurve_mean))
+        filehandle.write('#    Convolution background std: NONE\n')
+        filehandle.write('#    Convolution background mean: NONE\n')
+        filehandle.write('#    Convolution minimal value: NONE\n')
+        filehandle.write('#\n#\n')
+        filehandle.write('#filename     time      flux     conv_flux\n')
+
+        for i in len(lightcurve_paths):
+            seconds = star_data[i,3].strftime('%S')
+            filehandle.write("{} {} {} {}".format(lightcurve_paths[i],seconds,star_data[i,2],"N/A"))
+            
 
 
 def findMinute(obsdate, timestamp):
@@ -252,3 +313,8 @@ def hyphonateDate(obsdate):
     obsdate = obsdate.strftime('%Y-%m-%d')
 
     return obsdate
+
+
+#------------------------------------main-------------------------------------#
+
+
