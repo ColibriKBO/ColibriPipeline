@@ -70,7 +70,7 @@ DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift corre
 #--------------------------------functions------------------------------------#
 
 def generateLightcurve(minute_dir, central_frame, master_bias_list, 
-                       obsdate, radec, matchtype):
+                       obsdate, xy):
 
     ## Setup image pathing ## 
 
@@ -140,8 +140,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     
     ## Generate WCS transformations ##
 
-    # Get XY pixel coordinates for star of interest
-    star_X, star_Y = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
+    star_X,star_Y = xy
 
     # Determine if star is visible in field of view
     if (star_X < 0) or (star_X > x_length) or (star_Y < 0) or (star_Y > y_length):
@@ -236,8 +235,10 @@ def saveLightcurve(lightcurve_paths, star_data, header_times,
                                                              timestamp_bare,
                                                              telescope)
 
-    # Write header
+    # Write header and data to detection file
     with open(save_file, 'w') as filehandle:
+        # Write header
+        print("Writing lightcurve header...")
         filehandle.write('#\n#\n#\n#\n')
         filehandle.write('#    Event File: %s\n' %(lightcurve_paths[center_index]))
         filehandle.write('#    Star Coords: %f %f\n' %(xy[0], xy[1]))
@@ -254,10 +255,14 @@ def saveLightcurve(lightcurve_paths, star_data, header_times,
         filehandle.write('#\n#\n')
         filehandle.write('#filename     time      flux     conv_flux\n')
 
+        # Write data
+        print("Writing lightcurve data...")
         for i in len(lightcurve_paths):
             seconds = star_data[i,3].strftime('%S')
-            filehandle.write("{} {} {} {}".format(lightcurve_paths[i],seconds,star_data[i,2],"N/A"))
+            filehandle.write(f"{lightcurve_paths[i]} {seconds} {star_data[i,2]} N/A")
             
+    # Completed
+    print(f"Write curve written to {save_file}")
 
 
 def findMinute(obsdate, timestamp):
@@ -281,9 +286,9 @@ def findMinute(obsdate, timestamp):
             # Calculate the number of frames to skip to line up with the directory
             timediff = timestamp - dir_timestamp
             skip_frame = timediff.total_seconds() // EXPOSURE_TIME
-            break
-
-    return target_dir, skip_frame
+            
+            # Return the markers
+            return target_dir, skip_frame
 
 
 def reversePixelMapping(minute_dir, obsdate, RA, DEC):
@@ -318,3 +323,57 @@ def hyphonateDate(obsdate):
 #------------------------------------main-------------------------------------#
 
 
+if __name__ == '__main__':
+
+
+###########################
+## Argument Parser Setup
+###########################
+
+
+    # Generate argument parser
+    arg_parser = argparse.ArgumentParser(description="First-level data analysis for the Colibri telescopes",
+                                         formatter_class=argparse.RawTextHelpFormatter)
+    
+    # Available argument functionality
+    arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+    arg_parser.add_argument('timestamp' , help='Timestamp of 2-telescope event\'s central peak.')
+    arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',nargs=2)
+
+    # Process argparse list as useful variables
+    cml_args = arg_parser.parse_args()
+
+    # Assign cml args input as variables for readability
+    obsdate = (cml_args.date).replace("/","")
+    timestamp = cml_args.timestamp
+    radec = cml_args.radec
+
+
+###########################
+## Generate Lightcurve
+###########################
+
+    # Find which minute we expect to build the lightcurve in and bias list
+    found_minute = findMinute(obsdate,timestamp)
+    obs_archive = ARCHIVE_PATH / hyphonateDate(obsdate)
+    mbias_path =  obs_archive / 'masterBiases'
+
+    # Check that this passed
+    if found_minute is None:
+        print("ERROR: No valid minute directory found.")
+        sys.exit()
+
+    # Assign found_minute to variables
+    minute_dir,peak_frame = found_minute
+
+    # Get XY pixel coordinates for star of interest from WCS transform
+    star_XY = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
+
+    # Generate lightcurve
+    lightcurve = generateLightcurve(minute_dir,peak_frame,mbias_path,
+                                    obsdate,star_XY)
+    lightcurve_paths,star_data,header_times = lightcurve
+
+    # Save lightcurve
+    saveLightcurve(lightcurve_paths, star_data, header_times,
+                   obsdate, radec, star_XY)
