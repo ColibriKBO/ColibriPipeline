@@ -46,9 +46,9 @@ ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
 
 # Timestamp format
 OBSDATE_FORMAT = '%Y%m%d'
-MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%u'
-TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%u'
-BARE_FORMAT = '%Y-%m-%d_%H%M%S_%u'
+MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%f'
+TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+BARE_FORMAT = '%Y-%m-%d_%H%M%S_%f'
 
 # Processing parameters
 POOL_SIZE  = multiprocessing.cpu_count() - 2  # cores to use for multiprocessing
