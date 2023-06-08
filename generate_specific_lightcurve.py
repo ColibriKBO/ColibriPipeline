@@ -275,7 +275,7 @@ def findMinute(obsdate, timestamp):
     else:
         minute_dirs = [item for item in obs_path.iterdir() if item.is_dir()]
         dir_timestamps = [datetime.datetime.strptime(item.name+'000', MINDIR_FORMAT)
-                          for item in minute_dirs]
+                          for item in minute_dirs if item.name != 'Bias']
 
     # Find the minute directory that contains the timestamp
     timestamp = datetime.datetime.strptime(timestamp, TIMESTAMP_FORMAT)
