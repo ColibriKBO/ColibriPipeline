@@ -28,7 +28,7 @@ import getRAdec
 
 #--------------------------------functions------------------------------------#
 
-def getTransform(timestamp, median_stacks):
+def getTransform(timestamp, median_stacks, transformations, return_transformations=False):
     """
     Finds median image that best fits for the time of the detection and uses it to get Astrometry solution.
     Required to have a list of median-combined images (median_combos)
@@ -89,7 +89,10 @@ def getTransform(timestamp, median_stacks):
         #add to dictionary
         transformations[timestamp] = transform
         
-        return transform
+        if return_transformations:
+            return transform, transformations
+        else:
+            return transform
 
 
 def readFile(filepath):
@@ -199,7 +202,7 @@ if __name__ == '__main__':
         timestamp = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
 
     
-        transform = getTransform(timestamp, median_combos)
+        transform,transformations = getTransform(timestamp, median_combos, transformations, True)
         
         
         #get star coords in RA/dec

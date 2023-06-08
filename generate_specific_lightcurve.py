@@ -299,7 +299,7 @@ def reversePixelMapping(minute_dir, obsdate, RA, DEC):
     medstack_list_path = (ARCHIVE_PATH / str(obsdate)).glob('*_medstacked.fits')
 
     # Get the WCS transformation
-    transform = getTransform(minute_dir.name, medstack_list_path)
+    transform = getTransform(minute_dir.name, medstack_list_path, {})
 
     # Find the coordinates of the stars in the medstack 
     star_wcs = getRAdec.getXYSingle(transform, (RA, DEC))
