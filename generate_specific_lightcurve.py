@@ -13,12 +13,12 @@ import os,sys
 import argparse
 import pathlib
 import multiprocessing
-import datetime
 import gc
 import sep
 import re
 import numpy as np
 import time as timer
+from datetime import datetime,timedelta
 from astropy.convolution import RickerWavelet1DKernel
 from astropy.time import Time
 from copy import deepcopy
@@ -274,13 +274,13 @@ def findMinute(obsdate, timestamp):
         return None
     else:
         minute_dirs = [item for item in obs_path.iterdir() if item.is_dir()]
-        dir_timestamps = [datetime.datetime.strptime(item.name+'000', MINDIR_FORMAT)
+        dir_timestamps = [datetime.strptime(item.name+'000', MINDIR_FORMAT)
                           for item in minute_dirs if item.name != 'Bias']
 
     # Find the minute directory that contains the timestamp
-    timestamp = datetime.datetime.strptime(timestamp, TIMESTAMP_FORMAT)
+    timestamp = datetime.strptime(timestamp, TIMESTAMP_FORMAT)
     for dir_timestamp in dir_timestamps:
-        if dir_timestamp <= timestamp < dir_timestamp + datetime.timedelta(minutes=1):
+        if dir_timestamp <= timestamp < dir_timestamp + timedelta(minutes=1):
             target_dir = minute_dirs[dir_timestamps.index(dir_timestamp)]
 
             # Calculate the number of frames to skip to line up with the directory
@@ -312,7 +312,7 @@ def reversePixelMapping(minute_dir, obsdate, RA, DEC):
 def hyphonateDate(obsdate):
 
     # Convert the date to a datetime object
-    obsdate = datetime.datetime.strptime(obsdate, OBSDATE_FORMAT)
+    obsdate = datetime.strptime(obsdate, OBSDATE_FORMAT)
 
     # Convert the date to a hyphonated string
     obsdate = obsdate.strftime('%Y-%m-%d')
@@ -338,7 +338,7 @@ if __name__ == '__main__':
     # Available argument functionality
     arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed.')
     arg_parser.add_argument('timestamp' , help='Timestamp of 2-telescope event\'s central peak.')
-    arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',nargs=2)
+    arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',nargs=2,type=float)
 
     # Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
@@ -353,10 +353,15 @@ if __name__ == '__main__':
 ## Generate Lightcurve
 ###########################
 
-    # Find which minute we expect to build the lightcurve in and bias list
+    # Find which minute we expect to build the lightcurve in
     found_minute = findMinute(obsdate,timestamp)
+
+    # Generate master bias set
     obs_archive = ARCHIVE_PATH / hyphonateDate(obsdate)
-    mbias_path =  obs_archive / 'masterBiases'
+    mbias_path  = obs_archive / 'masterBiases'
+    mbias_array = [(datetime.strptime(bias.name[:-4]+'000',MINDIR_FORMAT), bias) for
+                   bias in mbias_path]
+    mbias_array = np.array(mbias_array)
 
     # Check that this passed
     if found_minute is None:
@@ -370,7 +375,7 @@ if __name__ == '__main__':
     star_XY = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
 
     # Generate lightcurve
-    lightcurve = generateLightcurve(minute_dir,peak_frame,mbias_path,
+    lightcurve = generateLightcurve(minute_dir,peak_frame,mbias_array,
                                     obsdate,star_XY)
     lightcurve_paths,star_data,header_times = lightcurve
 
