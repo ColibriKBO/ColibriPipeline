@@ -338,7 +338,8 @@ if __name__ == '__main__':
     # Available argument functionality
     arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed.')
     arg_parser.add_argument('timestamp' , help='Timestamp of 2-telescope event\'s central peak.')
-    arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',nargs=2)
+    arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',
+                            nargs=2,type=float)
 
     # Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
