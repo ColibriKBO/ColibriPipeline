@@ -75,14 +75,15 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     ## Setup image pathing ## 
 
     # Get the dark image data
-    dark = cir.chooseBias(minute_dir, master_bias_list, obsdate)
+    archive_dir = ARCHIVE_PATH / hyphonateDate(obsdate)
+    dark = cir.chooseBias(minute_dir, master_bias_list, datetime.strptime(obsdate,OBSDATE_FORMAT))
 
     # Get image dimensions & number of images
-    x_length, y_length, num_images = cir.getSizeRCD(image_paths)
+    x_length, y_length, num_images = cir.getSizeRCD(str(minute_dir))
 
     # Determine frames to save
-    min_frame = central_frame - (SEC_TO_SAVE // EXPOSURE_TIME)
-    max_frame = central_frame + 1 + (SEC_TO_SAVE // EXPOSURE_TIME)
+    min_frame = int(central_frame - (SEC_TO_SAVE // EXPOSURE_TIME))
+    max_frame = int(central_frame + 1 + (SEC_TO_SAVE // EXPOSURE_TIME))
     if min_frame < EXCLUDE_IMAGES:
         min_frame = EXCLUDE_IMAGES
     if max_frame >= num_images:
@@ -90,16 +91,15 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
 
     # Get image paths to process
     image_paths = sorted(minute_dir.glob('*.rcd'))
-    num_images = len(image_paths)
     lightcurve_paths = image_paths[min_frame:max_frame]
-    num_frames = len(image_paths)
+    num_frames = len(lightcurve_paths)
 
 
     ## Star identification ##
 
     # Get the star list from the archive (if not found, fail gracefully)
     # TODO: Add a way to generate a star list if it doesn't exist
-    star_list_path = (ARCHIVE_PATH / str(obs_date)).glob(minute_dir.name + '_*sig_pos.npy')
+    star_list_path = list(archive_dir.glob(minute_dir.name + '_*sig_pos.npy'))
     if len(star_list_path) == 0:
         print(f"ERROR: No star list found for {minute_dir.name}")
         return None
@@ -284,10 +284,11 @@ def findMinute(obsdate, timestamp):
             target_dir = minute_dirs[dir_timestamps.index(dir_timestamp)]
 
             # Calculate the number of frames to skip to line up with the directory
-            timediff = timestamp - dir_timestamp
-            skip_frame = timediff.total_seconds() // EXPOSURE_TIME
+            timediff = (timestamp - dir_timestamp).total_seconds()
+            skip_frame = timediff // EXPOSURE_TIME
             
             # Return the markers
+            skip_frame = int(skip_frame)
             return target_dir, skip_frame
 
 
@@ -360,8 +361,8 @@ if __name__ == '__main__':
     # Generate master bias set
     obs_archive = ARCHIVE_PATH / hyphonateDate(obsdate)
     mbias_path  = obs_archive / 'masterBiases'
-    mbias_array = [(datetime.strptime(bias.name[:-4]+'000',MINDIR_FORMAT), bias) for
-                   bias in mbias_path]
+    mbias_array = [(datetime.strptime(bias.name[:-5]+'000',MINDIR_FORMAT), bias) for
+                   bias in mbias_path.iterdir()]
     mbias_array = np.array(mbias_array)
 
     # Check that this passed
@@ -371,6 +372,7 @@ if __name__ == '__main__':
 
     # Assign found_minute to variables
     minute_dir,peak_frame = found_minute
+    print(peak_frame, type(peak_frame))
 
     # Get XY pixel coordinates for star of interest from WCS transform
     star_XY = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
