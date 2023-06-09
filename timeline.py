@@ -923,7 +923,7 @@ if __name__ == '__main__':
         sys.exit()
 
     # Create a directory for diagnostic files
-    diagnostic_dir = BASE_PATH.joinpath('Logs', 'Operations', obs_date)
+    diagnostic_dir = BASE_PATH / 'Logs' / 'Operations' / obs_date
     if diagnostic_dir.exists():
         for old_file in diagnostic_dir.iterdir():
             old_file.unlink()
@@ -932,11 +932,11 @@ if __name__ == '__main__':
 
     # Link to the cloud log
     weather_log_name = "weather.log.{}".format(obs_date_dashed)
-    weather_log_path = BASE_PATH.joinpath("Logs", "Weather", "Weather", weather_log_name)
+    weather_log_path = BASE_PATH / "Logs" / "Weather" / "Weather" / weather_log_name
 
 
 ###########################
-## 
+## Read in Data
 ###########################
 
 
@@ -972,8 +972,8 @@ try:
     if not os.path.exists(old_data):
         os.mkdir(old_data)
     files = [file for file in os.listdir(operations_savepath) #list all files from previous results
-             if (os.path.isfile(os.path.join(operations_savepath, file)) and '.html' not in file and 'sigma' not in file
-                and 'icon' not in file)]
+             if (os.path.isfile(os.path.join(operations_savepath, file)) and ('.html' not in file) and ('sigma' not in file)
+                (and 'icon' not in file))]
     
     for file in files: #move all old data to the designated folder
         shutil.move(os.path.join(operations_savepath, file),os.path.join(old_data, file))
