@@ -150,7 +150,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     star_X,star_Y = xy
     print(f"(StarX, StarY) = ({star_X},{star_Y})")
 
-    # Determine if star is visible in field of view
+    # Determine if star is visible in field of view and matches an existing star
     if (star_X < 0) or (star_X > x_length) or (star_Y < 0) or (star_Y > y_length):
         print(f"WARNING: Star is not visible in {minute_dir.name}")
         return None
@@ -208,8 +208,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
                                                   image_time[0],
                                                   APERTURE_RADIUS,
                                                   1,
-                                                  (x_length,y_length),
-                                                  (x_drift,y_drift))
+                                                  (x_length,y_length))
             header_times = header_times + image_time
             bkg_medians.append(np.median(image_data))
 
