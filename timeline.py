@@ -973,7 +973,7 @@ try:
         os.mkdir(old_data)
     files = [file for file in os.listdir(operations_savepath) #list all files from previous results
              if (os.path.isfile(os.path.join(operations_savepath, file)) and ('.html' not in file) and ('sigma' not in file)
-                (and 'icon' not in file))]
+                and ('icon' not in file))]
     
     for file in files: #move all old data to the designated folder
         shutil.move(os.path.join(operations_savepath, file),os.path.join(old_data, file))
