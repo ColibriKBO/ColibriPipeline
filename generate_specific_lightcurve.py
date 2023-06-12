@@ -89,8 +89,8 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
         min_frame = EXCLUDE_IMAGES + 1
     if max_frame >= num_images:
         max_frame = None
-    print(f"Saving frames from {min_frame} to {max_frame if max_frame is not None else num_images}")
-    print(f"    with central frame {central_frame}.")
+    print(f"Saving frames from {min_frame} to {max_frame if max_frame is not None else num_images}" +\
+          f"    with central frame {central_frame}.")
 
     # Get image paths to process
     lightcurve_paths = image_paths[min_frame:max_frame]
@@ -369,6 +369,11 @@ if __name__ == '__main__':
     timestamp = cml_args.timestamp
     radec = cml_args.radec
 
+    # Trim timestamp as necessary
+    if len(timestamp) > 26:
+        timestamp = timestamp[:26]
+        print(f"ALERT: Trimmed timestamp to {timestamp}")
+
 
 ###########################
 ## Generate Lightcurve
@@ -377,13 +382,6 @@ if __name__ == '__main__':
     # Find which minute we expect to build the lightcurve in
     found_minute = findMinute(obsdate,timestamp)
 
-    # Generate master bias set
-    obs_archive = ARCHIVE_PATH / hyphonateDate(obsdate)
-    mbias_path  = obs_archive / 'masterBiases'
-    mbias_array = [(datetime.strptime(bias.name[:-5]+'000',MINDIR_FORMAT), bias) for
-                   bias in mbias_path.iterdir()]
-    mbias_array = np.array(mbias_array)
-
     # Check that this passed
     if found_minute is None:
         print("ERROR: No valid minute directory found.")
@@ -391,6 +389,13 @@ if __name__ == '__main__':
 
     # Assign found_minute to variables
     minute_dir,peak_frame = found_minute
+
+    # Generate master bias set
+    obs_archive = ARCHIVE_PATH / hyphonateDate(obsdate)
+    mbias_path  = obs_archive / 'masterBiases'
+    mbias_array = [(datetime.strptime(bias.name[:-5]+'000',MINDIR_FORMAT), bias) for
+                   bias in mbias_path.iterdir()]
+    mbias_array = np.array(mbias_array)
 
     # Get XY pixel coordinates for star of interest from WCS transform
     star_XY = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
