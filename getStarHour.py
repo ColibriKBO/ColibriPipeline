@@ -391,9 +391,6 @@ def getStarHour(main_path, obs_date, threshold=4, gain='high'):
                 
                 break
         
-            
-
-
 
         coords=fieldCoords(field)
         
