@@ -89,8 +89,8 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
         min_frame = EXCLUDE_IMAGES + 1
     if max_frame >= num_images:
         max_frame = None
-    print(f"Saving frames from {min_frame} to {max_frame if max_frame is not None else num_images}" +\
-          f"    with central frame {central_frame}.")
+    print(f"Saving frames from {min_frame} to {max_frame if max_frame is not None else num_images} " +\
+          f"with central frame {central_frame}.")
 
     # Get image paths to process
     lightcurve_paths = image_paths[min_frame:max_frame]
