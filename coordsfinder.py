@@ -28,14 +28,14 @@ import getRAdec
 
 #--------------------------------functions------------------------------------#
 
-def getTransform(date):
+def getTransform(timestamp, median_stacks, transformations, return_transformations=False):
     """
     Finds median image that best fits for the time of the detection and uses it to get Astrometry solution.
     Required to have a list of median-combined images (median_combos)
 
     Parameters
     ----------
-    date : str
+    timestamp : str
         Time of the detection file HH.MM.SS.ms
 
     Returns
@@ -47,20 +47,20 @@ def getTransform(date):
     
 
     #if transformation has already been calculated, get from dictionary
-    if date in transformations:
-        return transformations[date]
+    if timestamp in transformations:
+        return transformations[timestamp]
     
     #calculate new transformation from astrometry.net
     else:
         #get median combined image
-        median_image = [f for f in median_combos if date in f.name][0] #this is to run web version of Astrometry
+        median_image = [f for f in median_stacks if timestamp in f.name][0] #this is to run web version of Astrometry
         #10-12 Roman A. to run astrometry localy using Linux subsystem
         median_str="/mnt/d/"+str(median_image).replace('D:', '').replace('\\', '/')
         median_str=median_str.lower()
         
         #get name of transformation header file to save
         #this is to run web version of Astrometry
-        transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
+        transform_file = median_image.parent / (median_image.name.replace('medstacked', 'wcs'))
         
         #10-12 Roman A. to run astrometry localy using Linux subsystem
         transform_str=str(transform_file).split('\\')[-1]
@@ -87,9 +87,13 @@ def getTransform(date):
             transform = wcs.WCS(wcs_header)
         
         #add to dictionary
-        transformations[date] = transform
+        transformations[timestamp] = transform
         
-        return transform
+        if return_transformations:
+            return transform, transformations
+        else:
+            return transform
+
 
 def readFile(filepath):
     """
@@ -168,46 +172,47 @@ def readFile(filepath):
 
 #-----------------------------------main--------------------------------------#
 
-arg_parser = argparse.ArgumentParser(description="Run secondary Colibri processing",
-                                     formatter_class=argparse.RawTextHelpFormatter)
-arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.',default='2022/09/30')
-# arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
+if __name__ == '__main__':
+    arg_parser = argparse.ArgumentParser(description="Run secondary Colibri processing",
+                                        formatter_class=argparse.RawTextHelpFormatter)
+    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+    # arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
 
-cml_args = arg_parser.parse_args()
-obsYYYYMMDD = cml_args.date
-obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+    cml_args = arg_parser.parse_args()
+    obsYYYYMMDD = cml_args.date
+    obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
+        
+    print(obs_date)
+    data_path=Path('/','D:/','ColibriArchive',str(obs_date)) #path to archive with dip detection txts
+
+    detect_files = [f for f in data_path.iterdir() if 'det' in f.name] #list of txts
+
+    ''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
+    median_combos = [f for f in data_path.iterdir() if 'medstacked' in f.name] #list of median combined images to use for WCS
+
+    #dictionary to hold WCS transformations for each transform file
+    transformations = {}
+
+    for filepath in detect_files:
+        
+        #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
+        eventData = readFile(filepath)
+
+        #get corresponding WCS transformation
+        timestamp = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
+
     
-print(obs_date)
-data_path=Path('/','D:','/ColibriArchive',str(obs_date)) #path to archive with dip detection txts
-
-detect_files = [f for f in data_path.iterdir() if 'det' in f.name] #list of txts
-
-''' get astrometry.net plate solution for each median combined image (1 per minute with detections)'''
-median_combos = [f for f in data_path.iterdir() if 'medstacked' in f.name] #list of median combined images to use for WCS
-
-#dictionary to hold WCS transformations for each transform file
-transformations = {}
-
-for filepath in detect_files:
-    
-    #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
-    eventData = readFile(filepath)
-
-    #get corresponding WCS transformation
-    date = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
-
-   
-    transform = getTransform(date)
-    
-    
-    #get star coords in RA/dec
-    star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
-    star_RA = star_wcs[0]
-    star_DEC = star_wcs[1]
-    
-    #write a line with RA dec in each file
-    with open(filepath, 'r') as filehandle:
-        lines = filehandle.readlines()
-        lines[6] = '#    RA Dec Coords: %f %f\n' %(star_RA, star_DEC)
-    with open(filepath, 'w') as filehandle:
-        filehandle.writelines( lines )
+        transform,transformations = getTransform(timestamp, median_combos, transformations, True)
+        
+        
+        #get star coords in RA/dec
+        star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
+        star_RA = star_wcs[0]
+        star_DEC = star_wcs[1]
+        
+        #write a line with RA dec in each file
+        with open(filepath, 'r') as filehandle:
+            lines = filehandle.readlines()
+            lines[6] = '#    RA Dec Coords: %f %f\n' %(star_RA, star_DEC)
+        with open(filepath, 'w') as filehandle:
+            filehandle.writelines( lines )

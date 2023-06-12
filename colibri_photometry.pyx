@@ -287,7 +287,7 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     ## Calculate time between prev_img and curr_img
     curr_time  = Time(img_time,scale='utc',precision=9).unix
     # print(img_time, curr_time,Time(img_time,format='isot',scale='utc',precision=9).unix)
-    drift_time = curr_time - prev_img[1,3]
+    drift_time = curr_time - prev_img[0,3]
     
     ## Incorporate drift into each star's coords based on time since last frame
     x = np.array([prev_img[ind, 0] + pix_drift[0]*drift_time for ind in range(0, num_stars)])

@@ -8,9 +8,11 @@ Updated: Thurs. June 23, 2022
 
 Script to make use of astrometry.net API - see online docs
 """
-import time, subprocess, os
 
+import time, subprocess, os
 from astropy.io.fits import Header
+
+#--------------------------------functions------------------------------------#
 
 def getSolution(image_file, save_file, order):
     '''send request to solve image from astrometry.net
@@ -63,7 +65,8 @@ def getLocalSolution(image_file, save_file, order):
 
     return wcs_header
 
-    # return wcs_header
+
+#-----------------------------------main--------------------------------------#
 
 if __name__ == '__main__':
     wcs = getLocalSolution('/mnt/d/testmedstack.fits', 'test-newer.fits', 3)
