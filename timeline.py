@@ -29,7 +29,6 @@ from datetime import datetime, timedelta, date
 from getStarHour import getStarHour
 from astropy.time import Time
 from astropy.coordinates import Angle,EarthLocation,SkyCoord
-from astropy.time import Time
 from astropy import units
 from astropy.coordinates import AltAz
 from scipy import interpolate
@@ -59,8 +58,9 @@ SITE_LOC  = EarthLocation(lat=SITE_LAT,
 
 
 # Noteable log patterns
-LOG_PATTERNS = ['starts', 'Weather unsafe!', 'Dome closed!', 'Field Name:']
-ACPLOG_STRP  = '%a %b %d %H:%M:%S %Z %Y'
+LOG_PATTERNS = ['starts', 'Weather unsafe!', 'Dome closed!', 'Field Name:', 'Sunrise JD', 'Sunset JD']
+OBSDATE_FORMAT = '%Y%m%d'
+ACPLOG_STRP    = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S'
 TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 
@@ -146,6 +146,7 @@ class Telescope:
                                  header=0, index_col=0)
         
         # Read in data from sample star light curves
+        # TODO: Guard against directory with no star txt files
         star_txt_file = (self.sensitivity_path.joinpath('high_4sig_lightcurves').glob('*.txt'))[0]
         with star_txt_file.open() as file:
             for i,line in enumerate(file):
@@ -170,28 +171,6 @@ class Telescope:
 
 
 #--------------------------------functions------------------------------------#
-
-#############################
-## New Functions
-#############################
-
-def getImportantLines(log_path, log_patterns):
-    
-    
-    # Break if the log_path is invalid
-    if not os.path.isfile(log_path):
-        print("ERROR: Log file does not exist!")
-        return []
-        
-    # Read the log line-by-line and save lines matching log_pattern substrings
-    matched_line = []
-    with open(log_path, "r") as log:
-        for line in log.readlines():
-            if any(pattern in line for pattern in log_patterns):
-                matched_line.append(line)
-                
-    return matched_line
-
 
 #############################
 ## Handling Times
@@ -264,9 +243,99 @@ def convJDtoUTC(JD):
     return UTC
 
 
+def hyphonateDate(obsdate):
+
+    # Convert the date to a datetime object
+    obsdate = datetime.strptime(obsdate, OBSDATE_FORMAT)
+
+    # Convert the date to a hyphonated string
+    obsdate = obsdate.strftime('%Y-%m-%d')
+
+    return obsdate
+
+
 #############################
 ## Analyze Logs
 #############################
+
+def getImportantLines(log_path, log_patterns):
+    
+    
+    # Break if the log_path is invalid
+    if not os.path.isfile(log_path):
+        print("ERROR: Log file does not exist!")
+        return []
+        
+    # Read the log line-by-line and save lines matching log_pattern substrings
+    matched_line = []
+    with open(log_path, "r") as log:
+        for line in log.readlines():
+            if any(pattern in line for pattern in log_patterns):
+                matched_line.append(line)
+                
+    return matched_line
+
+
+def getSunsetSunrise(log_lines):
+    
+    # Find the calculated JD times for sunset and sunrise
+    sunset_found,sunrise_found = False,False
+    for line in log_lines:
+        if 'INFO: Sunset JD: ' in line:
+            # Extract sunset JD from line
+            split_line = line.split('INFO: Sunset JD: ')
+            sunset = Time(float(split_line[-1]), format='jd', scale='utc')
+            sunset_found = True
+        elif 'INFO: Sunrise JD: ' in line:
+            # Extract sunrise JD from line
+            sunrise = Time(float(split_line[-1]), format='jd', scale='utc')
+            sunrise_found = True
+
+    # Determine which times could be obtained
+    if sunset_found and sunrise_found:
+        # Case where both sunset and sunrise were found
+        print(f"Sunset occurred at {sunset.to_datetime()} ({sunset}).")
+        print(f"Sunrise occurred at {sunrise.to_datetime()} ({sunrise}).")
+
+        return sunset,sunrise
+    elif sunset_found:
+        # Case where only sunset was found
+        print(f"Sunset occurred at {sunset.to_datetime()} ({sunset}).")
+        print(f"WARNING: Sunrise could not obtained!")
+
+        return sunset,None
+    elif sunrise_found:
+        # Case where only sunrise was found
+        print(f"WARNING: Sunset could not be obtained!")
+        print(f"Sunrise occurred at {sunrise.to_datetime()} ({sunrise}).")
+
+        return None,sunrise
+    else:
+        # Case where neither sunset nor sunrise were found
+        print(f"WARNING: Sunset and sunrise could not be obtained!")
+
+        return None,None
+
+
+def summarizeEvents(log_lines):
+
+    # Gets relevant actual events from the log
+    weather_aborts = getWeatherUnsafe(log_lines)
+    dome_closures  = getDomeClosure(log_lines)
+
+    # Create marker list correlated with event times
+    event_times = []
+    markers     = []
+    for event in weather_aborts:
+        event_times.append(event)
+        markers.append('x')
+    for event in dome_closures:
+        event_times.append(event)
+        markers.append('D')
+
+    # Return event_times and markers lists
+    return event_times,markers
+
 
 def getObservingPlan_LST(log_lines):
     
@@ -288,13 +357,13 @@ def getObservingPlan_LST(log_lines):
             start_UTC = convLSTtoUTC(start_LST)
 
             # Save the tuple to the list
-            plan_info.append((field_num, start_LST, num_stars))
+            plan_info.append((field_num, start_UTC, num_stars))
     
     # Eliminate duplicates in list
     return list(set(plan_info))
 
 
-def getObservingPlan_JD(log_lines):
+def getObservingPlan_JD(log_lines, return_utc=True):
 
     # Get shortlist lines and extract JD start time
     plan_info = []
@@ -310,11 +379,12 @@ def getObservingPlan_JD(log_lines):
             start_JD  = float(shortlist_seg[11])
             num_stars = int(shortlist_seg[16])
             
-            # Convert JD to UTC
-            start_UTC = convJDtoUTC(start_JD)
-
-            # Save the tuple to the list
-            plan_info.append((field_num, start_UTC, num_stars))
+            # Convert JD to UTC if requested
+            if return_utc:
+                start_UTC = convJDtoUTC(start_JD)
+                plan_info.append((start_UTC, field_num, num_stars))
+            else:
+                plan_info.append((start_JD, field_num, num_stars))
 
     # Eliminate duplicates in list
     return list(set(plan_info))
@@ -416,6 +486,45 @@ def calculateAirmass(alt):
 
 
 #############################
+## Weather
+#############################
+
+def getCloudData(*obs_dates):
+
+    print("\n## Collecting cloud/transparency data ##")
+
+    # Find cloud log files
+    weather_data = []
+    for weather_date in obs_dates:
+        # Path names
+        filename = f"weather.log.{hyphonateDate(weather_date)}"
+        filepath = CLOUD_PATH / filename
+
+        # Check if this file exists or is "today" and filelines to list
+        if filepath.exists():
+            with open(filepath,'r') as file:
+                for line in file.readlines():
+                    weather_data.append(line.split(','))
+        elif weather_date == datetime.now().strftime(OBSDATE_FORMAT):
+            with open(CLOUD_PATH / "weather.log", 'r') as file:
+                for line in file.readlines():
+                    weather_data.append(line.split(','))
+        else:
+            print(f"WARNING: No log for {weather_date}!")
+
+    # Check that at least one weather log exists
+    if weather_data is []:
+        print("ERROR: No weather logs found!")
+        return
+    
+    # Convert data list to numpy array for convenience
+    weather_array = np.array(weather_data,dtype=float)
+    print("Successfully found and collected cloud/transparency data.")
+
+    return weather_array
+
+
+#############################
 ## Plotting Functions
 #############################
 
@@ -443,7 +552,7 @@ def plotObservations(red=[], green=[], blue=[]):
     loc = mdates.HourLocator(interval=1)
     xfmt = DateFormatter('%H')
 
-    ## Plot actual observations
+    ## Plot actual observations ##
 
     # Get red/green/blue time blocks
     red_vertices   = plotTimeBlockVertices(red, 1)
@@ -480,7 +589,7 @@ def plotObservations(red=[], green=[], blue=[]):
     ax1.xaxis.grid(True)
     ax1.xaxis.tick_top()
 
-    ## Plot cloud/transparency data
+    ## Plot cloud/transparency data ##
 
     # Read in data from the cloud log
     weatherlog_name = "weather.log.{}".format(obs_date)
@@ -621,7 +730,7 @@ def twilightTimes(julian_date, site=(SITE_LAT,SITE_LON)):
         Sunset time.
 
     '''
-    n = np.floor(julian_date -2451545.0 + 0.0008)
+    n = np.floor(julian_date - 2451545.0 + 0.0008)
     Jstar = n - (site[1]/360.0)
     M = (357.5291 + 0.98560028 * Jstar) % 360.0
     C = 1.9148*np.sin(np.radians(M)) + 0.02*np.sin(2*np.radians(M)) + 0.0003*np.sin(3*np.radians(M))
@@ -762,6 +871,8 @@ if __name__ == '__main__':
 ## Argument Parser & Setup
 ###########################
 
+    ## Argparser ##
+
     # Generate argument parser
     arg_parser = argparse.ArgumentParser(description="Generate diagnostic plots from the ACP logs of a night.",
                                          formatter_class=argparse.RawTextHelpFormatter)
@@ -773,13 +884,16 @@ if __name__ == '__main__':
     # Extract date from command line arguments
     cml_args = arg_parser.parse_args()
     obs_date = cml_args.date
-    obs_date_dashed = "{}-{}-{}".format(obs_date[0:4], obs_date[4:6], obs_date[6:8])
+    obs_date_dashed = hyphonateDate(obs_date)
     
     # Check if this date has a valid format
     regex_match = re.fullmatch("[0-9]{8}", obs_date)
     if regex_match is None:
         print("ERROR: Invalid date given.")
         sys.exit()
+
+
+    ## Setup telescope classes ##
 
     # Initialize telescopes
     Red = Telescope("RED", "r", "R:", obs_date)
@@ -799,13 +913,165 @@ if __name__ == '__main__':
     else:
         diagnostic_dir.mkdir()
 
-    # Link to the cloud log
-    weather_log_name = "weather.log.{}".format(obs_date_dashed)
-    weather_log_path = BASE_PATH / "Logs" / "Weather" / "Weather" / weather_log_name
+
+    ## Initialize observation plots and timeline ##
+
+    # Create figure and axes
+    timeline_fig, (ax1, ax3) = plt.subplots(2, 1)
+    loc = mdates.HourLocator(interval=1)
+    xfmt = DateFormatter('%H')
 
 
 ###########################
-## Read in Data
+## Sunset/Sunrise Operations
 ###########################
 
+    # Get sunset and sunrise times (as JD) from logs
+    for machine in (Red,Green,Blue):
+        # Try to get sunset and sunrise times from each machine
+        sunset,sunrise = getSunsetSunrise(machine.log_lines)
 
+        # If one or both times are missing, try again with next machine
+        if (sunset is not None) and (sunrise is not None):
+            break
+    else:
+        # TODO: If sunrise and sunset times could not be obtained from
+        # TODO: logs, use Mike's function or minute dir timestamps.
+        print("ERROR: Could not obtain sunrise and sunset times!")
+        sys.exit()
+
+
+
+###########################
+## Timeblocks Plot
+###########################
+
+    # Fill timeblocks plot for each telescope
+    for i,machine in enumerate((Red,Green,Blue)):
+
+        # Get time blocks from observation data
+        vertices = plotTimeBlockVertices(machine.data_times, i)
+
+        # Plot the time blocks
+        ##TODO: append these blocks together?
+        time_blocks = PolyCollection(vertices, facecolors=COLOURMAPPING[machine.colour])
+
+        # Set transparency of the blocks
+        time_blocks.set_alpha(0.7)
+
+        # Plot time blocks to the axes
+        ax1.add_collection(time_blocks)
+
+
+    # Set the axes limits and labels of timeblocks plot
+    ax1.autoscale()
+    ax1.zorder=1
+    ax1.patch.set_alpha(0.01)
+    ax1.xaxis.set_major_locator(loc)
+    ax1.xaxis.set_major_formatter(xfmt)
+    ax1.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
+    ax1.set_yticks([1,2,3])
+    ax1.set_ylim(top=3+.4)
+    ax1.set_yticklabels(['Red','Green','Blue'])
+    ax1.xaxis.set_tick_params(labelsize=9)
+    ax1.xaxis.grid(True)
+    ax1.xaxis.tick_top()
+
+
+###########################
+## Cloud/Transparency Plot
+###########################
+
+    # Get list of unique dates this observation covered
+    sunset_date  = sunset.to_datetime().strftime(OBSDATE_FORMAT)
+    sunrise_date = sunrise.to_datetime().strftime(OBSDATE_FORMAT)
+    if sunset_date == sunrise_date:
+        cloud_data = getCloudData(sunset_date)
+    else:
+        cloud_data = getCloudData(sunset_date,sunrise_date)
+
+    # If cloud data has been passed, plot the transparency plot
+    # TODO: Fix this so if transparency data could not be found on Green, it will look at other telescopes
+    if cloud_data is not None:
+        # Isolate data between sunset and sunrise
+        cloud_data = cloud_data[np.where((cloud_data[:,0] > sunset) and (cloud_data[:,0] < sunrise))]
+
+        # Underlay timeblock data with transparency heatmap
+        ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
+        ax = sns.heatmap(cloud_data[:,[0,9]])
+        ax.axes.invert_yaxis()
+
+        # Overlay transparency heatmap with transparency linegraph 
+        ax2 = plt.twinx()
+        sns.lineplot(x=cloud_data[:,0],y=cloud_data[:,9],color='k',ax=ax2, zorder=5)
+
+        # Set the axes limits and labels of the transparency plot
+        ax2.yaxis.set_ticks(np.arange(0, 5, 1))
+        ax2.set_ylim([0,4])
+        ax.set_yticklabels([])
+        ax2.set_ylabel('mag')
+        ax.set_xticklabels([])
+        ax2.set_xticklabels([])
+        ax2.set_xticks([])
+    
+
+###########################
+## Event Timeline
+###########################
+
+    # Plot event timeline for each telescope
+    for i,machine in enumerate((Red,Green,Blue)):
+        # If no log exists, skip this telescope
+        if not machine.log_exists:
+            print(f"WARNING: Since no log data exists for {machine.name}, skipping event timeline...")
+            pass
+
+
+        ## Scrape information from the log ##
+
+        # Get observing plan from log
+        plan_times,plan_markers = [],[]
+        for field in getObservingPlan_JD(machine.log_lines):
+            plan_times.append(field[0])
+            plan_markers.append(field[1])
+
+        # Get observed fields from log
+        field_times,field_markers = [],[]
+        for field in getFieldsObserved(machine.log_lines):
+                field_times.append(field[0])
+                field_markers.append(fr'${field[1]}$')
+
+        # Get physical events
+        event_times,event_markers = summarizeEvents(machine.log_lines)
+
+
+        ## Plot each of the lines for this telescope ##
+
+        # Plot observing plan
+        ax3.plot(plan_times, i*2, color=machine.colour,
+                 marker=plan_markers, markerfacecolor='k', markeredgecolor='k')
+        ax3.axhline(y = i*2, color=machine.colour, linestyle='-')
+        ax3.text(mdates.datestr2num(str(sunset)), 0+i*2, 'planned',fontsize=8, ha='right', va='center') #TODO: fix
+
+        # Plot observed fields
+        ax3.plot(field_times, i*2+0.4, color=machine.colour,
+                 marker=field_markers, markerfacecolor='k', markeredgecolor='k')
+        ax3.axhline(y = i*2+0.4, color=machine.colour, linestyle='-')
+        ax3.text(mdates.datestr2num(str(sunset)), 0+i*2+0.4, 'observed',fontsize=8, ha='right', va='center') #TODO: fix
+
+        # Plot physical events
+        ax3.plot(event_times, i*2+0.8, color=machine.colour,
+                 marker=event_markers, markerfacecolor='k', markeredgecolor='k')
+        ax3.axhline(y = i*2+0.4, color=machine.colour, linestyle='-')
+        ax3.text(mdates.datestr2num(str(sunset)), 0+i*2+0.8, 'events',fontsize=8, ha='right', va='center') #TODO: fix
+
+
+        # Set the axes limits and labels of the timelines
+        ax3.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])#limit plot to sunrise and sunset
+        ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        ax3.yaxis.set_visible(False)
+        ax3.spines[:].set_visible(False)
+        ax3.xaxis.tick_top()
+        ax3.set_xticks([])
+        ax3.margins(y=0.1)
