@@ -60,6 +60,7 @@ SITE_LOC  = EarthLocation(lat=SITE_LAT,
 # Noteable log patterns
 LOG_PATTERNS = ['starts', 'Weather unsafe!', 'Dome closed!', 'Field Name:', 'Sunrise JD', 'Sunset JD']
 OBSDATE_FORMAT = '%Y%m%d'
+CLOCK_FORMAT   = '%H:%M:%S'
 ACPLOG_STRP    = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S'
 TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
@@ -1075,3 +1076,14 @@ if __name__ == '__main__':
         ax3.xaxis.tick_top()
         ax3.set_xticks([])
         ax3.margins(y=0.1)
+
+        # TODO: Add legend -> currently not formatted correctly
+        #legend = "X - bad weather \n ♦ - dome close"
+        #plt.text(0.02, 0.5, legend, fontsize=14, transform=timeline_fig.transFigure)
+
+        # Save figure
+        timeline_fig.subplots_adjust(hspace=0)
+        #plt.title(f"{sunset.strftime(OBSDATE_FORMAT)}:\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)}")
+        plt.title(f"{obs_date_dashed}")
+        timeline_fig.savefig(str(diagnostic_dir / "event.svg"),dpi=800,bbox_inches='tight')
+        plt.close()
