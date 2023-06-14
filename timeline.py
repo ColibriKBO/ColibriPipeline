@@ -269,10 +269,12 @@ def getImportantLines(log_path, log_patterns):
         
     # Read the log line-by-line and save lines matching log_pattern substrings
     matched_line = []
-    with open(log_path, "r") as log:
+    with open(log_path, "r", encoding="utf-16") as log:
+
         for line in log.readlines():
             if any(pattern in line for pattern in log_patterns):
-                matched_line.append(line)
+                print("Pattern matched!")
+                matched_line.append(line.strip("\n"))
                 
     return matched_line
 
@@ -955,7 +957,7 @@ if __name__ == '__main__':
 
         # Plot the time blocks
         ##TODO: append these blocks together?
-        time_blocks = PolyCollection(vertices, facecolors=COLOURMAPPING[machine.colour])
+        time_blocks = PolyCollection(vertices, facecolors=machine.colour)
 
         # Set transparency of the blocks
         time_blocks.set_alpha(0.7)
