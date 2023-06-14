@@ -62,7 +62,7 @@ LOG_PATTERNS = ['starts', 'Weather unsafe!', 'Dome closed!', 'Field Name:', 'Sun
 OBSDATE_FORMAT = '%Y%m%d'
 CLOCK_FORMAT   = '%H:%M:%S'
 ACPLOG_STRP    = '%a %b %d %H:%M:%S %Z %Y'
-MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S'
+MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S.%f'
 TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 
 # Directory structure
@@ -450,7 +450,7 @@ def getDomeClosure(log_lines):
 def getDataTimes(data_dir_path):
     
     # Get all minute directories in the given data directory
-    minute_dirs = [folder.name for folder in data_dir_path.iterdir() \
+    minute_dirs = [folder.name+'000' for folder in data_dir_path.iterdir() \
                    if ((folder.is_dir()) and (folder.name != 'Bias'))]
     minute_dirs.sort()
 
