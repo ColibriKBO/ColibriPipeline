@@ -380,7 +380,7 @@ def getObservingPlan_JD(log_lines, return_utc=True):
             # the number of stars.
             field_id  = shortlist_seg[7]
             field_num = int(field_id.strip('field'))
-            start_JD  = float(shortlist_seg[11])
+            start_JD  = float(shortlist_seg[9])
             num_stars = int(shortlist_seg[16])
             
             # Convert JD to UTC if requested
@@ -1008,18 +1008,16 @@ if __name__ == '__main__':
     if cloud_data is not None:
         print("Plotting transparency data...")
         # Isolate data between sunset and sunrise
-        print(cloud_data[:,0])
         cloud_data = cloud_data[np.where(cloud_data[:,0] > sunset.timestamp()) and np.where(cloud_data[:,0] < sunrise.timestamp())]
-        print(cloud_data)
 
         # Underlay timeblock data with transparency heatmap
         ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
-        ax = sns.heatmap(cloud_data[:,[0,9]])
+        ax = sns.heatmap(cloud_data[:,[0,9]],cmap='Blues_r',vmax=5,cbar=False,zorder=2)
         ax.axes.invert_yaxis()
 
         # Overlay transparency heatmap with transparency linegraph 
         ax2 = plt.twinx()
-        sns.lineplot(x=cloud_data[:,0],y=cloud_data[:,9],color='k',ax=ax2, zorder=5)
+        sns.lineplot(x=cloud_data[:,0],y=cloud_data[:,9]+15.55,color='k',ax=ax2, zorder=5)
 
         # Set the axes limits and labels of the transparency plot
         ax2.yaxis.set_ticks(np.arange(0, 5, 1))
@@ -1059,8 +1057,8 @@ if __name__ == '__main__':
         # Get observed fields from log
         field_times,field_markers = [],[]
         for field in getFieldsObserved(machine.log_lines):
-                field_times.append(field[0])
-                field_markers.append(fr'${field[1]}$')
+            field_times.append(field[0])
+            field_markers.append(fr'${field[1]}$')
 
         # Get physical events
         event_times,event_markers = summarizeEvents(machine.log_lines)
