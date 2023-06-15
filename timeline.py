@@ -538,11 +538,11 @@ def plotTimeBlockVertices(times, height):
     addMinute = timedelta(minutes=1)
     vertices  = []
     for time in times:
-        v = [(time, height - 0.4),
-             (time, height + 0.4),
-             (time + addMinute, height + 0.4),
-             (time + addMinute, height - 0.4),
-             (time, height - 0.4)]
+        v = [(mdates.datestr2num(time), height - 0.4),
+             (mdates.datestr2num(time), height + 0.4),
+             (mdates.datestr2num(time + addMinute), height + 0.4),
+             (mdates.datestr2num(time + addMinute), height - 0.4),
+             (mdates.datestr2num(time), height - 0.4)]
         
         vertices.append(v)
 
