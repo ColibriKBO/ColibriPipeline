@@ -403,7 +403,7 @@ def getFieldsObserved(log_lines):
         if field_regex in line:
             # Identify start time of the field and get the field number
             split_line = line.split(field_regex)
-            field_time = datetime.strptime(split_line[0], ACPLOG_STRP)
+            field_time = datetime.strptime(split_line[0].strip(), ACPLOG_STRP)
             field_num  = int(split_line[1].strip('field'))
             
             # Save the tuple to the list
@@ -495,8 +495,6 @@ def calculateAirmass(alt):
 
 def getCloudData(*obs_dates):
 
-    print("\n## Collecting cloud/transparency data ##")
-
     # Find cloud log files
     weather_data = []
     for weather_date in obs_dates:
@@ -538,11 +536,11 @@ def plotTimeBlockVertices(times, height):
     addMinute = timedelta(minutes=1)
     vertices  = []
     for time in times:
-        v = [(mdates.datestr2num(time), height - 0.4),
-             (mdates.datestr2num(time), height + 0.4),
-             (mdates.datestr2num(time + addMinute), height + 0.4),
-             (mdates.datestr2num(time + addMinute), height - 0.4),
-             (mdates.datestr2num(time), height - 0.4)]
+        v = [(mdates.date2num(time), height - 0.4),
+             (mdates.date2num(time), height + 0.4),
+             (mdates.date2num(time + addMinute), height + 0.4),
+             (mdates.date2num(time + addMinute), height - 0.4),
+             (mdates.date2num(time), height - 0.4)]
         
         vertices.append(v)
 
@@ -585,7 +583,7 @@ def plotObservations(red=[], green=[], blue=[]):
     ax1.patch.set_alpha(0.01)
     ax1.xaxis.set_major_locator(loc)
     ax1.xaxis.set_major_formatter(xfmt)
-    ax1.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
+    ax1.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])
     ax1.set_yticks([1,2,3])
     ax1.set_ylim(top=3+.4)
     ax1.set_yticklabels(['Green','Red','Blue'])
@@ -933,10 +931,10 @@ if __name__ == '__main__':
     # Get sunset and sunrise times (as JD) from logs
     for machine in (Red,Green,Blue):
         # Try to get sunset and sunrise times from each machine
-        sunset,sunrise = getSunsetSunrise(machine.log_lines)
+        sunsetJD,sunriseJD = getSunsetSunrise(machine.log_lines)
 
         # If one or both times are missing, try again with next machine
-        if (sunset is not None) and (sunrise is not None):
+        if (sunsetJD is not None) and (sunriseJD is not None):
             break
     else:
         # TODO: If sunrise and sunset times could not be obtained from
@@ -944,6 +942,13 @@ if __name__ == '__main__':
         print("ERROR: Could not obtain sunrise and sunset times!")
         sys.exit()
 
+    # Convert sunset/sunrise times to 'fits' format from JD
+    #sunset.format  = 'fits'
+    #sunrise.format = 'fits'
+
+    # Convert sunset/sunrise times to datetime objects
+    sunset  = sunsetJD.to_datetime()
+    sunrise = sunriseJD.to_datetime()
 
 
 ###########################
@@ -973,7 +978,7 @@ if __name__ == '__main__':
     ax1.patch.set_alpha(0.01)
     ax1.xaxis.set_major_locator(loc)
     ax1.xaxis.set_major_formatter(xfmt)
-    ax1.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])
+    ax1.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])
     ax1.set_yticks([1,2,3])
     ax1.set_ylim(top=3+.4)
     ax1.set_yticklabels(['Red','Green','Blue'])
@@ -986,19 +991,26 @@ if __name__ == '__main__':
 ## Cloud/Transparency Plot
 ###########################
 
+    print("\n## Cloud/Transparency ##")
+
     # Get list of unique dates this observation covered
-    sunset_date  = sunset.to_datetime().strftime(OBSDATE_FORMAT)
-    sunrise_date = sunrise.to_datetime().strftime(OBSDATE_FORMAT)
+    sunset_date  = sunset.strftime(OBSDATE_FORMAT)
+    sunrise_date = sunrise.strftime(OBSDATE_FORMAT)
     if sunset_date == sunrise_date:
+        print("Run occurred over one date.")
         cloud_data = getCloudData(sunset_date)
     else:
+        print("Run occurred over two dates.")
         cloud_data = getCloudData(sunset_date,sunrise_date)
 
     # If cloud data has been passed, plot the transparency plot
     # TODO: Fix this so if transparency data could not be found on Green, it will look at other telescopes
     if cloud_data is not None:
+        print("Plotting transparency data...")
         # Isolate data between sunset and sunrise
-        cloud_data = cloud_data[np.where((cloud_data[:,0] > sunset) and (cloud_data[:,0] < sunrise))]
+        print(cloud_data[:,0])
+        cloud_data = cloud_data[np.where(cloud_data[:,0] > sunset.timestamp()) and np.where(cloud_data[:,0] < sunrise.timestamp())]
+        print(cloud_data)
 
         # Underlay timeblock data with transparency heatmap
         ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
@@ -1023,8 +1035,11 @@ if __name__ == '__main__':
 ## Event Timeline
 ###########################
 
+    print("\n## Event Timeline ##")
+
     # Plot event timeline for each telescope
-    for i,machine in enumerate((Red,Green,Blue)):
+    for i,machine in enumerate((Red,Green,Blue)):        
+        
         # If no log exists, skip this telescope
         if not machine.log_exists:
             print(f"WARNING: Since no log data exists for {machine.name}, skipping event timeline...")
@@ -1033,11 +1048,13 @@ if __name__ == '__main__':
 
         ## Scrape information from the log ##
 
+        print(f"Scraping information from {machine.name} log...")
+
         # Get observing plan from log
         plan_times,plan_markers = [],[]
         for field in getObservingPlan_JD(machine.log_lines):
             plan_times.append(field[0])
-            plan_markers.append(field[1])
+            plan_markers.append(fr'${field[1]}$')
 
         # Get observed fields from log
         field_times,field_markers = [],[]
@@ -1051,27 +1068,32 @@ if __name__ == '__main__':
 
         ## Plot each of the lines for this telescope ##
 
+        print(f"Plotting {machine.name}'s timelines...")
+
         # Plot observing plan
-        ax3.plot(plan_times, i*2, color=machine.colour,
-                 marker=plan_markers, markerfacecolor='k', markeredgecolor='k')
+        for j in range(len(plan_times)):
+            ax3.plot(plan_times[j], i*2, color=machine.colour,
+                     marker=plan_markers[j], markerfacecolor='k', markeredgecolor='k')
         ax3.axhline(y = i*2, color=machine.colour, linestyle='-')
-        ax3.text(mdates.datestr2num(str(sunset)), 0+i*2, 'planned',fontsize=8, ha='right', va='center') #TODO: fix
+        ax3.text(mdates.date2num(sunset), 0+i*2, 'planned',fontsize=8, ha='right', va='center') #TODO: fix
 
         # Plot observed fields
-        ax3.plot(field_times, i*2+0.4, color=machine.colour,
-                 marker=field_markers, markerfacecolor='k', markeredgecolor='k')
+        for j in range(len(field_times)):
+            ax3.plot(field_times[j], i*2+0.4, color=machine.colour,
+                     marker=field_markers[j], markerfacecolor='k', markeredgecolor='k')
         ax3.axhline(y = i*2+0.4, color=machine.colour, linestyle='-')
-        ax3.text(mdates.datestr2num(str(sunset)), 0+i*2+0.4, 'observed',fontsize=8, ha='right', va='center') #TODO: fix
+        ax3.text(mdates.date2num(sunset), 0+i*2+0.4, 'observed',fontsize=8, ha='right', va='center') #TODO: fix
 
         # Plot physical events
-        ax3.plot(event_times, i*2+0.8, color=machine.colour,
-                 marker=event_markers, markerfacecolor='k', markeredgecolor='k')
-        ax3.axhline(y = i*2+0.4, color=machine.colour, linestyle='-')
-        ax3.text(mdates.datestr2num(str(sunset)), 0+i*2+0.8, 'events',fontsize=8, ha='right', va='center') #TODO: fix
+        for j in range(len(field_times)):
+            ax3.plot(event_times[j], i*2+0.8, color=machine.colour,
+                     marker=event_markers[j], markerfacecolor='k', markeredgecolor='k')
+        ax3.axhline(y = i*2+0.8, color=machine.colour, linestyle='-')
+        ax3.text(mdates.date2num(sunset), 0+i*2+0.8, 'events',fontsize=8, ha='right', va='center') #TODO: fix
 
 
         # Set the axes limits and labels of the timelines
-        ax3.set_xlim([mdates.datestr2num(str(sunset)), mdates.datestr2num(str(sunrise))])#limit plot to sunrise and sunset
+        ax3.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])#limit plot to sunrise and sunset
         ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
         ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         ax3.yaxis.set_visible(False)
