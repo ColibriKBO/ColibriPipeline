@@ -291,6 +291,7 @@ def getSunsetSunrise(log_lines):
             sunset_found = True
         elif 'INFO: Sunrise JD: ' in line:
             # Extract sunrise JD from line
+            split_line = line.split('INFO: Sunrise JD: ')
             sunrise = Time(float(split_line[-1]), format='jd', scale='utc')
             sunrise_found = True
 
