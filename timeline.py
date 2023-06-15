@@ -91,9 +91,11 @@ class Telescope:
         self.base_path = Path(base_path)
         self.log_path  = self.base_path.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
         self.data_path = self.base_path.joinpath("ColibriData", obs_date)
-        sensitivity_dir = self.base_path.joinpath("ColibriArchive", 
-                                                  "{}_diagnostics".format(obs_date), 
-                                                  "Sensitivity")
+        archive_dir    = self.base_path.joinpath("ColibriArchive",
+                                                 hyphonateDate(obs_date))
+        sensitivity_dir = self.base_path.joinpath("ColibriArchive",
+                                                    "{}_diagnostics".format(obs_date), 
+                                                    "Sensitivity")
         
         # Check if log and data directories exist
         self.log_exists  = True if self.log_path.exists() else False
@@ -124,6 +126,14 @@ class Telescope:
             self.addError("ERROR: {} has no sensitivity data for {}!".format(name, obs_date))
             self.sensitivity_path = None
 
+        # Get detection information
+        if archive_dir.exists():
+            self.detections = sorted(archive_dir.glob("det_*.txt"))
+        else:
+            self.addError("ERROR: {} has not completed the pipeline for {}!".format(name, obs_date))
+            self.detections = []
+
+
 
     def addError(self, error_msg):
 
@@ -136,8 +146,14 @@ class Telescope:
         # Check if sensitivity data exists
         if self.sensitivity_path is None:
             print("WARNING: {} has no sensitivity data. Skipping...\n".format(self.name))
-            return
+            return None,None,None
         
+        # Check that a starTable file exists
+        star_table_files = self.sensitivity_path.glob("starTable*.txt") 
+        if len(star_table_files) == 0:
+            print("ERROR: No star table exists for {}!".format(self.name))
+            return None,None,None
+
         # Load sensitivity data in pandas dataframe
         column_names = [ 'X', 'Y', 'ra', 'dec', 'GMAG',
                         'Gaia_RA' ,'Gaia_dec', 'Gaia_B-R',
@@ -156,18 +172,31 @@ class Telescope:
                     sample_star_time = Time(sample_star_time, format='isot', scale='utc')
                     break
             else:
+                # TODO: Try another star table file when it fails in this way
                 print("ERROR: Could not find sample star time in {}!".format(star_txt_file))
-                return
+                return None,None,None
             
         # Get field airmass
-        field_alt = calculateAlt(star_table['ra'][len(red_table['ra'] // 2)],
-                                 star_table['dec'][len(red_table['dec'] // 2)],
+        field_alt = calculateAlt(star_table['ra'][len(star_table['ra'] // 2)],
+                                 star_table['dec'][len(star_table['dec'] // 2)],
                                  sample_star_time)
         field_airmass = calculateAirmass(field_alt)
 
         print("SUCCESS: Sensitivity data loaded for {}!".format(self.name))
-        return star_table, field_airmass
+        return star_table, field_airmass, sample_star_time
     
+
+    def detectionStats(self):
+
+        # Extract the detection significance from each detection file
+        det_sigma = []
+        for det_file in self.detections:
+            sigma = readSigma(det_file)
+            if sigma is not None:
+                det_sigma.append(sigma)
+
+        return det_sigma
+
     ##TODO: determine if the directory date agrees with the timestamp date
 
 
@@ -889,7 +918,7 @@ if __name__ == '__main__':
     obs_date_dashed = hyphonateDate(obs_date)
     
     # Check if this date has a valid format
-    regex_match = re.fullmatch("[0-9]{8}", obs_date)
+    regex_match = re.fullmatch("\d{8}", obs_date)
     if regex_match is None:
         print("ERROR: Invalid date given.")
         sys.exit()
@@ -1110,3 +1139,90 @@ if __name__ == '__main__':
         plt.title(f"{obs_date_dashed}")
         timeline_fig.savefig(str(diagnostic_dir / "event.svg"),dpi=800,bbox_inches='tight')
         plt.close()
+
+
+###########################
+## Sensitivity Plot
+###########################
+
+    print("\n## Sensitivity Plot ##")
+
+    # Initialize sensitivity plot
+    sensitivity_fig, ax4 = plt.subplots()
+
+    # Iterate through telescopes and plot scatter plot
+    for machine in (Red,Green,Blue):
+        if machine.sensitivity_path is not None:
+            print(f"Plotting {machine.name} sensitivity data...")
+
+            # Get sensitivity data
+            star_table,field_airmass,sample_time = machine.analyzeSensitivity()
+            if star_table is None:
+                pass
+
+            # Plot the magnitude and SNR data
+            ax4.scatter(star_table['GMAG'],star_table['SNR'],color=machine.colour,
+                        s=3,alpha=0.4,
+                        label=f"Airmass: {field_airmass:.2f}, Time: {sample_time:.2f}")
+
+        # Set the axes limits and labels of the sensitivity plot
+        ax4.set_xlabel("GMAG")
+        ax4.set_ylabel("Temporal SNR")
+        plt.legend()
+        plt.grid()
+
+        # Save the plot
+        sensitivity_fig.savefig(str(diagnostic_dir / 'sensitivity.svg'),dpi=800,bbox_inches='tight')
+        plt.close()
+
+
+###########################
+## Single Detection Statistics
+###########################
+
+    print("\n## Single Detection Statistics ##")
+
+    # Initialize detection histograms
+    det1_fig, ax5 = plt.subplots()
+    bins = np.arange(6,12.25,0.25)
+
+    # Iterate over all 3 telescopes collecting nightly detection statistics
+    detection_sigma = []
+    colour = []
+    for machine in (Red,Green,Blue):
+        print(f"Collecting single detection statistics for {machine.name}...")
+        detection_sigma.append(machine.detectionStats())
+        colour.append(machine.colour)
+
+    # Plot single telescope candidates
+    ax5.hist(detection_sigma,bins=bins,log=False,color=colour)
+
+    # Set the axes limits and labels of the single telescope candidates plot
+    ax5.xticks(bins[::2],fontsize=8)
+    ax5.tick_params(axis='both',which='minor',labelsize=8)
+    ax5.xaxis.set_minor_locator(AutoMinorLocator(2))
+    plt.title(f"{obs_date} Detections")
+    ax5.set_xlabel("Significance")
+    ax5.set_ylabel("Number of Events")
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+    ax5.yaxis.set_major_formatter(formatter)
+    plt.grid(which='both',axis='x')
+
+    # Save single detection plot
+    det1_fig.savefig(str(diagnostic_dir / 'det1_hist.svg'),dpi=800,bbox_inches='tight')
+    plt.close()
+
+
+###########################
+## Multi-Detection Statistics
+###########################
+
+    print("\n## Matched Detection Statistics ##")
+
+    # Get directory for matched events
+    matched_dir = BASE_PATH / obs_date_dashed / 'matched'
+    if not matched_dir.exists():
+        print(f"ERROR: Detections have not been matched yet!")
+    else:
+        print("Hi")
