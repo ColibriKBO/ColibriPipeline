@@ -116,7 +116,7 @@ if __name__ == '__main__':
     print("Reading data...")# 21-09 Roman A. commented out unnecessary lines
     
     '''==========================================================#
-    # PQuigley vanity project
+    # PQuigley vanity project - Please ignore this snippet for now
     minutes = []
     radec   = []
     for telescope_path in (red_path,green_path,blue_path):
@@ -168,7 +168,11 @@ if __name__ == '__main__':
         print("No time matches today!")
         sys.exit()
 
-        
+    
+    # Create dir for each hhmmss signature that was matched
+    for hhmmss in set(pattern):
+        Path(matched_dir / hhmmss).mkdir()
+
     '''loop through each telescope dir and copy time matched events to Matched directory'''
 
     for root, subdirs, filename in os.walk(red_path):
@@ -178,6 +182,7 @@ if __name__ == '__main__':
                 for k in range(len(pattern)):
                     if pattern[k] in re.findall("_(\d{6})_", str(filename[i]))[0]: #copy det_ txts that have specific hhmmss
                         try:
+                            shutil.copy(red_path.joinpath(filename[i]), matched_dir / pattern[k])
                             shutil.copy(red_path.joinpath(filename[i]), matched_dir)
                         except FileNotFoundError:
                             pass
@@ -192,6 +197,7 @@ if __name__ == '__main__':
                     if pattern[k] in re.findall("_(\d{6})_", str(filename[i]))[0]:
                         
                         try:  
+                            shutil.copy(green_path.joinpath(filename[i]), matched_dir / pattern[k])
                             shutil.copy(green_path.joinpath(filename[i]), matched_dir)
                         except FileNotFoundError:
                             pass
@@ -207,6 +213,7 @@ if __name__ == '__main__':
                     if pattern[k] in re.findall("_(\d{6})_", str(filename[i]))[0]:
                         
                         try:
+                            shutil.copy(blue_path.joinpath(filename[i]), matched_dir / pattern[k])
                             shutil.copy(blue_path.joinpath(filename[i]), matched_dir)
                         except FileNotFoundError:
                             pass
@@ -223,13 +230,13 @@ if __name__ == '__main__':
 
     ##loop through each pattern of hhmmss and compare their milliseconds time with combinatorics
 
-    for k in pattern:
+    for hhmmss in pattern:
         milsecond_couple=[]
         matched_ab=[]
-        for file in sorted(os.listdir(matched_dir)):
+        for file in sorted(matched_dir.iterdir()):
             
-            if k in file:
-                for minute in re.findall("_(\d{9})_", file):
+            if (hhmmss in file.name) and (file.is_file()):
+                for minute in re.findall("_(\d{9})_", file.name):
                     milsecond_couple.append(float('.'+ minute))
 
         for a, b in itertools.combinations(milsecond_couple, 2):  
@@ -245,6 +252,9 @@ if __name__ == '__main__':
             milsec_match[n]=milsec_match[n]+'0'
 
     for matchedTXT in matched_dir.iterdir():
+        if matchedTXT.is_dir():
+            continue
+
         if re.findall("_(\d{9})_", str(matchedTXT))[0] not in milsec_match:
             
             if os.path.exists(matchedTXT):
@@ -264,19 +274,20 @@ if __name__ == '__main__':
     '''---------------------------------------Coordinates Matching-----------------------------------------'''
 
     #list of matched time patterns
-    pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
+    #pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
+    matched_files = sorted(matched_dir.glob('det_*.txt'))
+    pattern = list(set([re.search("_(\d{6})_", file) for file in matched_files]))
 
     start_time = time.time()
     print("Matching coordinates...")
     time_keys=np.unique(pattern,axis=0) #list of unique matched times
     print('times matched:',len(time_keys) )
     coords_match=[[]]
-    matched_files = os.listdir(matched_dir) #list of time matched files
 
 
     #read RA and dec from each file
     for times in time_keys:
-        time_matched_tuple=sorted(matched_dir.glob('*%s*'%(times))) #list of matched det_s
+        time_matched_tuple=sorted(matched_dir.glob('*%s*.txt'%(times))) #list of matched det_s
         star_ra=[]
         star_dec=[]
         for star_path in time_matched_tuple:
@@ -298,7 +309,7 @@ if __name__ == '__main__':
 
 
     #Read RA and dec from files and compare them with list of matched coordinates, delete file if it doesn't have those coordinates
-    for matchedTXT in matched_dir.iterdir(): 
+    for matchedTXT in matched_files: 
         star_ra=[]                          
         star_dec=[]
         ra,dec=readRAdec(matchedTXT)
@@ -321,13 +332,14 @@ if __name__ == '__main__':
     ##Is done for events that were removed by coordinates matching
     print("Matching in milliseconds again...")
 
-    matched_pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
+    matched_files = sorted(matched_dir.glob('det_*.txt'))
+    pattern = list(set([re.search("_(\d{6})_", file) for file in matched_files]))
     milsec_match=[[]]
 
-    for k in matched_pattern:
+    for k in pattern:
         milsecond_couple=[]
         matched_ab=[]
-        for file in sorted(os.listdir(matched_dir)):
+        for file in matched_files:
             
             if k in file:
 
@@ -348,7 +360,7 @@ if __name__ == '__main__':
         if len(milsec_match[n])<9:
             milsec_match[n]=milsec_match[n]+'0'
             
-    for matchedTXT in matched_dir.iterdir():
+    for matchedTXT in matched_files:
         if re.findall("_(\d{9})_", str(matchedTXT))[0] not in milsec_match: 
             if os.path.exists(matchedTXT):
                 #os.unlink(matchedTXT)
@@ -373,8 +385,8 @@ if __name__ == '__main__':
     format_data="%H.%M.%S.%f"
     format_mins="%H%M%S"
 
-        
-    detections = [f for f in matched_dir.iterdir() ] #list of detections by one telescope
+    matched_files = sorted(matched_dir.glob('det_*.txt'))
+    detections = [f for f in matched_files ] #list of detections by one telescope
     
     detection_minutes=[] #list of detected files minutes
     for det in detections:

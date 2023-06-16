@@ -1182,7 +1182,7 @@ if __name__ == '__main__':
 
     print("\n## Single Detection Statistics ##")
 
-    # Initialize detection histograms
+    # Initialize candidate detection histogram
     det1_fig, ax5 = plt.subplots()
     bins = np.arange(6,12.25,0.25)
 
@@ -1225,4 +1225,13 @@ if __name__ == '__main__':
     if not matched_dir.exists():
         print(f"ERROR: Detections have not been matched yet!")
     else:
-        print("Hi")
+        
+        # Get detection files
+        matched_det_files = matched_dir.glob('det_*.txt')
+
+        # Initialize matched detection table
+        matched_det_fig,ax6 = plt.subplots()
+
+        # Save matched detection table
+        matched_det_fig.savefig(str(diagnostic_dir / 'matched_table.svg'),dpi=800,bbox_inches='tight')
+        plt.close()
