@@ -24,16 +24,13 @@ import matplotlib.dates as mdates
 import pandas as pd
 import numpy as np
 import seaborn as sns
-import numba as nb
 from datetime import datetime, timedelta, date
 from getStarHour import getStarHour
 from astropy.time import Time
 from astropy.coordinates import Angle,EarthLocation,SkyCoord
 from astropy import units
 from astropy.coordinates import AltAz
-from scipy import interpolate
 from pathlib import Path
-from astropy import time
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.collections import PolyCollection
 from matplotlib.dates import DateFormatter
@@ -476,7 +473,7 @@ def getDomeClosure(log_lines):
 
 
 #############################
-## Analyze Data Directory
+## Analyze File/Dir Names
 #############################
 
 def getDataTimes(data_dir_path):
@@ -493,6 +490,58 @@ def getDataTimes(data_dir_path):
         directory_times.append(dir_datetime)
         
     return directory_times
+
+
+def analyzeDetectionMeta(filepath):
+
+    # Open file to read timestamp, RA/DEC, telescope, and significance
+    with open(filepath, 'r') as det:
+        lines = det.readlines()
+        for i,line in enumerate(lines):
+            
+            # TODO: convert this to regex matching
+            if i == 6: # RA/Dec
+                try:
+                    RA  = line.split(" ")[-2].strip("\n")
+                    DEC = line.split(" ")[-1].strip("\n")
+                except:
+                    print(f"WARNING: RA/Dec were not found in {filepath}!")
+                    RA,DEC = "",""
+            elif i == 7:
+                try:
+                    timestamp = line.split(" ")[-1].strip("\n")
+                except:
+                    print(f"WARNING: Timestamp was not found in {filepath}!")
+                    timestamp = ""
+            elif i == 8:
+                try:
+                    telescope = line.split(" ")[-1].strip("\n")
+                except:
+                    print(f"WARNING: Telescope name was not found in {filepath}!")
+                    telescope = ""
+            elif i == 10:
+                try:
+                    sigma = line.split(':')[1].strip("\n")
+                except:
+                    print(f"WARNING: Significance was not found in {filepath}!")
+                    sigma = ""
+            elif i > 10:
+                break
+
+    # Return the relevant information about this detection file
+    print(f"Reading matched detection: {telescope} {timestamp}")
+    return telescope, timestamp, RA, DEC, sigma
+
+
+def analyzeDetectionData(filepath):
+
+    # Read in the detection file lightcurve and strip filenames
+    lightcurve_data = np.loadtxt(str(filepath),dtype='object')
+    lightcurve_raw  = lightcurve_data[:,1:].astype(float)
+
+    # Return float array with columns
+    # [0] = seconds; [1] = flux; [2] = conv_flux
+    return lightcurve_raw
 
 
 #############################
@@ -733,8 +782,6 @@ def readSigma(filepath):
         #loop through each line of the file
         for i, line in enumerate(f):
             
-
-            
             if i==10:
                 sigma = float(line.split(':')[1])
  
@@ -867,29 +914,6 @@ def getPrevDate(path):
         return -1
     return(timeline_file.name.split('_')[0])
 
-    
-def ToFM():
-    """
-    get first hour of observations
-
-    Returns
-    -------
-    int
-        hour number.
-
-    """
-    #reading first minute of the night on Red, if no data then switch to Green or Blue
-    try:
-        
-        first_min=[f for f in green_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
-        
-    except:
-        try:
-            first_min=[f for f in red_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
-        except:
-            first_min=[f for f in blue_datapath.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)][0]
-
-    return int(first_min.name.split('_')[1].split('.')[0])
 
 
 #------------------------------------main-------------------------------------#
@@ -1215,7 +1239,7 @@ if __name__ == '__main__':
 
 
 ###########################
-## Multi-Detection Statistics
+## Matched Detection Statistics
 ###########################
 
     print("\n## Matched Detection Statistics ##")
@@ -1226,12 +1250,54 @@ if __name__ == '__main__':
         print(f"ERROR: Detections have not been matched yet!")
     else:
         
+        # Create directory for matched lightcurves
+        (diagnostic_dir / 'Lightcurves').mkdir()
+
         # Get detection files
         matched_det_files = matched_dir.glob('det_*.txt')
 
+        # Get names and descriptions of matched events form "matched" subdirectories
+        hhmmss_dirs = [item for item in matched_dir.iterdir() if item.is_dir()]
+        for dir in hhmmss_dirs:
+            print(f"Analyzing detection at {obs_date_dashed} {dir.name}...")
+            
+            # Analyze detection files in matched event and then plot it
+            sig = []
+            for det_file in hhmmss_dirs.iterdir():
+                # Get metadata from fileheader
+                # [0] = telescope, [1] = timestamp, [2] = RA, [3] = DEC, [4] = sigma
+                det_meta = analyzeDetectionMeta(det_file)
+
+                # Get lightcurve data from body
+                # [0] = seconds; [1] = raw flux; [2] = conv_flux
+                det_data = analyzeDetectionData(det_file)
+
+                # Plot this lightcurve
+                plt.plot(det_data[:,0], det_data[:,1], 
+                         color=COLOURMAPPING[det_meta[0]], linestyle="-",
+                         label=f"{det_meta[1]}: ({det_meta[2]}, {det_meta[3]})")
+                
+                # Add telescope and sigma to list
+                sig.append((det_meta[0],det_meta[4]))
+            
+            # Add decorations to plot
+            else:
+                plt.title(f"{obs_date_dashed}: {dir.name}\n{sig}")
+                plt.xlabel("Seconds")
+                plt.ylabel("Int. Flux")
+                plt.legend()
+                plt.grid()
+
+                plt.savefig(str(diagnostic_dir / 'Lightcurves' / (dir.name + '.svg')),
+                            dpi=800,bbox_inches='tight')
+                plt.close()
+
+
+        """ TODO: Finish this functionality
         # Initialize matched detection table
         matched_det_fig,ax6 = plt.subplots()
 
         # Save matched detection table
         matched_det_fig.savefig(str(diagnostic_dir / 'matched_table.svg'),dpi=800,bbox_inches='tight')
         plt.close()
+        """
