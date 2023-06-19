@@ -88,11 +88,11 @@ class Telescope:
         self.base_path = Path(base_path)
         self.log_path  = self.base_path.joinpath("Logs", "ACP", f"{obs_date}-ACP.log")
         self.data_path = self.base_path.joinpath("ColibriData", obs_date)
-        archive_dir    = self.base_path.joinpath("ColibriArchive",
-                                                 hyphonateDate(obs_date))
-        sensitivity_dir = self.base_path.joinpath("ColibriArchive",
-                                                    "{}_diagnostics".format(obs_date), 
-                                                    "Sensitivity")
+        self.archive_dir = self.base_path.joinpath("ColibriArchive",
+                                                   hyphonateDate(obs_date))
+        sensitivity_dir  = self.base_path.joinpath("ColibriArchive",
+                                                   "{}_diagnostics".format(obs_date), 
+                                                   "Sensitivity")
         
         # Check if log and data directories exist
         self.log_exists  = True if self.log_path.exists() else False
@@ -124,7 +124,7 @@ class Telescope:
             self.sensitivity_path = None
 
         # Get detection information
-        if archive_dir.exists():
+        if self.archive_dir.exists():
             self.detections = sorted(archive_dir.glob("det_*.txt"))
         else:
             self.addError("ERROR: {} has not completed the pipeline for {}!".format(name, obs_date))
@@ -1166,6 +1166,61 @@ if __name__ == '__main__':
 
 
 ###########################
+## Star Hours
+###########################
+
+    print("\n## Star Hours ##")
+
+    # Initialize sensitivity plot
+    starhours_fig, axs = plt.subplots()
+
+    # Plot star-hours for all cameras
+    for machine in (Red,Green,Blue):
+
+        # Read in star-hours from TELESCOPE_done.txt file
+        donetxt = sorted(machine.archive_dir.glob("*_done.txt"))
+        if len(donetxt) == 0:
+            continue
+        else:
+            #done_timestamp = []
+            #star_hours = []
+            # Operation to do on the data table
+            parse_done = {
+                    0: lambda timestamp: datetime.strptime(timestamp+'000', MINUTEDIR_STRP),
+                    1: lambda stars: int(stars),
+                    2: lambda detec: int(detec)
+                         }
+
+            # Load TELESCOPE_done.txt
+            star_hours = np.loadtxt(donetxt, converter=parse_done, dtype=object)
+
+            # Parse data to mark detections and calculate total star-hours
+            detec_markers = np.where(star_hours[:,2] > 0)
+            total_starhours = np.sum(star_hours[:,1])/(len(star_hours[:,1])/60.)
+            print(f"{machine.name}: {total_starhours}")
+            
+            # Plot the star-hours
+            axs.plot(mdates.date2num(star_hours[:,0]), star_hours[:,1],
+                     color=machine.colour, linestyle='-', label=machine.name)
+            axs.scatter(mdates.date2num(star_hours[detec_markers,0]), star_hours[detec_markers,1],
+                        color=machine.colour, marker="*")
+
+
+    # Set the axes limits and labels of the single telescope candidates plot
+    axs.autoscale()
+    axs.xaxis.set_major_locator(loc)
+    axs.xaxis.set_major_formatter(xfmt)
+    axs.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])
+    axs.xaxis.set_tick_params(labelsize=9)
+    plt.legend()
+    plt.grid(which='both',axis='x')
+
+    # Save the plot
+    starhours_fig.savefig(str(diagnostic_dir / 'starhours.svg'),dpi=800,bbox_inches='tight')
+    plt.close()
+
+
+###########################
 ## Sensitivity Plot
 ###########################
 
@@ -1254,7 +1309,7 @@ if __name__ == '__main__':
         (diagnostic_dir / 'Lightcurves').mkdir()
 
         # Get detection files
-        matched_det_files = matched_dir.glob('det_*.txt')
+        matched_det_files = sorted(matched_dir.glob('det_*.txt'))
 
         # Get names and descriptions of matched events form "matched" subdirectories
         hhmmss_dirs = [item for item in matched_dir.iterdir() if item.is_dir()]
