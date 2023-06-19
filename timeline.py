@@ -2,7 +2,7 @@
 """
 Filename:   timeline.py
 Author(s):  Roman Akhmetshyn, Peter Quigley
-Contact:    pquigley@uwo.ca
+Contact:    pquigle@uwo.ca
 Created:    Tue Nov 22 14:39:39 2022
 Updated:    Mon May  1 14:35:58 2023
     
@@ -14,17 +14,13 @@ nightly operations of the Colibri project. Runs only on Greenbird.
 # Module Imports
 import os,sys
 import re
-import csv
-import math
-import shutil
 import argparse
-import datetime as dt
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from getStarHour import getStarHour
 from astropy.time import Time
 from astropy.coordinates import Angle,EarthLocation,SkyCoord
@@ -36,7 +32,6 @@ from matplotlib.collections import PolyCollection
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 from matplotlib.ticker import ScalarFormatter
-from matplotlib.ticker import MaxNLocator
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -1195,13 +1190,14 @@ if __name__ == '__main__':
             star_hours = np.loadtxt(donetxt, converter=parse_done, dtype=object)
 
             # Parse data to mark detections and calculate total star-hours
+            # Star hours are calculated as num_stars*time
             detec_markers = np.where(star_hours[:,2] > 0)
-            total_starhours = np.sum(star_hours[:,1])/(len(star_hours[:,1])/60.)
-            print(f"{machine.name}: {total_starhours}")
+            total_starhours = np.sum(star_hours[:,1])*(len(star_hours[:,1])/60.)
+            print(f"{machine.name}: {total_starhours} star-hours")
             
             # Plot the star-hours
             axs.plot(mdates.date2num(star_hours[:,0]), star_hours[:,1],
-                     color=machine.colour, linestyle='-', label=machine.name)
+                     color=machine.colour, linestyle='-', label=f"{total_starhours} star-hours")
             axs.scatter(mdates.date2num(star_hours[detec_markers,0]), star_hours[detec_markers,1],
                         color=machine.colour, marker="*")
 
@@ -1244,15 +1240,15 @@ if __name__ == '__main__':
                         s=3,alpha=0.4,
                         label=f"Airmass: {field_airmass:.2f}, Time: {sample_time:.2f}")
 
-        # Set the axes limits and labels of the sensitivity plot
-        ax4.set_xlabel("GMAG")
-        ax4.set_ylabel("Temporal SNR")
-        plt.legend()
-        plt.grid()
+    # Set the axes limits and labels of the sensitivity plot
+    ax4.set_xlabel("GMAG")
+    ax4.set_ylabel("Temporal SNR")
+    plt.legend()
+    plt.grid()
 
-        # Save the plot
-        sensitivity_fig.savefig(str(diagnostic_dir / 'sensitivity.svg'),dpi=800,bbox_inches='tight')
-        plt.close()
+    # Save the plot
+    sensitivity_fig.savefig(str(diagnostic_dir / 'sensitivity.svg'),dpi=800,bbox_inches='tight')
+    plt.close()
 
 
 ###########################
