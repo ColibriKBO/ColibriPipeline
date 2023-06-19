@@ -627,7 +627,7 @@ if __name__ == '__main__':
     if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
-        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), telescope+'_done.txt')
+        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), 'primary_summary.txt')
         
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)

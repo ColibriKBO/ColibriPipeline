@@ -1172,22 +1172,22 @@ if __name__ == '__main__':
     # Plot star-hours for all cameras
     for machine in (Red,Green,Blue):
 
-        # Read in star-hours from TELESCOPE_done.txt file
-        donetxt = sorted(machine.archive_dir.glob("*_done.txt"))
-        if len(donetxt) == 0:
+        # Read in star-hours from primary_summary.txt file
+        summarytxt = machine.archive_dir / "primary_summary.txt"
+        if not summarytxt.exists():
             continue
         else:
             #done_timestamp = []
             #star_hours = []
             # Operation to do on the data table
-            parse_done = {
+            parse_summary = {
                     0: lambda timestamp: datetime.strptime(timestamp+'000', MINUTEDIR_STRP),
                     1: lambda stars: int(stars),
                     2: lambda detec: int(detec)
                          }
 
-            # Load TELESCOPE_done.txt
-            star_hours = np.loadtxt(donetxt, converter=parse_done, dtype=object)
+            # Load primary_summary.txt
+            star_hours = np.loadtxt(summarytxt, converter=parse_summary, dtype=object)
 
             # Parse data to mark detections and calculate total star-hours
             # Star hours are calculated as num_stars*time
