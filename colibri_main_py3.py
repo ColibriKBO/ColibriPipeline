@@ -29,12 +29,18 @@ from multiprocessing import Pool
 # Custom Script Imports
 import colibri_image_reader as cir
 import colibri_photometry as cp
+from coordsfinder import getTransform
+from getRAdec import getRAdec_arrays
+
 
 # Disable Warnings
 import warnings
 import logging
 #warnings.filterwarnings("ignore",category=DeprecationWarning)
 #warnings.filterwarnings("ignore",category=VisibleDeprecationWarning)
+
+
+#-------------------------------global vars-----------------------------------#
 
 
 #--------------------------------functions------------------------------------#
@@ -166,14 +172,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         print ("\n")
         return minuteDir.name, len(star_find_results), 0
         
-    
-    ## Save the array of star positions as an .npy file
-    ## Format: x  |  y  | half light radius
-    star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
-    if star_pos_file.exists():
-        star_pos_file.unlink()
-    np.save(star_pos_file, star_find_results)
-        
     ## Seperate radii and positions in separate arrays
     star_find_results = np.array(star_find_results)
     radii = star_find_results[:,-1]
@@ -181,7 +179,23 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
 
     ## Number of stars identified in image
     num_stars = len(initial_positions)
-    
+
+
+###########################
+## WCS Transformation
+########################### 
+
+    ## Generate WCS transformation and the RA/Dec
+    transform  = getTransform(minuteDir.name, savefolder, {})
+    star_radec = getRAdec_arrays(transform, star_find_results)
+
+    ## Save the array of star positions as an .npy file
+    ## Format: x  |  y  | half light radius | ra | dec
+    star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
+    if star_pos_file.exists():
+        star_pos_file.unlink()
+    np.save(star_pos_file, star_radec)
+
     
 ###########################
 ## Drift Calculations
