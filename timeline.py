@@ -120,7 +120,7 @@ class Telescope:
 
         # Get detection information
         if self.archive_dir.exists():
-            self.detections = sorted(archive_dir.glob("det_*.txt"))
+            self.detections = sorted(self.archive_dir.glob("det_*.txt"))
         else:
             self.addError("ERROR: {} has not completed the pipeline for {}!".format(name, obs_date))
             self.detections = []
@@ -418,10 +418,14 @@ def getObservingPlan_JD(log_lines, return_utc=True):
 def getFieldsObserved(log_lines):
     
     # Find which fields were actually observed and record their start time
+    # Skip the "After last time" fields 
     fields_observed = []
-    field_regex = "INFO: Field Name: "
+    toolate_regex = "TooLate"
+    field_regex   = "INFO: Field Name: "
     for line in log_lines:
-        if field_regex in line:
+        if toolate_regex in line:
+            continue
+        elif field_regex in line:
             # Identify start time of the field and get the field number
             split_line = line.split(field_regex)
             field_time = datetime.strptime(split_line[0].strip(), ACPLOG_STRP)
