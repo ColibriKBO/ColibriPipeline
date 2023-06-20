@@ -128,7 +128,7 @@ if __name__ == '__main__':
             det_times = []
             det_radec = []
             for det in det_files:
-                det_times.append(re.search("_(\d{6})_", det.name))
+                det_times.append(re.findall("_(\d{6})_", det.name)[0])
                 det_radec.append(getRAdec(det))
 
             # Append to greater list
@@ -276,12 +276,13 @@ if __name__ == '__main__':
     #list of matched time patterns
     #pattern=list(np.unique([minute for file in sorted(os.listdir(matched_dir)) if 'det' in file for minute in re.findall("_(\d{6})_", file)]))
     matched_files = sorted(matched_dir.glob('det_*.txt'))
-    pattern = list(set([re.search("_(\d{6})_", file) for file in matched_files]))
+    pattern = list(set([re.findall("_(\d{6})_", file.name)[0] for file in matched_files]))
 
     start_time = time.time()
     print("Matching coordinates...")
-    time_keys=np.unique(pattern,axis=0) #list of unique matched times
+    time_keys=np.array(pattern) #list of unique matched times
     print('times matched:',len(time_keys) )
+    print(time_keys)
     coords_match=[[]]
 
 
@@ -333,7 +334,7 @@ if __name__ == '__main__':
     print("Matching in milliseconds again...")
 
     matched_files = sorted(matched_dir.glob('det_*.txt'))
-    pattern = list(set([re.search("_(\d{6})_", file) for file in matched_files]))
+    pattern = list(set([re.findall("_(\d{6})_", file.name)[0] for file in matched_files]))
     milsec_match=[[]]
 
     for k in pattern:
