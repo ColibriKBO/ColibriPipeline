@@ -141,7 +141,7 @@ class Telescope:
             return None,None,None
         
         # Check that a starTable file exists
-        star_table_files = self.sensitivity_path.glob("starTable*.txt") 
+        star_table_files = sorted(self.sensitivity_path.glob("starTable*.txt"))
         if len(star_table_files) == 0:
             print("ERROR: No star table exists for {}!".format(self.name))
             return None,None,None
@@ -150,13 +150,13 @@ class Telescope:
         column_names = [ 'X', 'Y', 'ra', 'dec', 'GMAG',
                         'Gaia_RA' ,'Gaia_dec', 'Gaia_B-R',
                         'med' ,'std', 'SNR']
-        star_table = pd.read_csv(self.sensitivity_path.glob("starTable*.txt")[0],
+        star_table = pd.read_csv(sorted(self.sensitivity_path.glob("starTable*.txt"))[0],
                                  names=column_names, sep=' ',
                                  header=0, index_col=0)
         
         # Read in data from sample star light curves
         # TODO: Guard against directory with no star txt files
-        star_txt_file = (self.sensitivity_path.joinpath('high_4sig_lightcurves').glob('*.txt'))[0]
+        star_txt_file = sorted(self.sensitivity_path.joinpath('high_4sig_lightcurves').glob('*.txt'))[0]
         with star_txt_file.open() as file:
             for i,line in enumerate(file):
                 if i == 6:
@@ -169,8 +169,8 @@ class Telescope:
                 return None,None,None
             
         # Get field airmass
-        field_alt = calculateAlt(star_table['ra'][len(star_table['ra'] // 2)],
-                                 star_table['dec'][len(star_table['dec'] // 2)],
+        field_alt = calculateAlt(star_table['ra'][len(star_table['ra']) // 2],
+                                 star_table['dec'][len(star_table['dec']) // 2],
                                  sample_star_time)
         field_airmass = calculateAirmass(field_alt)
 
@@ -555,7 +555,7 @@ def calculateAlt(ra, dec, time):
     # Calculate the altitude at the given time
     alt = coord.transform_to(AltAz(obstime=time, location=SITE_LOC)).alt
     
-    return alt
+    return alt.degree
 
 
 def calculateAirmass(alt):
@@ -1179,25 +1179,26 @@ if __name__ == '__main__':
         # Read in star-hours from primary_summary.txt file
         summarytxt = machine.archive_dir / "primary_summary.txt"
         if not summarytxt.exists():
+            print(f"WARNING: No primary summary found on {machine.name}!")
             continue
         else:
             #done_timestamp = []
             #star_hours = []
             # Operation to do on the data table
             parse_summary = {
-                    0: lambda timestamp: datetime.strptime(timestamp+'000', MINUTEDIR_STRP),
+                    0: lambda timestamp: datetime.strptime(timestamp.decode('ascii')+'000', MINUTEDIR_STRP),
                     1: lambda stars: int(stars),
                     2: lambda detec: int(detec)
                          }
 
             # Load primary_summary.txt
-            star_hours = np.loadtxt(summarytxt, converter=parse_summary, dtype=object)
+            star_hours = np.loadtxt(summarytxt, delimiter=', ', converters=parse_summary, 
+                                    ndmin=2, dtype=object)
 
             # Parse data to mark detections and calculate total star-hours
             # Star hours are calculated as num_stars*time
             detec_markers = np.where(star_hours[:,2] > 0)
             total_starhours = np.sum(star_hours[:,1])*(len(star_hours[:,1])/60.)
-            print(f"{machine.name}: {total_starhours} star-hours")
             
             # Plot the star-hours
             axs.plot(mdates.date2num(star_hours[:,0]), star_hours[:,1],
@@ -1212,7 +1213,7 @@ if __name__ == '__main__':
     axs.xaxis.set_major_formatter(xfmt)
     axs.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])
     axs.xaxis.set_tick_params(labelsize=9)
-    plt.legend()
+    #plt.legend()
     plt.grid(which='both',axis='x')
 
     # Save the plot
@@ -1242,7 +1243,7 @@ if __name__ == '__main__':
             # Plot the magnitude and SNR data
             ax4.scatter(star_table['GMAG'],star_table['SNR'],color=machine.colour,
                         s=3,alpha=0.4,
-                        label=f"Airmass: {field_airmass:.2f}, Time: {sample_time:.2f}")
+                        label=f"Airmass: {field_airmass:.2f}, Time: {sample_time.value}")
 
     # Set the axes limits and labels of the sensitivity plot
     ax4.set_xlabel("GMAG")
@@ -1277,7 +1278,6 @@ if __name__ == '__main__':
     ax5.hist(detection_sigma,bins=bins,log=False,color=colour)
 
     # Set the axes limits and labels of the single telescope candidates plot
-    ax5.xticks(bins[::2],fontsize=8)
     ax5.tick_params(axis='both',which='minor',labelsize=8)
     ax5.xaxis.set_minor_locator(AutoMinorLocator(2))
     plt.title(f"{obs_date} Detections")
