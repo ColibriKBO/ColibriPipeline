@@ -15,6 +15,7 @@ Description: writes Ra Dec coordinates into dip detection txt file by performing
 
 import argparse
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from astropy import wcs
 from astropy.io import fits
