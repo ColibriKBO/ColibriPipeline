@@ -332,4 +332,3 @@ if __name__ == '__main__':
                                    RB_pairs[RB_inds,1],
                                    BG_pairs[BG_inds,1]))
         time_triplets = time_triplets.transpose()
-        
