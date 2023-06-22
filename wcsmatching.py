@@ -16,6 +16,7 @@ import multiprocessing
 import gc
 import sep
 import re
+import itertools
 import numpy as np
 import time as timer
 from pathlib import Path
@@ -95,7 +96,7 @@ class Telescope:
         for npy_file in self.npy_file_list:
             self.dt_list.append(regexNPYName(npy_file.name)[1])
         else:
-            return self.dt_list
+            return sorted(self.dt_list)
 
 
 
@@ -129,6 +130,33 @@ def npyFileWCSUpdate(npy_file_list):
         # Format: x  |  y  | half-light radius | ra | dec
         npy_file.unlink()
         np.save(npy_file, star_radec)
+
+
+def pairMinutes(minute_list1, minute_list2, spacing=31):
+    """
+    
+    """
+
+    # Cartesian product of the two sorted minute lists
+    minute_pairs = list(itertools.product(minute_list1,minute_list2))
+    minute_pairs = np.array(minute_pairs, dtype=object)
+
+    # Find time difference between two times
+    time_diff = np.array([abs((time_tuple[0] - time_tuple[1]).total_seconds()) \
+                          for time_tuple in minute_pairs],
+                          dtype=object)
+
+    # Identify minute pairs within our timing tolerance
+    valid_pair_inds = np.where(time_diff < spacing)
+
+    # Of the timestamps identified, find unique timestamps.
+    # In the case of duplicates, default to earliest time in minute_list1 then minute_list2.
+    _,unique1_inds = np.unique(minute_pairs[[valid_pair_inds],0],return_index=True)
+    _,unique2_inds = np.unique(minute_pairs[[valid_pair_inds[unique1_inds]],1],return_index=True)
+    paired_inds = valid_pair_inds[unique1_inds][unique2_inds]
+
+    # Return only valid, unique minute pairs that satisfy our timing tolerance
+    return minute_pairs[paired_inds]
 
 
 
@@ -286,4 +314,22 @@ if __name__ == '__main__':
         machine.genDatetimeList()
 
     # Try to find valid timestamp pairs between telescopes
-    #RG_pairs = 
+    RB_pairs = pairMinutes(Red.dt_list, Blue.dt_list)
+    BG_pairs = pairMinutes(Blue.dt_list, Green.dt_list)
+    RG_pairs = pairMinutes(Red.dt_list, Green.dt_list)
+
+    # If we found pairs between RB and BG, then we search for pairs between all 3
+    if (RB_pairs.size == 0) or (BG_pairs.size == 0) or (RG_pairs.size == 0):
+        print("Failed to match minutes for all 3 machines!")
+    else:
+        shared_matches, RB_inds, BG_inds = np.intersect1d(RB_pairs[:,1],
+                                                          BG_pairs[:,0],
+                                                          assume_unique=True,
+                                                          return_indices=True)
+        
+        # Join shared matches into triples
+        time_triplets = np.vstack((RB_pairs[RB_inds,0],
+                                   RB_pairs[RB_inds,1],
+                                   BG_pairs[BG_inds,1]))
+        time_triplets = time_triplets.transpose()
+        
