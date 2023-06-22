@@ -12,13 +12,13 @@ Usage: python wcsmatching.py <obs_date>
 # Module Imports
 import os,sys
 import argparse
-import pathlib
 import multiprocessing
 import gc
 import sep
 import re
 import numpy as np
 import time as timer
+from pathlib import Path
 from datetime import datetime,timedelta
 from astropy.convolution import RickerWavelet1DKernel
 from astropy.time import Time
@@ -38,10 +38,65 @@ import logging
 #-------------------------------global vars-----------------------------------#
 
 # Path variables
-BASE_PATH = pathlib.Path('D:/')
+BASE_PATH = Path('D:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
+# Timestamp format
+OBSDATE_FORMAT = '%Y%m%d'
+MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%f'
+TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+BARE_FORMAT = '%Y-%m-%d_%H%M%S_%f'
+
+
+#----------------------------------class--------------------------------------#
+
+class Telescope:
+
+    def __init__(self, name, base_path, obs_date):
+
+        # Telescope identifiers
+        print(f"Initializing {name}...")
+        self.name = name
+
+        # Error logging
+        self.errors = []
+
+        # Path variables
+        self.base_path = Path(base_path)
+        self.obs_archive = base_path / "ColibriArchive" / hyphonateDate(obs_date)
+        self.npy_file_list = sorted(self.obs_archive.glob('*pos.npy'))
+
+        # Check that star tables exist
+        if (not self.obs_archive.exists()) or (len(self.npy_file_list) == 0):
+            self.addError(f"ERROR: No star tables exist for {name} on {obs_date}!")
+            self.star_tables = False
+        else:
+            self.star_tables = True
+
+
+    def addError(self, error_msg):
+
+        self.errors.append(error_msg)
+        print(error_msg)
+
+
+    def genDatetimeList(self):
+
+        # Initialize datetime list
+        self.dt_list = []
+
+        # Confirm that star tables exist
+        if self.star_tables is False:
+            return self.dt_list
+        
+        # Iterate through all npy_files and get the datetime str from the name
+        for npy_file in self.npy_file_list:
+            self.dt_list.append(regexNPYName(npy_file.name)[1])
+        else:
+            return self.dt_list
+
 
 
 #--------------------------------functions------------------------------------#
@@ -52,7 +107,7 @@ def npyFileWCSUpdate(npy_file_list):
     # back into the WCS file
     for npy_file in npy_file_list:
 
-        print(f"Processing {npy_file.name}")
+        print(f"Processing {npy_file.name}...")
 
         # Read in data from npy file
         # Format x | y | half-light radius
@@ -63,8 +118,8 @@ def npyFileWCSUpdate(npy_file_list):
             continue
 
         # Get minute string from filename using regex
-        timestamp = re.search("^(\d{6}\._\d{2}\.\d{2}\.\d{2}\.\d{3})", npy_file.name).group(1)
-        print(timestamp)
+        timestamp,_ = regexNPYName(npy_file.name)
+        print(f"  -> Associated timestamp: {timestamp}")
 
         # Generate WCS transformation and the RA/Dec
         transform  = getTransform(timestamp, [npy_file], {})
@@ -103,6 +158,132 @@ def sharedStars(telescope1, telescope2, tolerance=1E-2):
     hypot = np.hypot(coord_diff[:,:,0], coord_diff[:,:,1])
 
     # Find any stars within tolerance
-    # Return should be similar values as telescope2[close_star_inds[1]]
+    # Return two arrays of indices
     close_star_inds = np.where(hypot < tolerance)
-    return telescope1[close_star_inds[0]]
+    return close_star_inds[0],close_star_inds[1]
+
+
+def regexNPYName(npy_file_name):
+
+    # Strip significance and file ext from filename
+    time_str = npy_file_name[:21] + "000"
+
+    # Convert to datetime object
+    time_obj = datetime.strptime(time_str, MINDIR_FORMAT)
+
+    return time_str, time_obj
+
+
+def hyphonateDate(obsdate):
+
+    # Convert the date to a datetime object
+    obsdate = datetime.strptime(obsdate, OBSDATE_FORMAT)
+
+    # Convert the date to a hyphonated string
+    obsdate = obsdate.strftime('%Y-%m-%d')
+
+    return obsdate
+
+
+#------------------------------------main-------------------------------------#
+
+if __name__ == '__main__':
+
+
+###########################
+## Argument Parser Setup
+###########################
+
+    # Generate argument parser
+    description = "Generate WCS transform of observed stars and match to other telescopes"
+    arg_parser = argparse.ArgumentParser(description=description,
+                                         formatter_class=argparse.RawTextHelpFormatter)
+    
+    # Available argument functionality
+    arg_parser.add_argument('date', help='Observation date (YYYYMMDD) of data to be processed.')
+    arg_parser.add_argument('-a', '--all', help='Process for all telescopes. Blue only.', 
+                            action='store_true')
+    arg_parser.add_argument('-m', '--match', help='Match stars between telescopes. Blue only.', 
+                            action='store_true')
+
+    # Process argparse list as useful variables
+    cml_args  = arg_parser.parse_args()
+    obsdate   = cml_args.date
+    proc_all  = cml_args.all
+    match_all = cml_args.match
+
+    # Environment variable to ensure BLUEBIRD is used when required
+    current_name = os.environ['COMPUTERNAME']
+
+
+###########################
+## WCS Transforms
+###########################
+
+    # Single-telescope mode
+    if proc_all is False:
+        # Process only for the current machine
+        print("Processing")
+        current = Telescope(current_name, BASE_PATH, obsdate)
+        if current.star_tables:
+            npyFileWCSUpdate(current.npy_file_list)
+        else:
+            print("ERROR: Could not process for current telescope!")
+
+    # Multi-telescope mode (assumed to run only on Blue)
+    elif current_name != "BLUEBIRD":
+        print(f"ERROR: Multi-telescope mode is only designed to run on Blue!")
+        sys.exit()
+
+    else:
+        # Initialize telescope classes
+        Red   = Telescope("RED", "R:", obsdate)
+        Green = Telescope("GREEN", "G:", obsdate)
+        Blue  = Telescope("BLUE", "D:", obsdate)
+
+        # Check that at least one star table set exists
+        if not (Red.star_tables | Green.star_tables | Blue.star_tables):
+            print(f"ERROR: No star tables exist for {obsdate}!")
+            sys.exit()
+        
+        # Process for each of the machines
+        for machine in (Red,Green,Blue):
+            if machine.star_tables:
+                print(f"Processing star tables for {machine.name}...")
+                npyFileWCSUpdate(machine.npy_file_list)
+            else:
+                print(f"Skipping {machine.name}...")
+
+
+###########################
+## Matching Stars
+###########################
+
+    # If not matching or not on Blue, we are done at this point
+    if match_all is False:
+        print("Done!")
+        sys.exit()
+    elif current_name != "BLUEBIRD":
+        print("ERROR: Matching is only designed to run on Blue!")
+        sys.exit()
+
+    # Initialize telescope classes if that wasn't done in the last part
+    if (proc_all is False) and (match_all):
+        print("Trusting that all telescopes have run astrometry...")
+
+        # Initialize telescope classes
+        Red   = Telescope("RED", "R:", obsdate)
+        Green = Telescope("GREEN", "G:", obsdate)
+        Blue  = Telescope("BLUE", "D:", obsdate)
+
+
+    ## Minute matching ## 
+
+    print("Starting minute matching...")
+
+    # Generate datetime objects for all telescopes
+    for machine in (Red,Blue,Green):
+        machine.genDatetimeList()
+
+    # Try to find valid timestamp pairs between telescopes
+    #RG_pairs = 
