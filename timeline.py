@@ -782,8 +782,14 @@ def readSigma(filepath):
         for i, line in enumerate(f):
             
             if i==10:
-                sigma = float(line.split(':')[1])
- 
+                try:
+                    sigma = float(line.split(':')[1])
+                except ValueError: # occurs in the case of ARTIFICIAL
+                    sigma = 0.
+
+                break
+
+
     return (sigma)
 
 
