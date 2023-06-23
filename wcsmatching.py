@@ -87,16 +87,20 @@ class Telescope:
 
         # Initialize datetime list
         self.dt_list = []
+        self.dt_dict = {}
 
         # Confirm that star tables exist
         if self.star_tables is False:
-            return self.dt_list
+            #return self.dt_list
+            return []
         
         # Iterate through all npy_files and get the datetime str from the name
         for npy_file in self.npy_file_list:
-            self.dt_list.append(regexNPYName(npy_file.name)[1])
+            #self.dt_list.append(regexNPYName(npy_file.name)[1])
+            self.dt_dict[regexNPYName(npy_file.name)[1]] = npy_file.name
         else:
-            return sorted(self.dt_list)
+            #return sorted(self.dt_list)
+            return sorted(list(self.dt_dict.keys()))
 
 
 
@@ -310,25 +314,60 @@ if __name__ == '__main__':
     print("Starting minute matching...")
 
     # Generate datetime objects for all telescopes
-    for machine in (Red,Blue,Green):
+    for machine in (Red,Green,Blue):
         machine.genDatetimeList()
 
+    """ Currently revising to use dictionary
     # Try to find valid timestamp pairs between telescopes
     RB_pairs = pairMinutes(Red.dt_list, Blue.dt_list)
     BG_pairs = pairMinutes(Blue.dt_list, Green.dt_list)
     RG_pairs = pairMinutes(Red.dt_list, Green.dt_list)
+    """
+
+    # Try to find valid timestamp pairs between telescopes
+    RG_pairs = pairMinutes(sorted(list(Red.dt_dict.keys())),
+                           sorted(list(Green.dt_dict.keys())))
+    GB_pairs = pairMinutes(sorted(list(Green.dt_dict.keys())),
+                           sorted(list(Blue.dt_dict.keys())))
+    RB_pairs = pairMinutes(sorted(list(Red.dt_dict.keys())),
+                           sorted(list(Blue.dt_dict.keys())))
+
 
     # If we found pairs between RB and BG, then we search for pairs between all 3
-    if (RB_pairs.size == 0) or (BG_pairs.size == 0) or (RG_pairs.size == 0):
+    if (RG_pairs.size == 0) or (GB_pairs.size == 0) or (RB_pairs.size == 0):
         print("Failed to match minutes for all 3 machines!")
+        sys.exit()
     else:
-        shared_matches, RB_inds, BG_inds = np.intersect1d(RB_pairs[:,1],
-                                                          BG_pairs[:,0],
+        shared_matches, GB_inds, RB_inds = np.intersect1d(GB_pairs[:,1],
+                                                          RB_pairs[:,1],
                                                           assume_unique=True,
                                                           return_indices=True)
         
         # Join shared matches into triples
         time_triplets = np.vstack((RB_pairs[RB_inds,0],
-                                   RB_pairs[RB_inds,1],
-                                   BG_pairs[BG_inds,1]))
+                                   GB_pairs[GB_inds,0],
+                                   GB_pairs[GB_inds,1]))
         time_triplets = time_triplets.transpose()
+
+
+    ## Star matching ##
+
+    print("Starting star matching...")
+
+    # Match stars from each telescope's star lists
+    for minute in time_triplets:
+
+        # Get npy file from each telescope
+        Red_file   = Red.dt_dict[minute[0]]
+        Green_file = Green.dt_dict[minute[1]]
+        Blue_file  = Blue.dt_dict[minute[2]]
+
+        # Get ra/dec from each npy file
+        Red_stars   = np.load(Red_file)[:,[3,4]]
+        Green_stars = np.load(Green_file)[:,[3,4]]
+        Blue_stars  = np.load(Blue_file)[:,[3,4]]
+
+        # Match stars between 2 and then 3
+        BR_matched = sharedStars(Blue_stars, Red_stars)
+        BG_matched = sharedStars(Blue_stars, Green_stars)
+        shared_stars = np.intersect1d(BR_matched[0], BG_matched[0])
