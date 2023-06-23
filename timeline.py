@@ -963,9 +963,18 @@ if __name__ == '__main__':
     diagnostic_dir = BASE_PATH / 'Logs' / 'Operations' / obs_date
     if diagnostic_dir.exists():
         for old_file in diagnostic_dir.iterdir():
-            old_file.unlink()
+            if old_file.is_file():
+                old_file.unlink()
     else:
         diagnostic_dir.mkdir()
+
+    # Create a directory for matched lightcurves
+    lightcurves_dir = diagnostic_dir / 'Lightcurves'
+    if lightcurves_dir.exists():
+        for old_file in lightcurves_dir.iterdir():
+            old_file.unlink()
+    else:
+        lightcurves_dir.mkdir()
 
 
     ## Initialize observation plots and timeline ##
@@ -1135,7 +1144,7 @@ if __name__ == '__main__':
         ax3.text(mdates.date2num(sunset), 0+i*2+0.4, 'observed',fontsize=8, ha='right', va='center') #TODO: fix
 
         # Plot physical events
-        for j in range(len(field_times)):
+        for j in range(len(event_times)):
             ax3.plot(event_times[j], i*2+0.8, color=machine.colour,
                      marker=event_markers[j], markerfacecolor='k', markeredgecolor='k')
         ax3.axhline(y = i*2+0.8, color=machine.colour, linestyle='-')
@@ -1179,7 +1188,7 @@ if __name__ == '__main__':
         # Read in star-hours from primary_summary.txt file
         summarytxt = machine.archive_dir / "primary_summary.txt"
         if not summarytxt.exists():
-            print(f"WARNING: No primary summary found on {machine.name}!")
+            machine.addError(f"WARNING: No primary summary found on {machine.name}!")
             continue
         else:
             #done_timestamp = []
@@ -1192,8 +1201,11 @@ if __name__ == '__main__':
                          }
 
             # Load primary_summary.txt
-            star_hours = np.loadtxt(summarytxt, delimiter=', ', converters=parse_summary, 
-                                    ndmin=2, dtype=object)
+            try:
+                star_hours = np.loadtxt(summarytxt, delimiter=',', converters=parse_summary, 
+                                        ndmin=2, dtype=object)
+            except IndexError:
+                machine.addError(f"ERROR: Could not read primary summary on {machine.name}!")
 
             # Parse data to mark detections and calculate total star-hours
             # Star hours are calculated as num_stars*time
@@ -1213,6 +1225,8 @@ if __name__ == '__main__':
     axs.xaxis.set_major_formatter(xfmt)
     axs.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])
     axs.xaxis.set_tick_params(labelsize=9)
+    axs.set_xlabel("Time (UTC)")
+    axs.set_ylabel("Star Counts in Minute")
     #plt.legend()
     plt.grid(which='both',axis='x')
 
@@ -1300,25 +1314,22 @@ if __name__ == '__main__':
     print("\n## Matched Detection Statistics ##")
 
     # Get directory for matched events
-    matched_dir = BASE_PATH / obs_date_dashed / 'matched'
+    matched_dir = BASE_PATH / "ColibriArchive" / obs_date_dashed / 'matched'
     if not matched_dir.exists():
         print(f"ERROR: Detections have not been matched yet!")
     else:
-        
-        # Create directory for matched lightcurves
-        (diagnostic_dir / 'Lightcurves').mkdir()
 
         # Get detection files
         matched_det_files = sorted(matched_dir.glob('det_*.txt'))
 
         # Get names and descriptions of matched events form "matched" subdirectories
         hhmmss_dirs = [item for item in matched_dir.iterdir() if item.is_dir()]
-        for dir in hhmmss_dirs:
-            print(f"Analyzing detection at {obs_date_dashed} {dir.name}...")
+        for hhmmss_dir in hhmmss_dirs:
+            print(f"Analyzing detection at {obs_date_dashed} {hhmmss_dir.name}...")
             
             # Analyze detection files in matched event and then plot it
             sig = []
-            for det_file in hhmmss_dirs.iterdir():
+            for det_file in hhmmss_dir.iterdir():
                 # Get metadata from fileheader
                 # [0] = telescope, [1] = timestamp, [2] = RA, [3] = DEC, [4] = sigma
                 det_meta = analyzeDetectionMeta(det_file)
@@ -1337,13 +1348,13 @@ if __name__ == '__main__':
             
             # Add decorations to plot
             else:
-                plt.title(f"{obs_date_dashed}: {dir.name}\n{sig}")
+                plt.title(f"{obs_date_dashed}: {hhmmss_dir.name}\n{sig}")
                 plt.xlabel("Seconds")
                 plt.ylabel("Int. Flux")
                 plt.legend()
                 plt.grid()
 
-                plt.savefig(str(diagnostic_dir / 'Lightcurves' / (dir.name + '.svg')),
+                plt.savefig(str(lightcurves_dir / (hhmmss_dir.name + '.svg')),
                             dpi=800,bbox_inches='tight')
                 plt.close()
 
