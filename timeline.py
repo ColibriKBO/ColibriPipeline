@@ -476,7 +476,9 @@ def getDomeClosure(log_lines):
 #############################
 
 def getDataTimes(data_dir_path):
-    
+    # TODO: Use medstacked image files over raw data dirs.
+    #       Therefore could be generated even after data is gone.
+
     # Get all minute directories in the given data directory
     minute_dirs = [folder.name+'000' for folder in data_dir_path.iterdir() \
                    if ((folder.is_dir()) and (folder.name != 'Bias'))]
@@ -1258,7 +1260,7 @@ if __name__ == '__main__':
             # Get sensitivity data
             star_table,field_airmass,sample_time = machine.analyzeSensitivity()
             if star_table is None:
-                pass
+                continue
 
             # Plot the magnitude and SNR data
             ax4.scatter(star_table['GMAG'],star_table['SNR'],color=machine.colour,
