@@ -1367,11 +1367,15 @@ if __name__ == '__main__':
                 plt.close()
 
 
-        """ TODO: Finish this functionality
-        # Initialize matched detection table
-        matched_det_fig,ax6 = plt.subplots()
+###########################
+## Cumulative Detection Statistics
+###########################
 
-        # Save matched detection table
-        matched_det_fig.savefig(str(diagnostic_dir / 'matched_table.svg'),dpi=800,bbox_inches='tight')
-        plt.close()
-        """
+    """ TODO: Finish this functionality
+    # Initialize cumulative detection table
+    tot_det_fig,ax6 = plt.subplots()
+
+    # Save cumulative detection table
+    tot_det_fig.savefig(str(diagnostic_dir / 'matched_table.svg'),dpi=800,bbox_inches='tight')
+    plt.close()
+    """
