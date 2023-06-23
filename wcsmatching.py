@@ -331,7 +331,8 @@ if __name__ == '__main__':
                            sorted(list(Blue.dt_dict.keys())))
     RB_pairs = pairMinutes(sorted(list(Red.dt_dict.keys())),
                            sorted(list(Blue.dt_dict.keys())))
-
+    
+    print(f"RG = {len(RG_pairs)}\nGB = {len(GB_pairs)}\nRB = {len(RB_pairs)}")
 
     # If we found pairs between RB and BG, then we search for pairs between all 3
     if (RG_pairs.size == 0) or (GB_pairs.size == 0) or (RB_pairs.size == 0):
@@ -355,6 +356,7 @@ if __name__ == '__main__':
     print("Starting star matching...")
 
     # Match stars from each telescope's star lists
+    star_minutes = 0
     for minute in time_triplets:
 
         # Get npy file from each telescope
@@ -371,3 +373,6 @@ if __name__ == '__main__':
         BR_matched = sharedStars(Blue_stars, Red_stars)
         BG_matched = sharedStars(Blue_stars, Green_stars)
         shared_stars = np.intersect1d(BR_matched[0], BG_matched[0])
+
+        star_minutes += len(shared_stars)
+    
