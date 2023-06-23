@@ -252,6 +252,8 @@ if __name__ == '__main__':
 ## WCS Transforms
 ###########################
 
+    print("Starting WCS transformations...")
+
     # Single-telescope mode
     if proc_all is False:
         # Process only for the current machine
@@ -311,7 +313,7 @@ if __name__ == '__main__':
 
     ## Minute matching ## 
 
-    print("Starting minute matching...")
+    print("\nStarting minute matching...")
 
     # Generate datetime objects for all telescopes
     for machine in (Red,Green,Blue):
@@ -350,10 +352,12 @@ if __name__ == '__main__':
                                    GB_pairs[GB_inds,1]))
         time_triplets = time_triplets.transpose()
 
+        print(f"RGB = {len(time_triplets)}")
+
 
     ## Star matching ##
 
-    print("Starting star matching...")
+    print("\nStarting star matching...")
 
     # Match stars from each telescope's star lists
     star_minutes = 0
