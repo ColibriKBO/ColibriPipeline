@@ -120,7 +120,8 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         star_table = np.load(npy_file)
 
         # If npy file already contains ra/dec information
-        if star_table.shape[1] == 4: 
+        if star_table.shape[1] == 4:
+            print("  Already proccessed.")
             continue
 
         # Get minute string from filename using regex
@@ -130,6 +131,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         # Generate WCS transformation and the RA/Dec
         transform  = getTransform(timestamp, medstack_file_list, {})
         star_radec = getRAdec(transform, npy_file)
+        print("  Successfully generated RA/DEC.")
 
         # Save the array of star positions as an .npy file again
         # Format: x  |  y  | ra | dec :: No half-light radius data saved!
@@ -137,7 +139,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         np.save(npy_file, star_radec)
 
 
-def pairMinutes(minute_list1, minute_list2, spacing=31):
+def pairMinutes(minute_list1, minute_list2, spacing=33):
     """
     
     """
@@ -161,6 +163,7 @@ def pairMinutes(minute_list1, minute_list2, spacing=31):
     paired_inds = valid_pair_inds[unique1_inds][unique2_inds]
 
     # Return only valid, unique minute pairs that satisfy our timing tolerance
+    print(f"Minutes successfully paired. {len(paired_inds)} minute pairs found.")
     return minute_pairs[paired_inds]
 
 
@@ -193,6 +196,7 @@ def sharedStars(telescope1, telescope2, tolerance=1E-2):
     # Find any stars within tolerance
     # Return two arrays of indices
     close_star_inds = np.where(hypot < tolerance)
+    print(f"Stars successfully matched. {len(close_star_inds[0])} matched stars found.")
     return close_star_inds[0],close_star_inds[1]
 
 
