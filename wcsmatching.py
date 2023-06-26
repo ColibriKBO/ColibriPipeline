@@ -66,7 +66,7 @@ class Telescope:
 
         # Path variables
         self.base_path = Path(base_path)
-        self.obs_archive = base_path / "ColibriArchive" / hyphonateDate(obs_date)
+        self.obs_archive = self.base_path / "ColibriArchive" / hyphonateDate(obs_date)
         self.npy_file_list = sorted(self.obs_archive.glob('*pos.npy'))
         self.medstack_file_list = sorted(self.obs_archive.glob('*medstacked.fits'))
 
