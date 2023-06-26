@@ -68,6 +68,7 @@ class Telescope:
         self.base_path = Path(base_path)
         self.obs_archive = base_path / "ColibriArchive" / hyphonateDate(obs_date)
         self.npy_file_list = sorted(self.obs_archive.glob('*pos.npy'))
+        self.medstack_file_list = sorted(self.obs_archive.glob('*medstacked.fits'))
 
         # Check that star tables exist
         if (not self.obs_archive.exists()) or (len(self.npy_file_list) == 0):
@@ -106,7 +107,7 @@ class Telescope:
 
 #--------------------------------functions------------------------------------#
 
-def npyFileWCSUpdate(npy_file_list):
+def npyFileWCSUpdate(npy_file_list, medstack_file_list):
 
     # Iterate through npy files and generate a WCS transformation to write
     # back into the WCS file
@@ -127,8 +128,8 @@ def npyFileWCSUpdate(npy_file_list):
         print(f"  -> Associated timestamp: {timestamp}")
 
         # Generate WCS transformation and the RA/Dec
-        transform  = getTransform(timestamp, [npy_file], {})
-        star_radec = getRAdec(transform, star_table)
+        transform  = getTransform(timestamp, medstack_file_list, {})
+        star_radec = getRAdec(transform, npy_file)
 
         # Save the array of star positions as an .npy file again
         # Format: x  |  y  | half-light radius | ra | dec
@@ -198,10 +199,10 @@ def sharedStars(telescope1, telescope2, tolerance=1E-2):
 def regexNPYName(npy_file_name):
 
     # Strip significance and file ext from filename
-    time_str = npy_file_name[:21] + "000"
+    time_str = npy_file_name[:21] 
 
     # Convert to datetime object
-    time_obj = datetime.strptime(time_str, MINDIR_FORMAT)
+    time_obj = datetime.strptime(time_str + "000", MINDIR_FORMAT)
 
     return time_str, time_obj
 
@@ -259,8 +260,9 @@ if __name__ == '__main__':
         # Process only for the current machine
         print("Processing")
         current = Telescope(current_name, BASE_PATH, obsdate)
-        if current.star_tables:
-            npyFileWCSUpdate(current.npy_file_list)
+        if (current.star_tables) and (current.medstack_file_list != []):
+            npyFileWCSUpdate(current.npy_file_list,
+                             current.medstack_file_list)
         else:
             print("ERROR: Could not process for current telescope!")
 
@@ -282,9 +284,10 @@ if __name__ == '__main__':
         
         # Process for each of the machines
         for machine in (Red,Green,Blue):
-            if machine.star_tables:
+            if (machine.star_tables) and (machine.medstack_file_list != []):
                 print(f"Processing star tables for {machine.name}...")
-                npyFileWCSUpdate(machine.npy_file_list)
+                npyFileWCSUpdate(machine.npy_file_list,
+                                 machine.medstack_file_list)
             else:
                 print(f"Skipping {machine.name}...")
 

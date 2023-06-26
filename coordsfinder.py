@@ -99,7 +99,7 @@ def getTransform(timestamp, median_stacks, transformations, return_transformatio
             return transform
 
 
-def getRAdec(transform, star_pos_file, savefile):
+def getRAdec(transform, star_pos_file, savefile=None):
     '''get WCS transform from astrometry.net header
     input: astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
     returns: coordinate transform'''
@@ -118,12 +118,13 @@ def getRAdec(transform, star_pos_file, savefile):
    # print(px)
     
     #optional: save text file with transformation
-    with open(savefile, 'w') as filehandle:
-        filehandle.write('#\n#\n#\n#\n#X  Y  RA  Dec\n')
+    if savefile is not None:
+        with open(savefile, 'w') as filehandle:
+            filehandle.write('#\n#\n#\n#\n#X  Y  RA  Dec\n')
     
-        for i in range(0, len(star_pos)):
-            #output table: | x | y | RA | Dec | 
-            filehandle.write('%f %f %f %f\n' %(star_pos[i][0], star_pos[i][1], world[i][0], world[i][1]))
+            for i in range(0, len(star_pos)):
+                #output table: | x | y | RA | Dec | 
+                filehandle.write('%f %f %f %f\n' %(star_pos[i][0], star_pos[i][1], world[i][0], world[i][1]))
       
     coords = np.array([star_pos[:,0], star_pos[:,1], world[:,0], world[:,1]]).transpose()
     return coords
