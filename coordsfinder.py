@@ -109,7 +109,7 @@ def getRAdec(transform, star_pos_file, savefile=None):
 #    transform = wcs.WCS(transform_im[0].header)
     
     #get star coordinates from observation image (.npy file)
-    star_pos = np.load(star_pos_file)
+    star_pos = np.load(star_pos_file)[:,[0,1]]
     
     #get transformation
     world = transform.all_pix2world(star_pos, 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
