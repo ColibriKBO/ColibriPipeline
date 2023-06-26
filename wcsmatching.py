@@ -302,7 +302,7 @@ if __name__ == '__main__':
 
     # If not matching or not on Blue, we are done at this point
     if match_all is False:
-        print("Done!")
+        print("\nDone!")
         sys.exit()
     elif current_name != "BLUEBIRD":
         print("ERROR: Matching is only designed to run on Blue!")
