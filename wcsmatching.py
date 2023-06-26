@@ -154,12 +154,14 @@ def pairMinutes(minute_list1, minute_list2, spacing=33):
                           dtype=object)
 
     # Identify minute pairs within our timing tolerance
-    valid_pair_inds = np.where(time_diff < spacing)
+    valid_pair_inds = np.where(time_diff < spacing)[0]
 
     # Of the timestamps identified, find unique timestamps.
     # In the case of duplicates, default to earliest time in minute_list1 then minute_list2.
-    _,unique1_inds = np.unique(minute_pairs[[valid_pair_inds],0],return_index=True)
-    _,unique2_inds = np.unique(minute_pairs[[valid_pair_inds[unique1_inds]],1],return_index=True)
+    _,unique1_inds = np.unique(minute_pairs[[valid_pair_inds],0],
+                               return_index=True)
+    _,unique2_inds = np.unique(minute_pairs[[valid_pair_inds[unique1_inds]],1],
+                               return_index=True)
     paired_inds = valid_pair_inds[unique1_inds][unique2_inds]
 
     # Return only valid, unique minute pairs that satisfy our timing tolerance
@@ -257,12 +259,12 @@ if __name__ == '__main__':
 ## WCS Transforms
 ###########################
 
-    print("Starting WCS transformations...")
+    print("\n## WCS Transformations ##")
 
     # Single-telescope mode
     if proc_all is False:
         # Process only for the current machine
-        print("Processing")
+        print("Processing current machine...\n")
         current = Telescope(current_name, BASE_PATH, obsdate)
         if (current.star_tables) and (current.medstack_file_list != []):
             npyFileWCSUpdate(current.npy_file_list,
@@ -320,7 +322,7 @@ if __name__ == '__main__':
 
     ## Minute matching ## 
 
-    print("\nStarting minute matching...")
+    print("\n## Minute Matching ##")
 
     # Generate datetime objects for all telescopes
     for machine in (Red,Green,Blue):
@@ -334,6 +336,7 @@ if __name__ == '__main__':
     """
 
     # Try to find valid timestamp pairs between telescopes
+    #print(sorted(list(Red.dt_dict.keys())))
     RG_pairs = pairMinutes(sorted(list(Red.dt_dict.keys())),
                            sorted(list(Green.dt_dict.keys())))
     GB_pairs = pairMinutes(sorted(list(Green.dt_dict.keys())),
@@ -364,7 +367,7 @@ if __name__ == '__main__':
 
     ## Star matching ##
 
-    print("\nStarting star matching...")
+    print("\n## Star Matching ##")
 
     # Match stars from each telescope's star lists
     star_minutes = 0
@@ -376,9 +379,23 @@ if __name__ == '__main__':
         Blue_file  = Blue.dt_dict[minute[2]]
 
         # Get ra/dec from each npy file
-        Red_stars   = np.load(Red_file)[:,[3,4]]
-        Green_stars = np.load(Green_file)[:,[3,4]]
-        Blue_stars  = np.load(Blue_file)[:,[3,4]]
+        # TODO: WCS mapping if not already done
+        try:
+            Red_stars   = np.load(Red_file)[:,[2,3]]
+        except IndexError:
+            print(f"ERROR: {Red_file} has not been updated!")
+            continue
+        try:
+            Green_stars = np.load(Green_file)[:,[2,3]]
+        except IndexError:
+            print(f"ERROR: {Green_file} has not been updated!")
+            continue
+        try:
+            Blue_stars  = np.load(Blue_file)[:,[2,3]]
+        except IndexError:
+            print(f"ERROR: {Blue_file} has not been updated!")
+            continue
+
 
         # Match stars between 2 and then 3
         BR_matched = sharedStars(Blue_stars, Red_stars)
@@ -387,3 +404,4 @@ if __name__ == '__main__':
 
         star_minutes += len(shared_stars)
     
+    print(f"\nDone star matching! {star_minutes/60.} star-hours detected.")
