@@ -374,9 +374,9 @@ if __name__ == '__main__':
     for minute in time_triplets:
 
         # Get npy file from each telescope
-        Red_file   = Red.dt_dict[minute[0]]
-        Green_file = Green.dt_dict[minute[1]]
-        Blue_file  = Blue.dt_dict[minute[2]]
+        Red_file   = Red.obs_archive / Red.dt_dict[minute[0]]
+        Green_file = Green.obs_archive / Green.dt_dict[minute[1]]
+        Blue_file  = Blue.obs_archive / Blue.dt_dict[minute[2]]
 
         # Get ra/dec from each npy file
         # TODO: WCS mapping if not already done
