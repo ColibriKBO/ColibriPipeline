@@ -120,7 +120,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         star_table = np.load(npy_file)
 
         # If npy file already contains ra/dec information
-        if star_table.shape[1] == 5: 
+        if star_table.shape[1] == 4: 
             continue
 
         # Get minute string from filename using regex
@@ -132,7 +132,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         star_radec = getRAdec(transform, npy_file)
 
         # Save the array of star positions as an .npy file again
-        # Format: x  |  y  | half-light radius | ra | dec
+        # Format: x  |  y  | ra | dec :: No half-light radius data saved!
         npy_file.unlink()
         np.save(npy_file, star_radec)
 
