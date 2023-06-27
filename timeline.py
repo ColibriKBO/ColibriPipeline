@@ -552,7 +552,7 @@ def analyzeDetectionData(filepath):
 def calculateAlt(ra, dec, time):
     
     # Convert RA and Dec to SkyCoord object
-    coord = SkyCoord(ra, dec, unit=(units.hourangle, units.deg))
+    coord = SkyCoord(ra, dec, unit=(units.deg, units.deg))
     
     # Calculate the altitude at the given time
     alt = coord.transform_to(AltAz(obstime=time, location=SITE_LOC)).alt
