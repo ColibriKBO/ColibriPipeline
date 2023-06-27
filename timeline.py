@@ -31,6 +31,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.collections import PolyCollection
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import AutoMinorLocator, ScalarFormatter, MaxNLocator
+from PIL import Image
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -1383,3 +1384,18 @@ if __name__ == '__main__':
     tot_det_fig.savefig(str(diagnostic_dir / 'matched_table.svg'),dpi=800,bbox_inches='tight')
     plt.close()
     """
+
+
+###########################
+## Composite Plot
+###########################
+
+    print("\n## Final Summary ##")
+
+    # Get list of all plot images
+    images = [Image.open(img_path) for img_path in diagnostic_dir.rglob("*.svg")]
+
+    # Append all images to 0th image
+    summary_path = diagnostic_dir / 'observation_summary.pdf'
+    images[0].save(summary_path, "PDF", resolution=100., save_all=True, append_images=images[1:])
+    print("All images saved! You are done!")
