@@ -1225,9 +1225,11 @@ if __name__ == '__main__':
             
             # Plot the star-hours
             axs.plot(mdates.date2num(star_hours[:,0]), star_hours[:,1],
-                     color=machine.colour, linestyle='-', label=f"{total_starhours} star-hours")
+                     color=machine.colour, linestyle='-', alpha=0.7,
+                     zorder=1, label=f"{total_starhours} star-hours")
             axs.scatter(mdates.date2num(star_hours[detec_markers,0]), star_hours[detec_markers,1],
-                        color=machine.colour, marker="*")
+                        color=machine.colour, marker="*", 
+                        edgecolors='k', linewidth=0.3, zorder=2)
 
 
     # Set the axes limits and labels of the single telescope candidates plot
