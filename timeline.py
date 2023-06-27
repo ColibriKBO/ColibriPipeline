@@ -30,8 +30,7 @@ from pathlib import Path
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.collections import PolyCollection
 from matplotlib.dates import DateFormatter
-from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
-from matplotlib.ticker import ScalarFormatter
+from matplotlib.ticker import AutoMinorLocator, ScalarFormatter, MaxNLocator
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -1312,7 +1311,7 @@ if __name__ == '__main__':
     ax5.set_ylabel("Number of Events")
     formatter = ScalarFormatter()
     formatter.set_scientific(False)
-    ax5.yaxis.set_major_formatter(formatter)
+    ax5.yaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid(which='both',axis='x')
 
     # Save single detection plot
