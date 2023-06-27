@@ -20,7 +20,7 @@ import matplotlib.dates as mdates
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from getStarHour import getStarHour
 from astropy.time import Time
 from astropy.coordinates import Angle,EarthLocation,SkyCoord
@@ -1078,15 +1078,17 @@ if __name__ == '__main__':
         print("Plotting transparency data...")
         # Isolate data between sunset and sunrise
         cloud_data = cloud_data[(cloud_data[:,0] > sunset.timestamp()) & (cloud_data[:,0] < sunrise.timestamp())]
+        cloud_time = datetime.fromtimestamp(cloud_data[:,0], tz=timezone.utc)
 
         # Underlay timeblock data with transparency heatmap
-        ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
+        ax = ax1.twinx()
+        #ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
         ax = sns.heatmap(cloud_data[:,[0,9]].transpose(),cmap='Blues_r',vmax=5,cbar=False,zorder=2)
         ax.axes.invert_yaxis()
 
         # Overlay transparency heatmap with transparency linegraph 
-        ax2 = plt.twinx()
-        sns.lineplot(x=cloud_data[:,0],y=cloud_data[:,9]+15.55,color='k',ax=ax2, zorder=5)
+        ax2 = ax1.twinx()
+        ax2.lineplot(x=mdates.date2num(cloud_time),y=cloud_data[:,9]+15.55,color='k', zorder=5)
 
         # Set the axes limits and labels of the transparency plot
         ax2.yaxis.set_ticks(np.arange(0, 5, 1))
@@ -1094,9 +1096,9 @@ if __name__ == '__main__':
         ax.set_yticks([])
         ax.set_yticklabels([])
         ax2.set_ylabel('mag')
-        ax.set_xticklabels([])
-        ax2.set_xticks([])
-        ax2.set_xticklabels([])
+        #ax.set_xticklabels([])
+        #ax2.set_xticks([])
+        #ax2.set_xticklabels([])
     
 
 ###########################
