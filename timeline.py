@@ -1404,6 +1404,6 @@ if __name__ == '__main__':
     images = [Image.open(img_path) for img_path in img_list]
 
     # Append all images to 0th image
-    summary_path = diagnostic_dir / 'observation_summary.pdf'
+    summary_path = diagnostic_dir / f'{obs_date}_observation_summary.pdf'
     images[0].save(summary_path, "PDF", resolution=100., save_all=True, append_images=images[1:])
     print("All images saved! You are done!")
