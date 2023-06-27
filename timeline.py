@@ -987,6 +987,9 @@ if __name__ == '__main__':
 
     ## Initialize observation plots and timeline ##
 
+    # List of final plots' paths
+    img_list = []
+
     # Create figure and axes
     timeline_fig, (ax1, ax3) = plt.subplots(2, 1)
     loc = mdates.HourLocator(interval=1)
@@ -1142,46 +1145,47 @@ if __name__ == '__main__':
 
         # Plot observing plan
         for j in range(len(plan_times)):
-            ax3.plot(plan_times[j], i*2, color=machine.colour,
+            ax3.plot(plan_times[j], i*2, color=machine.colour, zorder=2,
                      marker=plan_markers[j], markerfacecolor='k', markeredgecolor='k')
-        ax3.axhline(y = i*2, color=machine.colour, linestyle='-')
+        ax3.axhline(y = i*2, color=machine.colour, linestyle='-', zorder=1)
         ax3.text(mdates.date2num(sunset), 0+i*2, 'planned',fontsize=8, ha='right', va='center') #TODO: fix
 
         # Plot observed fields
         for j in range(len(field_times)):
-            ax3.plot(field_times[j], i*2+0.4, color=machine.colour,
+            ax3.plot(field_times[j], i*2+0.4, color=machine.colour, zorder=2,
                      marker=field_markers[j], markerfacecolor='k', markeredgecolor='k')
-        ax3.axhline(y = i*2+0.4, color=machine.colour, linestyle='-')
+        ax3.axhline(y = i*2+0.4, color=machine.colour, linestyle='-', zorder=1)
         ax3.text(mdates.date2num(sunset), 0+i*2+0.4, 'observed',fontsize=8, ha='right', va='center') #TODO: fix
 
         # Plot physical events
         for j in range(len(event_times)):
-            ax3.plot(event_times[j], i*2+0.8, color=machine.colour,
+            ax3.plot(event_times[j], i*2+0.8, color=machine.colour, zorder=2,
                      marker=event_markers[j], markerfacecolor='k', markeredgecolor='k')
-        ax3.axhline(y = i*2+0.8, color=machine.colour, linestyle='-')
+        ax3.axhline(y = i*2+0.8, color=machine.colour, linestyle='-', zorder=1)
         ax3.text(mdates.date2num(sunset), 0+i*2+0.8, 'events',fontsize=8, ha='right', va='center') #TODO: fix
 
 
-        # Set the axes limits and labels of the timelines
-        ax3.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])#limit plot to sunrise and sunset
-        ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-        ax3.yaxis.set_visible(False)
-        ax3.spines[:].set_visible(False)
-        ax3.xaxis.tick_top()
-        ax3.set_xticks([])
-        ax3.margins(y=0.2)
+    # Set the axes limits and labels of the timelines
+    ax3.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])#limit plot to sunrise and sunset
+    ax3.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    ax3.yaxis.set_visible(False)
+    ax3.spines[:].set_visible(False)
+    ax3.xaxis.tick_top()
+    ax3.set_xticks([])
+    ax3.margins(y=0.2)
 
-        # TODO: Add legend -> currently not formatted correctly
-        #legend = "X - bad weather \n ♦ - dome close"
-        #plt.text(0.02, 0.5, legend, fontsize=14, transform=timeline_fig.transFigure)
+    # TODO: Add legend -> currently not formatted correctly
+    #legend = "X - bad weather \n ♦ - dome close"
+    #plt.text(0.02, 0.5, legend, fontsize=14, transform=timeline_fig.transFigure)
 
-        # Save figure
-        timeline_fig.subplots_adjust(hspace=0)
-        #plt.title(f"{sunset.strftime(OBSDATE_FORMAT)}:\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)}")
-        plt.title(f"{obs_date_dashed}")
-        timeline_fig.savefig(str(diagnostic_dir / "event.svg"),dpi=800,bbox_inches='tight')
-        plt.close()
+    # Save figure
+    timeline_fig.subplots_adjust(hspace=0)
+    #plt.title(f"{sunset.strftime(OBSDATE_FORMAT)}:\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)}")
+    plt.title(f"{obs_date_dashed}")
+    timeline_fig.savefig(str(diagnostic_dir / "event.jpg"),dpi=800,bbox_inches='tight')
+    img_list.append(str(diagnostic_dir / "event.jpg"))
+    plt.close()
 
 
 ###########################
@@ -1244,7 +1248,8 @@ if __name__ == '__main__':
     plt.grid(which='both',axis='x')
 
     # Save the plot
-    starhours_fig.savefig(str(diagnostic_dir / 'starhours.svg'),dpi=800,bbox_inches='tight')
+    starhours_fig.savefig(str(diagnostic_dir / 'starhours.jpg'),dpi=800,bbox_inches='tight')
+    img_list.append(str(diagnostic_dir / 'starhours.jpg'))
     plt.close()
 
 
@@ -1279,7 +1284,8 @@ if __name__ == '__main__':
     plt.grid()
 
     # Save the plot
-    sensitivity_fig.savefig(str(diagnostic_dir / 'sensitivity.svg'),dpi=800,bbox_inches='tight')
+    sensitivity_fig.savefig(str(diagnostic_dir / 'sensitivity.jpg'),dpi=800,bbox_inches='tight')
+    img_list.append(str(diagnostic_dir / 'sensitivity.jpg'))
     plt.close()
 
 
@@ -1316,7 +1322,8 @@ if __name__ == '__main__':
     plt.grid(which='both',axis='x')
 
     # Save single detection plot
-    det1_fig.savefig(str(diagnostic_dir / 'det1_hist.svg'),dpi=800,bbox_inches='tight')
+    det1_fig.savefig(str(diagnostic_dir / 'det1_hist.jpg'),dpi=800,bbox_inches='tight')
+    img_list.append(str(diagnostic_dir / 'det1_hist.jpg'))
     plt.close()
 
 
@@ -1367,8 +1374,9 @@ if __name__ == '__main__':
                 plt.legend()
                 plt.grid()
 
-                plt.savefig(str(lightcurves_dir / (hhmmss_dir.name + '.svg')),
+                plt.savefig(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')),
                             dpi=800,bbox_inches='tight')
+                img_list.append(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')))
                 plt.close()
 
 
@@ -1381,7 +1389,7 @@ if __name__ == '__main__':
     tot_det_fig,ax6 = plt.subplots()
 
     # Save cumulative detection table
-    tot_det_fig.savefig(str(diagnostic_dir / 'matched_table.svg'),dpi=800,bbox_inches='tight')
+    tot_det_fig.savefig(str(diagnostic_dir / 'matched_table.jpg'),dpi=800,bbox_inches='tight')
     plt.close()
     """
 
@@ -1393,7 +1401,7 @@ if __name__ == '__main__':
     print("\n## Final Summary ##")
 
     # Get list of all plot images
-    images = [Image.open(img_path) for img_path in diagnostic_dir.rglob("*.svg")]
+    images = [Image.open(img_path) for img_path in img_list]
 
     # Append all images to 0th image
     summary_path = diagnostic_dir / 'observation_summary.pdf'
