@@ -1081,7 +1081,7 @@ if __name__ == '__main__':
 
         # Underlay timeblock data with transparency heatmap
         ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
-        ax = sns.heatmap(cloud_data[:,[0,9]],cmap='Blues_r',vmax=5,cbar=False,zorder=2)
+        ax = sns.heatmap(cloud_data[:,[0,9]].transpose(),cmap='Blues_r',vmax=5,cbar=False,zorder=2)
         ax.axes.invert_yaxis()
 
         # Overlay transparency heatmap with transparency linegraph 
@@ -1168,14 +1168,14 @@ if __name__ == '__main__':
         ax3.spines[:].set_visible(False)
         ax3.xaxis.tick_top()
         ax3.set_xticks([])
-        ax3.margins(y=0.1)
+        ax3.margins(y=0.4)
 
         # TODO: Add legend -> currently not formatted correctly
         #legend = "X - bad weather \n ♦ - dome close"
         #plt.text(0.02, 0.5, legend, fontsize=14, transform=timeline_fig.transFigure)
 
         # Save figure
-        timeline_fig.subplots_adjust(hspace=1)
+        timeline_fig.subplots_adjust(hspace=0)
         #plt.title(f"{sunset.strftime(OBSDATE_FORMAT)}:\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)}")
         plt.title(f"{obs_date_dashed}")
         timeline_fig.savefig(str(diagnostic_dir / "event.svg"),dpi=800,bbox_inches='tight')
