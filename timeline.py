@@ -1089,13 +1089,14 @@ if __name__ == '__main__':
         #ax = sns.heatmap(cloud_data[:,[0,9]].transpose(),cmap='Blues_r',vmax=5,cbar=False,zorder=2)
         #ax.axes.invert_yaxis()
 
-        # Overlay transparency heatmap with transparency linegraph 
+        # Overlay transparency heatmap with transparency linegraph
+        # Offset is due to empirical/historic data for skydelta
         ax2 = ax1.twinx()
-        ax2.plot(cloud_time,cloud_data[:,9]+15.55,'k-')
+        ax2.plot(cloud_time,cloud_data[:,9]+14.55,'k-')
 
         # Set the axes limits and labels of the transparency plot
-        #ax2.yaxis.set_ticks(np.arange(0, 5, 1))
-        #ax2.set_ylim([0,4])
+        ax2.yaxis.set_ticks(np.arange(0, 5, 1))
+        ax2.set_ylim([0,4])
         #ax.set_yticks([])
         #ax.set_yticklabels([])
         ax2.set_ylabel('mag')
