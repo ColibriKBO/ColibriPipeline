@@ -1095,8 +1095,8 @@ if __name__ == '__main__':
         ax2.plot(cloud_time,cloud_data[:,9]+14.55,'k-')
 
         # Set the axes limits and labels of the transparency plot
-        ax2.yaxis.set_ticks(np.arange(0, 5, 1))
-        ax2.set_ylim([0,4])
+        ax2.yaxis.set_ticks(np.arange(0, 5, 1)*0.5)
+        ax2.set_ylim([0,2.5])
         #ax.set_yticks([])
         #ax.set_yticklabels([])
         ax2.set_ylabel('mag')
