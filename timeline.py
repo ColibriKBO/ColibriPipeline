@@ -1048,12 +1048,12 @@ if __name__ == '__main__':
     ax1.xaxis.set_major_locator(loc)
     ax1.xaxis.set_major_formatter(xfmt)
     ax1.set_xlim([mdates.date2num(sunset), mdates.date2num(sunrise)])
-    ax1.set_yticks([1,2,3])
-    ax1.set_ylim(top=3+.4)
+    ax1.set_yticks([0,1,2])
+    ax1.set_ylim(bottom=0-0.5, top=2+0.5)
     ax1.set_yticklabels(['Red','Green','Blue'])
     ax1.xaxis.set_tick_params(labelsize=9)
     ax1.xaxis.grid(True)
-    ax1.xaxis.tick_top()
+    #ax1.xaxis.tick_top()
 
 
 ###########################
@@ -1091,11 +1091,12 @@ if __name__ == '__main__':
         # Set the axes limits and labels of the transparency plot
         ax2.yaxis.set_ticks(np.arange(0, 5, 1))
         ax2.set_ylim([0,4])
+        ax.set_yticks([])
         ax.set_yticklabels([])
         ax2.set_ylabel('mag')
         ax.set_xticklabels([])
-        ax2.set_xticklabels([])
         ax2.set_xticks([])
+        ax2.set_xticklabels([])
     
 
 ###########################
@@ -1174,7 +1175,7 @@ if __name__ == '__main__':
         #plt.text(0.02, 0.5, legend, fontsize=14, transform=timeline_fig.transFigure)
 
         # Save figure
-        timeline_fig.subplots_adjust(hspace=0)
+        timeline_fig.subplots_adjust(hspace=1)
         #plt.title(f"{sunset.strftime(OBSDATE_FORMAT)}:\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)}")
         plt.title(f"{obs_date_dashed}")
         timeline_fig.savefig(str(diagnostic_dir / "event.svg"),dpi=800,bbox_inches='tight')
