@@ -1077,7 +1077,7 @@ if __name__ == '__main__':
     if cloud_data is not None:
         print("Plotting transparency data...")
         # Isolate data between sunset and sunrise
-        cloud_data = cloud_data[np.where(cloud_data[:,0] > sunset.timestamp()) and np.where(cloud_data[:,0] < sunrise.timestamp())]
+        cloud_data = cloud_data[(cloud_data[:,0] > sunset.timestamp()) & (cloud_data[:,0] < sunrise.timestamp())]
 
         # Underlay timeblock data with transparency heatmap
         ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
