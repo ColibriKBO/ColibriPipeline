@@ -294,7 +294,7 @@ def getImportantLines(log_path, log_patterns):
 
         for line in log.readlines():
             if any(pattern in line for pattern in log_patterns):
-                print("Pattern matched!")
+                #print("Pattern matched!")
                 matched_line.append(line.strip("\n"))
                 
     return matched_line
@@ -1078,23 +1078,23 @@ if __name__ == '__main__':
         print("Plotting transparency data...")
         # Isolate data between sunset and sunrise
         cloud_data = cloud_data[(cloud_data[:,0] > sunset.timestamp()) & (cloud_data[:,0] < sunrise.timestamp())]
-        cloud_time = datetime.fromtimestamp(cloud_data[:,0], tz=timezone.utc)
+        cloud_time = [mdates.date2num(datetime.fromtimestamp(transparency, tz=timezone.utc)) for transparency in cloud_data[:,0]]
 
         # Underlay timeblock data with transparency heatmap
-        ax = ax1.twinx()
+        #ax = ax1.twinx()
         #ax = inset_axes(ax1, width="100%", height="100%",loc=3, bbox_to_anchor=(-0.014,-0.06,1,1), bbox_transform=ax1.transAxes)
-        ax = sns.heatmap(cloud_data[:,[0,9]].transpose(),cmap='Blues_r',vmax=5,cbar=False,zorder=2)
-        ax.axes.invert_yaxis()
+        #ax = sns.heatmap(cloud_data[:,[0,9]].transpose(),cmap='Blues_r',vmax=5,cbar=False,zorder=2)
+        #ax.axes.invert_yaxis()
 
         # Overlay transparency heatmap with transparency linegraph 
         ax2 = ax1.twinx()
-        ax2.lineplot(x=mdates.date2num(cloud_time),y=cloud_data[:,9]+15.55,color='k', zorder=5)
+        ax2.plot(cloud_time,cloud_data[:,9]+15.55,'k-')
 
         # Set the axes limits and labels of the transparency plot
-        ax2.yaxis.set_ticks(np.arange(0, 5, 1))
-        ax2.set_ylim([0,4])
-        ax.set_yticks([])
-        ax.set_yticklabels([])
+        #ax2.yaxis.set_ticks(np.arange(0, 5, 1))
+        #ax2.set_ylim([0,4])
+        #ax.set_yticks([])
+        #ax.set_yticklabels([])
         ax2.set_ylabel('mag')
         #ax.set_xticklabels([])
         #ax2.set_xticks([])
@@ -1170,7 +1170,7 @@ if __name__ == '__main__':
         ax3.spines[:].set_visible(False)
         ax3.xaxis.tick_top()
         ax3.set_xticks([])
-        ax3.margins(y=0.4)
+        ax3.margins(y=0.2)
 
         # TODO: Add legend -> currently not formatted correctly
         #legend = "X - bad weather \n ♦ - dome close"
