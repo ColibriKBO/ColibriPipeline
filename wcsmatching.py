@@ -50,6 +50,9 @@ MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%f'
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 BARE_FORMAT = '%Y-%m-%d_%H%M%S_%f'
 
+# Verbose print statement
+VERBOSE = False
+verboseprint = lambda *a, **k: None
 
 #----------------------------------class--------------------------------------#
 
@@ -109,7 +112,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
     # back into the WCS file
     for npy_file in npy_file_list:
 
-        print(f"Processing {npy_file.name}...")
+        verboseprint(f"Processing {npy_file.name}...")
 
         # Read in data from npy file
         # Format x | y | half-light radius
@@ -117,17 +120,17 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
 
         # If npy file already contains ra/dec information
         if star_table.shape[1] == 4:
-            print("  Already proccessed.")
+            verboseprint("  Already proccessed.")
             continue
 
         # Get minute string from filename using regex
         timestamp,_ = regexNPYName(npy_file.name)
-        print(f"  -> Associated timestamp: {timestamp}")
+        verboseprint(f"  -> Associated timestamp: {timestamp}")
 
         # Generate WCS transformation and the RA/Dec
         transform  = getTransform(timestamp, medstack_file_list, {})
         star_radec = getRAdec(transform, npy_file)
-        print("  Successfully generated RA/DEC.")
+        verboseprint("  Successfully generated RA/DEC.")
 
         # Save the array of star positions as an .npy file again
         # Format: x  |  y  | ra | dec :: No half-light radius data saved!
@@ -190,7 +193,7 @@ def getMinuteTriplets(minute_list1, minute_list2, minute_list3, spacing=60):
 
                     # If match found, save triplet and update last matched minute in minute_list3
                     if abs((timestamp1 - timestamp3).total_seconds()) < spacing:
-                        print(f"Matched {timestamp1} with {timestamp2} and {timestamp3}!")
+                        verboseprint(f"Matched {timestamp1} with {timestamp2} and {timestamp3}!")
                         minute_triplets.append([timestamp1, timestamp2, timestamp3])
                         last_matched3 += ind3 + 1
                         break
@@ -280,12 +283,18 @@ if __name__ == '__main__':
                             action='store_true')
     arg_parser.add_argument('-m', '--match', help='Match stars between telescopes. Blue only.', 
                             action='store_true')
+    arg_parser.add_argument('-v', '--verbose', help='Increase output verbosity.', 
+                            action='store_true')
 
     # Process argparse list as useful variables
     cml_args  = arg_parser.parse_args()
     obsdate   = cml_args.date
     proc_all  = cml_args.all
     match_all = cml_args.match
+    
+    # Update verboseprint function
+    if cml_args.verbose:
+        verboseprint = print
 
     # Environment variable to ensure BLUEBIRD is used when required
     current_name = os.environ['COMPUTERNAME']
@@ -366,38 +375,6 @@ if __name__ == '__main__':
     for machine in (Blue,Red,Green):
         keys_list.append(machine.genDatetimeList())
         print(f"{machine.name} has {len(machine.dt_dict)} minutes of data.")
-
-    ''' # Deprecated
-    # Try to find valid timestamp pairs between telescopes
-    RG_pairs = pairMinutes(sorted(list(Red.dt_dict.keys())),
-                           sorted(list(Green.dt_dict.keys())))
-    GB_pairs = pairMinutes(sorted(list(Green.dt_dict.keys())),
-                           sorted(list(Blue.dt_dict.keys())))
-    RB_pairs = pairMinutes(sorted(list(Red.dt_dict.keys())),
-                           sorted(list(Blue.dt_dict.keys())))
-    
-    print(f"RG = {len(RG_pairs)}\nGB = {len(GB_pairs)}\nRB = {len(RB_pairs)}")
-
-
-    
-
-    # If we found pairs between RB and BG, then we search for pairs between all 3
-    if (RG_pairs.size == 0) or (GB_pairs.size == 0) or (RB_pairs.size == 0):
-        print("Failed to match minutes for all 3 machines!")
-        sys.exit()
-    else:
-        shared_matches, GB_inds, RB_inds = np.intersect1d(GB_pairs[:,1],
-                                                          RB_pairs[:,1],
-                                                          assume_unique=True,
-                                                          return_indices=True)
-        
-        # Join shared matches into triples
-        time_triplets = np.vstack((RB_pairs[RB_inds,0],
-                                   GB_pairs[GB_inds,0],
-                                   GB_pairs[GB_inds,1]))
-        time_triplets = time_triplets.transpose()
-
-    '''
 
     # Pair minutes between all 3 telescopes
     time_triplets = getMinuteTriplets(*keys_list)
