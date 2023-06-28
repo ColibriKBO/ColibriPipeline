@@ -57,7 +57,7 @@ DETECT_THRESH = 3.3  # sigma threshold for detection
 NUM_TO_SKIP  = 1  # number of images to skip for star detection
 NUM_TO_STACK = 9  # number of images to stack for star detection
 EDGE_BUFFER  = 10  # px from edge of image to ignore
-NPY_STARS = 5  # number of stars to save in .npy file
+NPY_STARS = 10  # number of stars to save in .npy file
 MIN_STARS = 30  # minimum number of stars to analyze minute
 
 # Drift parameters
