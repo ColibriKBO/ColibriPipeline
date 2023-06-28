@@ -87,20 +87,16 @@ class Telescope:
     def genDatetimeList(self):
 
         # Initialize datetime list
-        self.dt_list = []
         self.dt_dict = {}
 
         # Confirm that star tables exist
         if self.star_tables is False:
-            #return self.dt_list
             return []
         
         # Iterate through all npy_files and get the datetime str from the name
         for npy_file in self.npy_file_list:
-            #self.dt_list.append(regexNPYName(npy_file.name)[1])
             self.dt_dict[regexNPYName(npy_file.name)[1]] = npy_file.name
         else:
-            #return sorted(self.dt_list)
             return sorted(list(self.dt_dict.keys()))
 
 
@@ -139,7 +135,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         np.save(npy_file, star_radec)
 
 
-def pairMinutes(minute_list1, minute_list2, spacing=33):
+def pairMinutes(minute_list1, minute_list2, spacing=60):
     """
     
     """
@@ -169,7 +165,7 @@ def pairMinutes(minute_list1, minute_list2, spacing=33):
     return minute_pairs[paired_inds]
 
 
-def getMinuteTriplets(minute_list1, minute_list2, minute_list3, spacing=33):
+def getMinuteTriplets(minute_list1, minute_list2, minute_list3, spacing=60):
     """
     
     """
@@ -205,6 +201,8 @@ def getMinuteTriplets(minute_list1, minute_list2, minute_list3, spacing=33):
     
     else:
         print("All minutes matched!")
+
+    return minute_triplets
 
 
 
@@ -362,9 +360,11 @@ if __name__ == '__main__':
 
     print("\n## Minute Matching ##")
 
-    # Generate datetime objects for all telescopes
-    for machine in (Red,Green,Blue):
-        machine.genDatetimeList()
+    # Generate datetime objects for all telescopes.
+    # Save list of keys for use later in order.
+    keys_list = []
+    for machine in (Blue,Red,Green):
+        keys_list.append(machine.genDatetimeList())
 
     ''' # Deprecated
     # Try to find valid timestamp pairs between telescopes
@@ -399,9 +399,7 @@ if __name__ == '__main__':
     '''
 
     # Pair minutes between all 3 telescopes
-    time_triplets = getMinuteTriplets(sorted(list(Blue.dt_dict.keys())),
-                                      sorted(list(Red.dt_dict.keys())),
-                                      sorted(list(Green.dt_dict.keys())))
+    time_triplets = getMinuteTriplets(*keys_list)
     print(f"RGB = {len(time_triplets)}")
 
 
@@ -414,9 +412,9 @@ if __name__ == '__main__':
     for minute in time_triplets:
 
         # Get npy file from each telescope
-        Red_file   = Red.obs_archive / Red.dt_dict[minute[0]]
-        Green_file = Green.obs_archive / Green.dt_dict[minute[1]]
-        Blue_file  = Blue.obs_archive / Blue.dt_dict[minute[2]]
+        Blue_file  = Blue.obs_archive / Blue.dt_dict[minute[0]]
+        Red_file   = Red.obs_archive / Red.dt_dict[minute[1]]
+        Green_file = Green.obs_archive / Green.dt_dict[minute[2]]
 
         # Get ra/dec from each npy file
         # TODO: WCS mapping if not already done
