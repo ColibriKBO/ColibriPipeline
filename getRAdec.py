@@ -46,6 +46,24 @@ def getRAdec(transform, star_pos_file, savefile):
     return coords
 
 
+def getRAdec_arrays(transform, star_pos):
+    '''get WCS transform from astrometry.net header
+    input: astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
+    returns: coordinate transform'''
+    
+    #load in transformation information
+#    transform_im = fits.open(transform_file)
+#    transform = wcs.WCS(transform_im[0].header)
+    
+    #get transformation
+    world = transform.all_pix2world(star_pos, 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
+                
+    # output table: | x | y | RA | Dec | 
+    #coords = np.array([star_pos[:,0], star_pos[:,1], world[:,0], world[:,1]]).transpose()
+    coords = np.hstack((star_pos[:,0], star_pos[:,1], world[:,0], world[:,1]))
+    return coords
+
+
 def getRAdecfromFile(transform_file, star_pos_file, savefile):
     '''get WCS transform from astrometry.net header
     input: astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
