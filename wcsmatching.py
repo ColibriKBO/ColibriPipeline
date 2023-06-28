@@ -169,6 +169,44 @@ def pairMinutes(minute_list1, minute_list2, spacing=33):
     return minute_pairs[paired_inds]
 
 
+def getMinuteTriplets(minute_list1, minute_list2, minute_list3, spacing=33):
+    """
+    
+    """
+
+    # Iterate through minute_list1 and find all pairs with minute_list2 and minute_list3.
+    # Save index of last matched minute in minute_list2 and minute_list3 to avoid duplicates.
+    minute_triplets = []
+    last_matched2 = 0
+    last_matched3 = 0
+    for timestamp1 in minute_list1:
+        # Check that neither minute_list2 or minute_list3 are over-indexed
+        if (last_matched2 >= len(minute_list2)) or (last_matched3 >= len(minute_list3)):
+            print("No more minutes to match!")
+            break
+
+        # Compare to minute_list2 and find first match within spacing
+        for ind2, timestamp2 in enumerate(minute_list2[last_matched2:]):
+            if abs((timestamp1 - timestamp2).total_seconds()) < spacing:
+                
+                # Compare to minute_list3 and find first match within spacing
+                for ind3, timestamp3 in enumerate(minute_list3[last_matched3:]):
+
+                    # If match found, save triplet and update last matched minute in minute_list3
+                    if abs((timestamp1 - timestamp3).total_seconds()) < spacing:
+                        print(f"Matched {timestamp1} with {timestamp2} and {timestamp3}!")
+                        minute_triplets.append([timestamp1, timestamp2, timestamp3])
+                        last_matched3 += ind3 + 1
+                        break
+                
+                # Update last matched minute in minute_list2
+                last_matched2 += ind2 + 1
+                break
+    
+    else:
+        print("All minutes matched!")
+
+
 
 def sharedStars(telescope1, telescope2, tolerance=1E-2):
     """
@@ -328,15 +366,8 @@ if __name__ == '__main__':
     for machine in (Red,Green,Blue):
         machine.genDatetimeList()
 
-    """ Currently revising to use dictionary
+    ''' # Deprecated
     # Try to find valid timestamp pairs between telescopes
-    RB_pairs = pairMinutes(Red.dt_list, Blue.dt_list)
-    BG_pairs = pairMinutes(Blue.dt_list, Green.dt_list)
-    RG_pairs = pairMinutes(Red.dt_list, Green.dt_list)
-    """
-
-    # Try to find valid timestamp pairs between telescopes
-    #print(sorted(list(Red.dt_dict.keys())))
     RG_pairs = pairMinutes(sorted(list(Red.dt_dict.keys())),
                            sorted(list(Green.dt_dict.keys())))
     GB_pairs = pairMinutes(sorted(list(Green.dt_dict.keys())),
@@ -345,6 +376,9 @@ if __name__ == '__main__':
                            sorted(list(Blue.dt_dict.keys())))
     
     print(f"RG = {len(RG_pairs)}\nGB = {len(GB_pairs)}\nRB = {len(RB_pairs)}")
+
+
+    
 
     # If we found pairs between RB and BG, then we search for pairs between all 3
     if (RG_pairs.size == 0) or (GB_pairs.size == 0) or (RB_pairs.size == 0):
@@ -362,7 +396,13 @@ if __name__ == '__main__':
                                    GB_pairs[GB_inds,1]))
         time_triplets = time_triplets.transpose()
 
-        print(f"RGB = {len(time_triplets)}")
+    '''
+
+    # Pair minutes between all 3 telescopes
+    time_triplets = getMinuteTriplets(sorted(list(Blue.dt_dict.keys())),
+                                      sorted(list(Red.dt_dict.keys())),
+                                      sorted(list(Green.dt_dict.keys())))
+    print(f"RGB = {len(time_triplets)}")
 
 
     ## Star matching ##
