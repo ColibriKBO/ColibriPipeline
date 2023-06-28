@@ -1177,8 +1177,11 @@ if __name__ == '__main__':
     ax3.margins(y=0.2)
 
     # TODO: Add legend -> currently not formatted correctly
-    #legend = "X - bad weather \n ♦ - dome close"
-    #plt.text(0.02, 0.5, legend, fontsize=14, transform=timeline_fig.transFigure)
+    marker_dict = {"Bad Weather":"x", "Dome Closure":"D"}
+    for key in marker_dict.keys():
+        ax3.plot([], [], marker_dict[key], label=key)
+    
+    ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     # Save figure
     timeline_fig.subplots_adjust(hspace=0)
