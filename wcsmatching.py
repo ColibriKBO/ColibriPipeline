@@ -51,7 +51,6 @@ TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 BARE_FORMAT = '%Y-%m-%d_%H%M%S_%f'
 
 # Verbose print statement
-VERBOSE = False
 verboseprint = lambda *a, **k: None
 
 #----------------------------------class--------------------------------------#
@@ -237,7 +236,7 @@ def sharedStars(telescope1, telescope2, tolerance=1E-2):
     # Find any stars within tolerance
     # Return two arrays of indices
     close_star_inds = np.where(hypot < tolerance)
-    print(f"Stars successfully matched. {len(close_star_inds[0])} matched stars found.")
+    verboseprint(f"Stars successfully matched. {len(close_star_inds[0])} matched stars found.")
     return close_star_inds[0],close_star_inds[1]
 
 
