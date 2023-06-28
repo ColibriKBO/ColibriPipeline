@@ -1183,7 +1183,7 @@ if __name__ == '__main__':
     # Save figure
     timeline_fig.subplots_adjust(hspace=0)
     #plt.title(f"{sunset.strftime(OBSDATE_FORMAT)}:\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)}")
-    plt.title(f"{obs_date_dashed}")
+    plt.title(f"{obs_date_dashed}\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)} UTC")
     timeline_fig.savefig(str(diagnostic_dir / "event.jpg"),dpi=800,bbox_inches='tight')
     img_list.append(str(diagnostic_dir / "event.jpg"))
     plt.close()
@@ -1285,6 +1285,7 @@ if __name__ == '__main__':
     plt.grid()
 
     # Save the plot
+    plt.title(f"Sensitivity {obs_date}")
     sensitivity_fig.savefig(str(diagnostic_dir / 'sensitivity.jpg'),dpi=800,bbox_inches='tight')
     img_list.append(str(diagnostic_dir / 'sensitivity.jpg'))
     plt.close()
@@ -1314,7 +1315,6 @@ if __name__ == '__main__':
     # Set the axes limits and labels of the single telescope candidates plot
     ax5.tick_params(axis='both',which='minor',labelsize=8)
     ax5.xaxis.set_minor_locator(AutoMinorLocator(2))
-    plt.title(f"{obs_date} Detections")
     ax5.set_xlabel("Significance")
     ax5.set_ylabel("Number of Events")
     formatter = ScalarFormatter()
@@ -1323,6 +1323,7 @@ if __name__ == '__main__':
     plt.grid(which='both',axis='x')
 
     # Save single detection plot
+    plt.title(f"{obs_date} Detections")
     det1_fig.savefig(str(diagnostic_dir / 'det1_hist.jpg'),dpi=800,bbox_inches='tight')
     img_list.append(str(diagnostic_dir / 'det1_hist.jpg'))
     plt.close()
