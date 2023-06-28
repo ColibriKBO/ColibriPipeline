@@ -1176,12 +1176,13 @@ if __name__ == '__main__':
     ax3.set_xticks([])
     ax3.margins(y=0.2)
 
-    # TODO: Add legend -> currently not formatted correctly
+    # Plot legend for physical events
+    # TODO: change marker_dict to be a global var used in summarizeEvents()
     marker_dict = {"Bad Weather":"x", "Dome Closure":"D"}
     for key in marker_dict.keys():
-        ax3.plot([], [], marker_dict[key], label=key)
+        ax3.plot([], [], marker_dict[key]+'k', label=key)
     
-    ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1))
+    ax3.legend(loc='upper center', bbox_to_anchor=(0.5, 0))
 
     # Save figure
     timeline_fig.subplots_adjust(hspace=0)
