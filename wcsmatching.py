@@ -365,6 +365,7 @@ if __name__ == '__main__':
     keys_list = []
     for machine in (Blue,Red,Green):
         keys_list.append(machine.genDatetimeList())
+        print(f"{machine.name} has {len(machine.dt_dict)} minutes of data.")
 
     ''' # Deprecated
     # Try to find valid timestamp pairs between telescopes
