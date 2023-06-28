@@ -352,7 +352,7 @@ if __name__ == '__main__':
 
 
     # Generate argument parser
-    arg_parser = argparse.ArgumentParser(description="First-level data analysis for the Colibri telescopes",
+    arg_parser = argparse.ArgumentParser(description="Force generate a lightcurve from raw images",
                                          formatter_class=argparse.RawTextHelpFormatter)
     
     # Available argument functionality
