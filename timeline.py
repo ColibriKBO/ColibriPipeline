@@ -1346,7 +1346,7 @@ if __name__ == '__main__':
     else:
 
         # Get detection files
-        matched_det_files = sorted(matched_dir.glob('det_*.txt'))
+        matched_det_files = sorted(matched_dir.glob('*.txt'))
 
         # Get names and descriptions of matched events form "matched" subdirectories
         hhmmss_dirs = [item for item in matched_dir.iterdir() if item.is_dir()]

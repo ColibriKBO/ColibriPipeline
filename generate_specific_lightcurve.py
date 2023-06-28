@@ -251,7 +251,7 @@ def saveLightcurve(lightcurve_paths, star_data, header_times,
 
     # Save names
     save_path = ARCHIVE_PATH / obsdate_hyphon
-    save_file = save_path / "det_{}_FORCED_{}.txt".format(timestamp_bare, telescope)
+    save_file = save_path / "art_{}_{}.txt".format(timestamp_bare, telescope)
     print(f"Saving lightcurve to {save_file}")
 
     # Write header and data to detection file
