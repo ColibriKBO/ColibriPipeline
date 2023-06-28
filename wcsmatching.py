@@ -2,8 +2,8 @@
 Filename:   wcsmatching.py
 Author(s):  Peter Quigley
 Contact:    pquigley@uwo.ca
-Created:    June 19, 2022
-Updated:    June 20, 2022
+Created:    June 19, 2023
+Updated:    June 20, 2023
     
 Usage: python wcsmatching.py <obs_date>
        *This script is intended to run only on BLUEBIRD
@@ -135,6 +135,94 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         # Format: x  |  y  | ra | dec :: No half-light radius data saved!
         npy_file.unlink()
         np.save(npy_file, star_radec)
+
+
+def matchNight(obsdate):
+    """
+    Match stars between telescopes for a given night. Substitute for main().
+
+    Parameters
+    ----------
+        obsdate (str): Date of observation in YYYYMMDD format.
+
+    Returns
+    ----------
+        starhours (float): Number of star hours matched between telescopes.
+                           Returns nan if no matching stars found, but minutes are.
+    
+    """
+
+    # Initialize telescope classes
+    Red   = Telescope("RED", "R:", obsdate)
+    Green = Telescope("GREEN", "G:", obsdate)
+    Blue  = Telescope("BLUE", "D:", obsdate)
+
+
+    ## Minute matching ## 
+
+    print("\n## Minute Matching ##")
+
+    # Generate datetime objects for all telescopes.
+    # Save list of keys for use later in order.
+    keys_list = []
+    for machine in (Blue,Red,Green):
+        keys_list.append(machine.genDatetimeList())
+        print(f"{machine.name} has {len(machine.dt_dict)} minutes of data.")
+
+    # Pair minutes between all 3 telescopes
+    time_triplets = getMinuteTriplets(*keys_list)
+    if len(time_triplets) == 0:
+        print("ERROR: No matching minutes between telescopes!")
+        return 0
+    else:
+        print(f"RGB = {len(time_triplets)}")
+
+
+    ## Star matching ##
+
+    print("\n## Star Matching ##")
+
+    # Match stars from each telescope's star lists
+    star_minutes = 0
+    for minute in time_triplets:
+
+        # Get npy file from each telescope
+        Blue_file  = Blue.obs_archive / Blue.dt_dict[minute[0]]
+        Red_file   = Red.obs_archive / Red.dt_dict[minute[1]]
+        Green_file = Green.obs_archive / Green.dt_dict[minute[2]]
+
+        # Get ra/dec from each npy file
+        # TODO: WCS mapping if not already done
+        try:
+            Red_stars   = np.load(Red_file)[:,[2,3]]
+        except IndexError:
+            print(f"ERROR: {Red_file} has not been updated!")
+            continue
+        try:
+            Green_stars = np.load(Green_file)[:,[2,3]]
+        except IndexError:
+            print(f"ERROR: {Green_file} has not been updated!")
+            continue
+        try:
+            Blue_stars  = np.load(Blue_file)[:,[2,3]]
+        except IndexError:
+            print(f"ERROR: {Blue_file} has not been updated!")
+            continue
+
+        # Match stars between 2 and then 3
+        BR_matched = sharedStars(Blue_stars, Red_stars)
+        BG_matched = sharedStars(Blue_stars, Green_stars)
+        shared_stars = np.intersect1d(BR_matched[0], BG_matched[0])
+
+        star_minutes += len(shared_stars)
+    
+    # Check that we matched some stars
+    if star_minutes == 0:
+        print("ERROR: No stars matched! Check that all files have been updated.")
+        return np.nan
+    else:
+        print(f"\nDone star matching! {star_minutes/60.} star-hours detected.")
+        return star_minutes/60.
 
 
 def pairMinutes(minute_list1, minute_list2, spacing=60):
@@ -278,8 +366,6 @@ if __name__ == '__main__':
     
     # Available argument functionality
     arg_parser.add_argument('date', help='Observation date (YYYYMMDD) of data to be processed.')
-    arg_parser.add_argument('-a', '--all', help='Process for all telescopes. Blue only.', 
-                            action='store_true')
     arg_parser.add_argument('-m', '--match', help='Match stars between telescopes. Blue only.', 
                             action='store_true')
     arg_parser.add_argument('-v', '--verbose', help='Increase output verbosity.', 
@@ -305,41 +391,14 @@ if __name__ == '__main__':
 
     print("\n## WCS Transformations ##")
 
-    # Single-telescope mode
-    if proc_all is False:
-        # Process only for the current machine
-        print("Processing current machine...\n")
-        current = Telescope(current_name, BASE_PATH, obsdate)
-        if (current.star_tables) and (current.medstack_file_list != []):
-            npyFileWCSUpdate(current.npy_file_list,
-                             current.medstack_file_list)
-        else:
-            print("ERROR: Could not process for current telescope!")
-
-    # Multi-telescope mode (assumed to run only on Blue)
-    elif current_name != "BLUEBIRD":
-        print(f"ERROR: Multi-telescope mode is only designed to run on Blue!")
-        sys.exit()
-
+    # Process npy files for the current machine
+    print("Processing current machine...\n")
+    current = Telescope(current_name, BASE_PATH, obsdate)
+    if (current.star_tables) and (current.medstack_file_list != []):
+        npyFileWCSUpdate(current.npy_file_list,
+                            current.medstack_file_list)
     else:
-        # Initialize telescope classes
-        Red   = Telescope("RED", "R:", obsdate)
-        Green = Telescope("GREEN", "G:", obsdate)
-        Blue  = Telescope("BLUE", "D:", obsdate)
-
-        # Check that at least one star table set exists
-        if not (Red.star_tables | Green.star_tables | Blue.star_tables):
-            print(f"ERROR: No star tables exist for {obsdate}!")
-            sys.exit()
-        
-        # Process for each of the machines
-        for machine in (Red,Green,Blue):
-            if (machine.star_tables) and (machine.medstack_file_list != []):
-                print(f"Processing star tables for {machine.name}...")
-                npyFileWCSUpdate(machine.npy_file_list,
-                                 machine.medstack_file_list)
-            else:
-                print(f"Skipping {machine.name}...")
+        print("ERROR: Could not process for current telescope!")
 
 
 ###########################
@@ -353,70 +412,6 @@ if __name__ == '__main__':
     elif current_name != "BLUEBIRD":
         print("ERROR: Matching is only designed to run on Blue!")
         sys.exit()
-
-    # Initialize telescope classes if that wasn't done in the last part
-    if (proc_all is False) and (match_all):
-        print("Trusting that all telescopes have run astrometry...")
-
-        # Initialize telescope classes
-        Red   = Telescope("RED", "R:", obsdate)
-        Green = Telescope("GREEN", "G:", obsdate)
-        Blue  = Telescope("BLUE", "D:", obsdate)
-
-
-    ## Minute matching ## 
-
-    print("\n## Minute Matching ##")
-
-    # Generate datetime objects for all telescopes.
-    # Save list of keys for use later in order.
-    keys_list = []
-    for machine in (Blue,Red,Green):
-        keys_list.append(machine.genDatetimeList())
-        print(f"{machine.name} has {len(machine.dt_dict)} minutes of data.")
-
-    # Pair minutes between all 3 telescopes
-    time_triplets = getMinuteTriplets(*keys_list)
-    print(f"RGB = {len(time_triplets)}")
-
-
-    ## Star matching ##
-
-    print("\n## Star Matching ##")
-
-    # Match stars from each telescope's star lists
-    star_minutes = 0
-    for minute in time_triplets:
-
-        # Get npy file from each telescope
-        Blue_file  = Blue.obs_archive / Blue.dt_dict[minute[0]]
-        Red_file   = Red.obs_archive / Red.dt_dict[minute[1]]
-        Green_file = Green.obs_archive / Green.dt_dict[minute[2]]
-
-        # Get ra/dec from each npy file
-        # TODO: WCS mapping if not already done
-        try:
-            Red_stars   = np.load(Red_file)[:,[2,3]]
-        except IndexError:
-            print(f"ERROR: {Red_file} has not been updated!")
-            continue
-        try:
-            Green_stars = np.load(Green_file)[:,[2,3]]
-        except IndexError:
-            print(f"ERROR: {Green_file} has not been updated!")
-            continue
-        try:
-            Blue_stars  = np.load(Blue_file)[:,[2,3]]
-        except IndexError:
-            print(f"ERROR: {Blue_file} has not been updated!")
-            continue
-
-
-        # Match stars between 2 and then 3
-        BR_matched = sharedStars(Blue_stars, Red_stars)
-        BG_matched = sharedStars(Blue_stars, Green_stars)
-        shared_stars = np.intersect1d(BR_matched[0], BG_matched[0])
-
-        star_minutes += len(shared_stars)
-    
-    print(f"\nDone star matching! {star_minutes/60.} star-hours detected.")
+    else:
+        print("\nBeginning telescope matching...\n")
+        matchNight(obsdate)
