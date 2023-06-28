@@ -68,206 +68,209 @@ def readSigma(filepath):
  
     return (sigma)
 
-base_path=Path('/','D:')
-#ColibriArchive pathes
-green_arch=base_path.joinpath('/ColibriArchive')
-red_arch=Path('/','Z:',)
-blue_arch=Path('/','Y:')
 
-#create directories that will store all detections
+if __name__ == '__main__':
 
-cumm_dets=green_arch.joinpath('cummulative_detections') #single telescope detections
+    base_path=Path('/','D:')
+    #ColibriArchive pathes
+    green_arch=base_path.joinpath('/ColibriArchive')
+    red_arch=Path('/','Z:',)
+    blue_arch=Path('/','Y:')
 
-if not os.path.exists(cumm_dets):
-    os.mkdir(cumm_dets)
-    
-cumm_occults2=green_arch.joinpath('cummulative_occultations2') #matched detections 2 telescopes
+    #create directories that will store all detections
 
-if not os.path.exists(cumm_occults2):
-    os.mkdir(cumm_occults2)
-    
-cumm_occults3=green_arch.joinpath('cummulative_occultations3') #matched detections 3 telescopes
+    cumm_dets=green_arch.joinpath('cummulative_detections') #single telescope detections
 
-if not os.path.exists(cumm_occults3):
-    os.mkdir(cumm_occults3)
-    
-archives=[green_arch,red_arch,blue_arch] #list of archives
+    if not os.path.exists(cumm_dets):
+        os.mkdir(cumm_dets)
+        
+    cumm_occults2=green_arch.joinpath('cummulative_occultations2') #matched detections 2 telescopes
 
-#%% cumulative detections for single telescope
-for archive in archives:
-    #sort out night dirs to reduce time
-    nights=[f for f in archive.iterdir() if ('diagnostics' not in f.name and getNightTime(f)>date(2022, 11, 5) and 'cummulative' not in f.name and f.is_dir())]
-    for night in nights:
-        print(night)
-        detections=[f for f in night.iterdir() if ('det' in f.name and 'txt' in f.name)]
-        if len(detections)==0: #some directories don't have detection txts
-            continue
-        else:
-            for detection in detections:
-                with open(detection) as f:
-                    if 'significance' in f.read(): #check if detection txt has significance
-                        try:
-                            shutil.copy2(detection,os.path.join(cumm_dets,detection.name)) #copy detection files
-                        except shutil.SameFileError:
-                            pass
+    if not os.path.exists(cumm_occults2):
+        os.mkdir(cumm_occults2)
+        
+    cumm_occults3=green_arch.joinpath('cummulative_occultations3') #matched detections 3 telescopes
 
-        print(night)
-#%%  cummulative telescope matches that are stored on Green
+    if not os.path.exists(cumm_occults3):
+        os.mkdir(cumm_occults3)
+        
+    archives=[green_arch,red_arch,blue_arch] #list of archives
 
-#sort out night dirs to reduce time
-#os.path.getctime(f)>1663609502 - after that time significance was implemented
-nights=[f for f in green_arch.iterdir() if ('diagnostics' not in f.name and os.path.getctime(f)>1667606400 and 'cummulative' not in f.name and f.is_dir())]
-for night in nights:
-    if os.path.exists(night.joinpath('matched')):
-        matched_dirs=[d for d in night.joinpath('matched').iterdir() if d.is_dir()]
-        for d in matched_dirs:
-            dets=[f for f in d.iterdir() if ('det' in f.name and '.txt' in f.name)]
-            if len(dets)==3:
-                for detection in dets:
-                    try:
-                        shutil.copy2(detection,os.path.join(cumm_occults3,detection.name)) #copy to 3-telescope candidate
-                    except:
-                        continue
-                    
-            elif len(dets)==2:
-                for detection in dets:
-                    try:
-                        shutil.copy2(detection,os.path.join(cumm_occults2,detection.name)) #copy to 2-telescope candidate
-                    except:
-                        continue
-            elif len(dets)==1:
+    #%% cumulative detections for single telescope
+    for archive in archives:
+        #sort out night dirs to reduce time
+        nights=[f for f in archive.iterdir() if ('diagnostics' not in f.name and getNightTime(f)>date(2022, 11, 5) and 'cummulative' not in f.name and f.is_dir())]
+        for night in nights:
+            print(night)
+            detections=[f for f in night.iterdir() if ('det' in f.name and 'txt' in f.name)]
+            if len(detections)==0: #some directories don't have detection txts
                 continue
+            else:
+                for detection in detections:
+                    with open(detection) as f:
+                        if 'significance' in f.read(): #check if detection txt has significance
+                            try:
+                                shutil.copy2(detection,os.path.join(cumm_dets,detection.name)) #copy detection files
+                            except shutil.SameFileError:
+                                pass
 
-#%% plot 1
+            print(night)
+    #%%  cummulative telescope matches that are stored on Green
 
-detected_files=[f for f in cumm_dets.iterdir() if 'det' in f.name]
+    #sort out night dirs to reduce time
+    #os.path.getctime(f)>1663609502 - after that time significance was implemented
+    nights=[f for f in green_arch.iterdir() if ('diagnostics' not in f.name and os.path.getctime(f)>1667606400 and 'cummulative' not in f.name and f.is_dir())]
+    for night in nights:
+        if os.path.exists(night.joinpath('matched')):
+            matched_dirs=[d for d in night.joinpath('matched').iterdir() if d.is_dir()]
+            for d in matched_dirs:
+                dets=[f for f in d.iterdir() if ('det' in f.name and '.txt' in f.name)]
+                if len(dets)==3:
+                    for detection in dets:
+                        try:
+                            shutil.copy2(detection,os.path.join(cumm_occults3,detection.name)) #copy to 3-telescope candidate
+                        except:
+                            continue
+                        
+                elif len(dets)==2:
+                    for detection in dets:
+                        try:
+                            shutil.copy2(detection,os.path.join(cumm_occults2,detection.name)) #copy to 2-telescope candidate
+                        except:
+                            continue
+                elif len(dets)==1:
+                    continue
 
-sigmas=[]
-for file in detected_files:
-    sigmas.append(readSigma(file))
+    #%% plot 1
 
-sigmas=np.array(sigmas)
-# q25, q75 = np.percentile(sigmas, [25, 75])
-# bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
-# bins = round((sigmas.max() - sigmas.min()) / bin_width)
-fig, ax = plt.subplots()
+    detected_files=[f for f in cumm_dets.iterdir() if 'det' in f.name]
 
-# We change the fontsize of minor ticks label 
-bins=np.arange(6,12.25,0.25)
+    sigmas=[]
+    for file in detected_files:
+        sigmas.append(readSigma(file))
 
-plt.hist(sigmas,bins=bins,log=False)
-# ax.yaxis.set_ticks(np.arange(0, 3, 1))
+    sigmas=np.array(sigmas)
+    # q25, q75 = np.percentile(sigmas, [25, 75])
+    # bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
+    # bins = round((sigmas.max() - sigmas.min()) / bin_width)
+    fig, ax = plt.subplots()
 
-plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
-# ax.tick_params(axis='both', which='major', labelsize=7)
-ax.tick_params(axis='both', which='minor', labelsize=8)
-ax.xaxis.set_minor_locator(AutoMinorLocator(2))
-# plt.xlim([min(sigmas),12])
-ax.set_xlabel('Signisifance')
-ax.set_ylabel('number of events')
-# ax.set_ylim([0,2])
-formatter = ScalarFormatter()
-formatter.set_scientific(False)
-ax.yaxis.set_major_formatter(formatter)
+    # We change the fontsize of minor ticks label 
+    bins=np.arange(6,12.25,0.25)
 
-#plt.ylim([1,600])
-plt.title('cummulative number of detections: '+str(np.size(sigmas)))
-# plt.title(' Number of occulatations: '+str(np.size(sigmas)))
-plt.grid(which='both',axis='x')
-plt.savefig(cumm_dets.joinpath("sigma.png"),dpi=300)
-# notbase_path=Path('/','D:','/Colibri','Green')
-operations_savepath=base_path.joinpath('/Logs','Operations')
-plt.savefig(operations_savepath.joinpath("sigma_det.svg"),dpi=800) 
-# plt.show()
+    plt.hist(sigmas,bins=bins,log=False)
+    # ax.yaxis.set_ticks(np.arange(0, 3, 1))
 
-plt.close()  
+    plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
+    # ax.tick_params(axis='both', which='major', labelsize=7)
+    ax.tick_params(axis='both', which='minor', labelsize=8)
+    ax.xaxis.set_minor_locator(AutoMinorLocator(2))
+    # plt.xlim([min(sigmas),12])
+    ax.set_xlabel('Signisifance')
+    ax.set_ylabel('number of events')
+    # ax.set_ylim([0,2])
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+    ax.yaxis.set_major_formatter(formatter)
 
-#%% plot 2
+    #plt.ylim([1,600])
+    plt.title('cummulative number of detections: '+str(np.size(sigmas)))
+    # plt.title(' Number of occulatations: '+str(np.size(sigmas)))
+    plt.grid(which='both',axis='x')
+    plt.savefig(cumm_dets.joinpath("sigma.png"),dpi=300)
+    # notbase_path=Path('/','D:','/Colibri','Green')
+    operations_savepath=base_path.joinpath('/Logs','Operations')
+    plt.savefig(operations_savepath.joinpath("sigma_det.svg"),dpi=800) 
+    # plt.show()
 
-detected_files=[f for f in cumm_occults2.iterdir() if 'det' in f.name]
+    plt.close()  
 
-sigmas=[]
-for file in detected_files:
-    sigmas.append(readSigma(file))
+    #%% plot 2
 
-sigmas=np.array(sigmas)
-# q25, q75 = np.percentile(sigmas, [25, 75])
-# bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
-# bins = round((sigmas.max() - sigmas.min()) / bin_width)
-fig, ax = plt.subplots()
+    detected_files=[f for f in cumm_occults2.iterdir() if 'det' in f.name]
 
-# We change the fontsize of minor ticks label 
-bins=np.arange(6,12.25,0.25)
+    sigmas=[]
+    for file in detected_files:
+        sigmas.append(readSigma(file))
 
-plt.hist(sigmas,bins=bins,log=False)
-# ax.yaxis.set_ticks(np.arange(0, 3, 1))
-ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    sigmas=np.array(sigmas)
+    # q25, q75 = np.percentile(sigmas, [25, 75])
+    # bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
+    # bins = round((sigmas.max() - sigmas.min()) / bin_width)
+    fig, ax = plt.subplots()
 
-plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
-# ax.tick_params(axis='both', which='major', labelsize=7)
-ax.tick_params(axis='both', which='minor', labelsize=8)
-ax.xaxis.set_minor_locator(AutoMinorLocator(2))
-# plt.xlim([min(sigmas),12])
-ax.set_xlabel('Signisifance')
-ax.set_ylabel('number of events')
-# ax.set_ylim([0,2])
-formatter = ScalarFormatter()
-formatter.set_scientific(False)
-ax.yaxis.set_major_formatter(formatter)
+    # We change the fontsize of minor ticks label 
+    bins=np.arange(6,12.25,0.25)
 
-#plt.ylim([1,600])
-plt.title('cummulative number of occultations for 2 telescopes: '+str(np.size(sigmas)))
-# plt.title(' Number of occulatations: '+str(np.size(sigmas)))
-plt.grid(which='both',axis='x')
-plt.savefig(cumm_dets.joinpath("sigma.png"),dpi=300)
-# notbase_path=Path('/','D:','/Colibri','Green')
-operations_savepath=base_path.joinpath('/Logs','Operations')
-plt.savefig(operations_savepath.joinpath("sigma_2.svg"),dpi=800) 
-# plt.show()
+    plt.hist(sigmas,bins=bins,log=False)
+    # ax.yaxis.set_ticks(np.arange(0, 3, 1))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-plt.close()
+    plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
+    # ax.tick_params(axis='both', which='major', labelsize=7)
+    ax.tick_params(axis='both', which='minor', labelsize=8)
+    ax.xaxis.set_minor_locator(AutoMinorLocator(2))
+    # plt.xlim([min(sigmas),12])
+    ax.set_xlabel('Signisifance')
+    ax.set_ylabel('number of events')
+    # ax.set_ylim([0,2])
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+    ax.yaxis.set_major_formatter(formatter)
 
-#%% plot 3        
+    #plt.ylim([1,600])
+    plt.title('cummulative number of occultations for 2 telescopes: '+str(np.size(sigmas)))
+    # plt.title(' Number of occulatations: '+str(np.size(sigmas)))
+    plt.grid(which='both',axis='x')
+    plt.savefig(cumm_dets.joinpath("sigma.png"),dpi=300)
+    # notbase_path=Path('/','D:','/Colibri','Green')
+    operations_savepath=base_path.joinpath('/Logs','Operations')
+    plt.savefig(operations_savepath.joinpath("sigma_2.svg"),dpi=800) 
+    # plt.show()
 
-detected_files=[f for f in cumm_occults3.iterdir() if 'det' in f.name]
+    plt.close()
 
-sigmas=[]
-for file in detected_files:
-    sigmas.append(readSigma(file))
+    #%% plot 3        
 
-sigmas=np.array(sigmas)
-# q25, q75 = np.percentile(sigmas, [25, 75])
-# bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
-# bins = round((sigmas.max() - sigmas.min()) / bin_width)
-fig, ax = plt.subplots()
+    detected_files=[f for f in cumm_occults3.iterdir() if 'det' in f.name]
 
-# We change the fontsize of minor ticks label 
-bins=np.arange(6,12.25,0.25)
+    sigmas=[]
+    for file in detected_files:
+        sigmas.append(readSigma(file))
 
-plt.hist(sigmas,bins=bins,log=False)
-# ax.yaxis.set_ticks(np.arange(0, 3, 1))
-ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    sigmas=np.array(sigmas)
+    # q25, q75 = np.percentile(sigmas, [25, 75])
+    # bin_width = 2 * (q75 - q25) * len(sigmas) ** (-1/3)
+    # bins = round((sigmas.max() - sigmas.min()) / bin_width)
+    fig, ax = plt.subplots()
 
-plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
-# ax.tick_params(axis='both', which='major', labelsize=7)
-ax.tick_params(axis='both', which='minor', labelsize=8)
-ax.xaxis.set_minor_locator(AutoMinorLocator(2))
-# plt.xlim([min(sigmas),12])
-ax.set_xlabel('Signisifance')
-ax.set_ylabel('number of events')
-# ax.set_ylim([0,2])
-formatter = ScalarFormatter()
-formatter.set_scientific(False)
-ax.yaxis.set_major_formatter(formatter)
+    # We change the fontsize of minor ticks label 
+    bins=np.arange(6,12.25,0.25)
 
-#plt.ylim([1,600])
-plt.title('cummulative number of occultations for 3 telescopes: '+str(np.size(sigmas)))
-# plt.title(' Number of occulatations: '+str(np.size(sigmas)))
-plt.grid(which='both',axis='x')
-plt.savefig(cumm_dets.joinpath("sigma.png"),dpi=300)
-# notbase_path=Path('/','D:','/Colibri','Green')
-operations_savepath=base_path.joinpath('/Logs','Operations')
-plt.savefig(operations_savepath.joinpath("sigma_3.svg"),dpi=800) 
-# plt.show()
+    plt.hist(sigmas,bins=bins,log=False)
+    # ax.yaxis.set_ticks(np.arange(0, 3, 1))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-plt.close()                        
+    plt.xticks(np.arange(6, 12.25, 0.5),fontsize=8)
+    # ax.tick_params(axis='both', which='major', labelsize=7)
+    ax.tick_params(axis='both', which='minor', labelsize=8)
+    ax.xaxis.set_minor_locator(AutoMinorLocator(2))
+    # plt.xlim([min(sigmas),12])
+    ax.set_xlabel('Signisifance')
+    ax.set_ylabel('number of events')
+    # ax.set_ylim([0,2])
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+    ax.yaxis.set_major_formatter(formatter)
+
+    #plt.ylim([1,600])
+    plt.title('cummulative number of occultations for 3 telescopes: '+str(np.size(sigmas)))
+    # plt.title(' Number of occulatations: '+str(np.size(sigmas)))
+    plt.grid(which='both',axis='x')
+    plt.savefig(cumm_dets.joinpath("sigma.png"),dpi=300)
+    # notbase_path=Path('/','D:','/Colibri','Green')
+    operations_savepath=base_path.joinpath('/Logs','Operations')
+    plt.savefig(operations_savepath.joinpath("sigma_3.svg"),dpi=800) 
+    # plt.show()
+
+    plt.close()                        
