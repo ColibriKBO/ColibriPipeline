@@ -157,7 +157,17 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     #star_find_results = tuple(y for y in star_find_results if y[1] + ap_r + edge_buffer < x_length and y[1] - ap_r - edge_buffer > 0)
     star_find_results = tuple(x for x in star_find_results if x[0] + edge_buffer < x_length and x[0] - edge_buffer > 0)
     star_find_results = tuple(y for y in star_find_results if y[1] + edge_buffer < x_length and y[1] - edge_buffer > 0)
-            
+
+
+    ## Save the array of star positions as an .npy file
+    ## Format: x  |  y  | half light radius
+    if len(star_find_results) != 0:
+        star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
+        if star_pos_file.exists():
+            star_pos_file.unlink()
+        np.save(star_pos_file, star_find_results)
+
+
     ## Enforce a minimum number of visible stars in each image
     min_stars = 30
     if len(star_find_results) < min_stars:
@@ -165,14 +175,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         print (f"{datetime.datetime.now()} Closing: {minuteDir}")
         print ("\n")
         return minuteDir.name, len(star_find_results), 0
-        
-    
-    ## Save the array of star positions as an .npy file
-    ## Format: x  |  y  | half light radius
-    star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(detect_thresh) + 'sig_pos.npy')
-    if star_pos_file.exists():
-        star_pos_file.unlink()
-    np.save(star_pos_file, star_find_results)
         
     ## Seperate radii and positions in separate arrays
     star_find_results = np.array(star_find_results)
