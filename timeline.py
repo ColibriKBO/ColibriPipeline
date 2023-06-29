@@ -1397,7 +1397,8 @@ if __name__ == '__main__':
 
     # Add occultation histograms to image list
     img_list.append(str(STATS_PATH / 'occ_candidates.jpg'))
-    img_list.append(str(STATS_PATH / 'occ_matches.jpg'))
+    img_list.append(str(STATS_PATH / '2telescope_matches.jpg'))
+    img_list.append(str(STATS_PATH / '3telescope_matches.jpg'))
 
     # Get list of all plot images
     images = [Image.open(img_path) for img_path in img_list]

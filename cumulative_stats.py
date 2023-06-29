@@ -325,7 +325,6 @@ def plotMatchedCandidates(tier3_df):
     tel3_min = tel3_df[['sigma1', 'sigma2', 'sigma3']].min(axis=1)
 
     # Histogram binning parameters
-    fig, (ax1, ax2) = plt.subplots(2, 1)
     binwidth = 0.25
     minbin = 6
     maxbin = 12
@@ -333,6 +332,7 @@ def plotMatchedCandidates(tier3_df):
 
 
     ## Plot 2-telescope histogram with overflow & underflow bins
+    fig1, ax1 = plt.subplots()
 
     # Plot histogram with overflow & underflow bins
     print("Plotting 2-telescope histogram...")
@@ -345,8 +345,15 @@ def plotMatchedCandidates(tier3_df):
     ax1.set_xlim(bins[0], bins[-1])
     ax1.grid(axis='x')
 
-    
+    # Save figure
+    print("Saving 2-telescope match histograms...")
+    fig1.savefig(STATS_PATH / '2telescope_matches.jpg', dpi=800)
+    plt.close()
+
+
+
     ## Plot 3-telescope histogram with overflow & underflow bins
+    fig2, ax2 = plt.subplots()
 
     # Plot histogram with overflow & underflow bins
     print("Plotting 3-telescope histogram...")
@@ -361,8 +368,7 @@ def plotMatchedCandidates(tier3_df):
 
     # Save figure
     print("Saving histograms...")
-    fig.subplots_adjust(hspace=0.5)
-    fig.savefig(STATS_PATH / 'occ_matches.jpg', dpi=800)
+    fig2.savefig(STATS_PATH / '3telescope_matches.jpg', dpi=800)
     plt.close()
 
 
