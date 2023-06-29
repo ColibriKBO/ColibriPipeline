@@ -1346,13 +1346,10 @@ if __name__ == '__main__':
         print(f"ERROR: Detections have not been matched yet!")
     else:
 
-        # Get detection files
-        matched_det_files = sorted(matched_dir.glob('*.txt'))
-
         # Get names and descriptions of matched events form "matched" subdirectories
         hhmmss_dirs = [item for item in matched_dir.iterdir() if item.is_dir()]
         for hhmmss_dir in hhmmss_dirs:
-            print(f"Analyzing detection at {obs_date_dashed} {hhmmss_dir.name}...")
+            print(f"Analyzing detection at {hhmmss_dir.name}...")
             
             # Analyze detection files in matched event and then plot it
             sig = []
@@ -1365,9 +1362,15 @@ if __name__ == '__main__':
                 # [0] = seconds; [1] = raw flux; [2] = conv_flux
                 det_data = analyzeDetectionData(det_file)
 
-                # Plot this lightcurve
+                # Define linestyle based on if it was generated naturally or artificially
+                if 'det' in det_file.name:
+                    lstyle = "-"
+                elif 'art' in det_file.name:
+                    lstyle = "--"
+
+                # Plot lightcurve
                 plt.plot(det_data[:,0], det_data[:,1], 
-                         color=COLOURMAPPING[det_meta[0]], linestyle="-",
+                         color=COLOURMAPPING[det_meta[0]], linestyle=lstyle,
                          label=f"{det_meta[1]}: ({det_meta[2]}, {det_meta[3]})")
                 
                 # Add telescope and sigma to list
@@ -1385,21 +1388,6 @@ if __name__ == '__main__':
                             dpi=800,bbox_inches='tight')
                 img_list.append(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')))
                 plt.close()
-
-
-###########################
-## Cumulative Detection Statistics
-###########################
-
-    """ TODO: Finish this functionality
-    # Initialize cumulative detection table
-    tot_det_fig,ax6 = plt.subplots()
-
-    # Save cumulative detection table
-    tot_det_fig.savefig(str(diagnostic_dir / 'matched_table.jpg'),dpi=800,bbox_inches='tight')
-    plt.close()
-    """
-
 
 ###########################
 ## Composite Plot
