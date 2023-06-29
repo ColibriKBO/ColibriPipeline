@@ -429,7 +429,6 @@ if __name__ == '__main__':
     # Check that this night has not been added already
     if obsdate in stats_df.index:
         print(f"WARNING: {obsdate} has already been added to the cumulative statistics!")
-        sys.exit()
 
 
 ###########################

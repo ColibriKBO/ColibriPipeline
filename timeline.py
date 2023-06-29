@@ -60,6 +60,7 @@ TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 # Directory structure
 BASE_PATH  = Path('/', 'D:')
 CLOUD_PATH = BASE_PATH / 'Logs' / 'Weather' / 'Weather'
+STATS_PATH = BASE_PATH / 'CentralRepo' / 'CumulativeStats'
 
 # Plotting constants
 TELESCOPE_ID = {"REDBIRD" : 1, "GREENBIRD" : 2, "BLUEBIRD" : 3}
@@ -1405,6 +1406,10 @@ if __name__ == '__main__':
 ###########################
 
     print("\n## Final Summary ##")
+
+    # Add occultation histograms to image list
+    img_list.append(str(STATS_PATH / 'occ_candidates.jpg'))
+    img_list.append(str(STATS_PATH / 'occ_matches.jpg'))
 
     # Get list of all plot images
     images = [Image.open(img_path) for img_path in img_list]
