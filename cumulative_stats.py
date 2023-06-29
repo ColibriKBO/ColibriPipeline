@@ -301,13 +301,14 @@ def plotOccCandidates():
     plt.close()
 
 
-def plotMatchedCandidates():
+def plotMatchedCandidates(tier3_df):
     """
     Plot histogram of all historical matched candidates.
 
     Parameters
     ----------
-    None
+    tier3_df : pandas dataframe
+        Dataframe of all tier 3 matches. Read in from csv file.
 
     Returns
     -------
@@ -315,12 +316,9 @@ def plotMatchedCandidates():
     Seperate plots for 2 and 3 telescope matches.
     """
 
-    # Read in data frame
-    df = pd.read_csv(TIER3_FILE, index_col='timestamp')
-
     # Get rows containing 2 and 3 telescope matches
-    tel2_df = df[df['sigma3'].isnull()]
-    tel3_df = df[~df['sigma3'].isnull()]
+    tel2_df = tier3_df[tier3_df['sigma3'].isnull()]
+    tel3_df = tier3_df[~tier3_df['sigma3'].isnull()]
 
     # Get minimum sigma values
     tel2_min = tel2_df[['sigma1', 'sigma2']].min(axis=1)
@@ -449,6 +447,10 @@ if __name__ == '__main__':
     # Tier 3: matched in RA/Dec (candidate for KBO)
     obs_match_dir = Green.obs_archive / 'matched'
 
+    # Load the tier3 dataframe
+    tier3_df = pd.read_csv(TIER3_FILE, index_col='timestamp')
+
+
     # Check that detection matching has been done
     if not obs_match_dir.exists():
         print(f"ERROR: No matched directory for {obsdate}!")
@@ -471,14 +473,10 @@ if __name__ == '__main__':
                     satellite_matches += 1
                 elif parse_output[0] == 'double':
                     match2 += 1
-                    with open(TIER3_FILE, 'a') as t3f:
-                        # Track the matched occultation: timestamp, sigma1, sigma2, empty
-                        t3f.write(f"{parse_output[1]},{parse_output[2]},{parse_output[3]}{np.nan}\n")
+                    tier3_df.loc[parse_output[1]] = [parse_output[2], parse_output[3], np.nan]
                 elif parse_output[0] == 'triple':
                     match3 += 1
-                    with open(TIER3_FILE, 'a') as t3f:
-                        # Track the matched occultation: timestamp, sigma1, sigma2, sigma3
-                        t3f.write(f"{parse_output[1]},{parse_output[2]},{parse_output[3]},{parse_output[4]}\n")
+                    tier3_df.loc[parse_output[1]] = [parse_output[2], parse_output[3], parse_output[4]]
 
 
 ###########################
@@ -492,11 +490,12 @@ if __name__ == '__main__':
                             starhours, satellite_matches, match2, match3]
     print(stats_df.loc[obsdate])
     
-    # Save the updated dataframe as a CSV
+    # Save the updated dataframes as CSVs
     #STATS_FILE.unlink()
     stats_df.to_csv(STATS_FILE)
+    tier3_df.to_csv(TIER3_FILE)
 
     # Generate plots
     if gen_plot:
         plotOccCandidates()
-        plotMatchedCandidates()
+        plotMatchedCandidates(tier3_df)
