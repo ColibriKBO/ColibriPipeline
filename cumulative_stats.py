@@ -76,11 +76,11 @@ class Telescope:
         if self.obs_archive.exists():
             # Get number of minute directories for the night
             medstack_file_list = list(self.obs_archive.glob('*medstacked.fits'))
-            self.n_minutedirs = len(medstack_file_list)
+            self.obs_time = len(medstack_file_list)
 
             # Get number of occultation candidates for the night
             occult_file_list = list(self.obs_archive.glob('det_*.txt'))
-            self.n_occults = len(occult_file_list)
+            self.occultations = len(occult_file_list)
 
             # Copy occultation files to cumulative occultation folder
             for occult_file in occult_file_list:
@@ -96,8 +96,8 @@ class Telescope:
 
         # If the night folder does not exist, log zeros
         else:
-            self.n_minutedirs = 0
-            self.n_occults = 0
+            self.obs_time = 0
+            self.occultations = 0
             self.star_hours = 0
 
     
@@ -278,7 +278,7 @@ def plotOccCandidates():
 
     # Get sigma values
     try:
-        sigmas =  [float(sigma.split('sig').strip('.txt')) for sigma in det_files]
+        sigmas =  [float(sigma.name.split('sig')[-1].strip('.txt')) for sigma in det_files]
     except IndexError:
         print("ERROR: Could not read sigma values from det file names!")
         print("Manual inspection required.")
@@ -467,18 +467,18 @@ if __name__ == '__main__':
                 parse_output = parseMatchedDetDir(match_dir)
 
                 # Decide what to do with the output
-                if parse_output[0] == 'satellite':
+                if parse_output == 'satellite':
                     satellite_matches += 1
                 elif parse_output[0] == 'double':
                     match2 += 1
-                    with open(TIER3_FILE, 'a'):
+                    with open(TIER3_FILE, 'a') as t3f:
                         # Track the matched occultation: timestamp, sigma1, sigma2, empty
-                        TIER3_FILE.write(f"{parse_output[1]},{parse_output[2]},{parse_output[3]}{np.nan}\n")
+                        t3f.write(f"{parse_output[1]},{parse_output[2]},{parse_output[3]}{np.nan}\n")
                 elif parse_output[0] == 'triple':
                     match3 += 1
-                    with open(TIER3_FILE, 'a'):
+                    with open(TIER3_FILE, 'a') as t3f:
                         # Track the matched occultation: timestamp, sigma1, sigma2, sigma3
-                        TIER3_FILE.write(f"{parse_output[1]},{parse_output[2]},{parse_output[3]},{parse_output[4]}\n")
+                        t3f.write(f"{parse_output[1]},{parse_output[2]},{parse_output[3]},{parse_output[4]}\n")
 
 
 ###########################
