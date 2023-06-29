@@ -262,6 +262,7 @@ def getMinuteTriplets(minute_list1, minute_list2, minute_list3, spacing=60):
 
     # Iterate through minute_list1 and find all pairs with minute_list2 and minute_list3.
     # Save index of last matched minute in minute_list2 and minute_list3 to avoid duplicates.
+    # Assumes a sorted list of datetime objects.
     minute_triplets = []
     last_matched2 = 0
     last_matched3 = 0
