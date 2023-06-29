@@ -11,6 +11,7 @@ Usage: python cumulative_stats.py <obs_date>
 
 import sys,os
 import os
+import re
 import shutil
 import argparse
 import pandas as pd
@@ -223,14 +224,14 @@ def parseMatchedDetDir(det_dir_path):
     # Tier 1 and 2
     if match_tier in ['Tier1', 'Tier2']:
         print(f"Copying {det_dir_path.name} to satellite folder...")
-        shutil.copy(det_dir_path, SATELLITE_PATH)
+        shutil.copytree(det_dir_path, SATELLITE_PATH)
         return 'satellite'
     
     # Tier 3
     elif (match_tier == 'Tier3') and (det_count == 2):
         # Copy detections to Tier3 folder
         print(f"Copying {det_dir_path.name} to Tier3 folder...")
-        shutil.copy(det_dir_path, TIER3_PATH)
+        shutil.copytree(det_dir_path, TIER3_PATH)
 
         # Get sigma values
         sigma1 = readSigma(det_files[0])
@@ -242,7 +243,7 @@ def parseMatchedDetDir(det_dir_path):
     elif (match_tier == 'Tier3') and (det_count == 3):
         # Copy detections to Tier3 folder
         print(f"Copying {det_dir_path.name} to Tier3 folder...")
-        shutil.copy(det_dir_path, TIER3_PATH)
+        shutil.copytree(det_dir_path, TIER3_PATH)
 
         # Get sigma values
         sigma1 = readSigma(det_files[0])
