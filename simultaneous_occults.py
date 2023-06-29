@@ -26,9 +26,44 @@ import sys
 import fnmatch
 import math
 import argparse
-from datetime import datetime,date
+from datetime import datetime,date,timedelta
+
+#-------------------------------global vars-----------------------------------#
+
+# Path variables
+BASE_PATH = Path('D:/')
+DATA_PATH = BASE_PATH / 'ColibriData'
+IMGE_PATH = BASE_PATH / 'ColibriImages'
+ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
+#-------------------------------classes---------------------------------------#
+
+class Telescope:
+
+    def __init__(self, name, base_path, obs_date):
+
+        # Telescope identifiers
+        print(f"Initializing {name}...")
+        self.name = name
+
+        # Error logging
+        self.errors = []
+
+        # Path variables
+        self.base_path = Path(base_path)
+        self.obs_archive = self.base_path / "ColibriArchive" / hyphonateDate(obs_date)
+
+        # Check if the archive for that night exists
+        if self.obs_archive.exists():
+            self.det_list = list(self.obs_archive.glob("det_*.txt"))
+        else:
+            print(f"ERROR: No archive found for {self.name} on {obs_date}!")
+            self.det_list = []
 
 
+
+
+#-------------------------------functions-------------------------------------#
 
 def readRAdec(filepath):
     """
@@ -64,12 +99,53 @@ def readRAdec(filepath):
 
     
     return (star_ra,star_dec)
-    
-'''---------------------------------------------SCRIPT STARTS HERE--------------------------------------'''
 
-''' Argument parsing added by MJM - July 20, 2022 '''
+
+def hyphonateDate(obsdate):
+
+    # Convert the date to a datetime object
+    obsdate = datetime.strptime(obsdate, OBSDATE_FORMAT)
+
+    # Convert the date to a hyphonated string
+    obsdate = obsdate.strftime('%Y-%m-%d')
+
+    return obsdate
+
+
+#-------------------------------main------------------------------------------#
 
 if __name__ == '__main__':
+
+
+###########################
+## Argument Parser/Setup
+###########################
+
+    # Generate argument parser
+    description = "Match occultation candidate events. Tiers are as follows:\n" +\
+                   "1. Match to 1 second\n2. Match to 0.2 seconds\n3. Match in time and coordinates"
+    arg_parser = argparse.ArgumentParser(description=description,
+                                         formatter_class=argparse.RawTextHelpFormatter)
+    
+    # Available argument functionality
+    arg_parser.add_argument('date', help='Observation date (YYYYMMDD) of data to be processed.')
+
+    # Process argparse list as useful variables
+    cml_args  = arg_parser.parse_args()
+    obsdate   = cml_args.date
+
+    # Initialize telescope classes
+    Red   = Telescope("RED", "R:", obsdate)
+    Green = Telescope("GREEN", "D:", obsdate)
+    Blue  = Telescope("BLUE", "B:", obsdate)
+
+    # Setup matched directory structure
+    matched_dir = Green.obs_archive / "matched"
+    if not matched_dir.exists():
+        matched_dir.mkdir(parents=True, exist_ok=True)
+
+
+#-------------------------------old------------------------------------------#
     arg_parser = argparse.ArgumentParser(description=""" Run secondary Colibri processing
         Usage:
 
