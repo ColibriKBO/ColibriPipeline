@@ -190,7 +190,7 @@ if __name__ == '__main__':
                         B_det = Blue.det_dict[B_time]
 
                         # Create matched directory if it doesn't exist
-                        match_dir = matched_dir / str(R_time)
+                        match_dir = matched_dir / R_time.strftime(BARE_FORMAT)
                         if not match_dir.exists():
                             match_dir.mkdir(parents=True, exist_ok=True)
 
@@ -213,7 +213,7 @@ if __name__ == '__main__':
                     R_det = Red.det_dict[R_time]
 
                     # Create matched directory if it doesn't exist
-                    match_dir = matched_dir / str(R_time)
+                    match_dir = matched_dir / R_time.strftime(BARE_FORMAT)
                     if not match_dir.exists():
                         match_dir.mkdir(parents=True, exist_ok=True)
 
@@ -238,7 +238,7 @@ if __name__ == '__main__':
                     B_det = Blue.det_dict[B_time]
 
                     # Create matched directory if it doesn't exist
-                    match_dir = matched_dir / str(G_time)
+                    match_dir = matched_dir / G_time.strftime(BARE_FORMAT)
                     if not match_dir.exists():
                         match_dir.mkdir(parents=True, exist_ok=True)
 
@@ -265,7 +265,7 @@ if __name__ == '__main__':
                 B_det = Blue.det_dict[B_time]
 
                 # Create matched directory if it doesn't exist
-                match_dir = matched_dir / str(R_time)
+                match_dir = matched_dir / R_time.strftime(BARE_FORMAT)
                 if not match_dir.exists():
                     match_dir.mkdir(parents=True, exist_ok=True)
 
