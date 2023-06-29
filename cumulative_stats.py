@@ -47,6 +47,9 @@ ACPLOG_STRP    = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S.%f'
 TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 
+# Regex patterns
+MATCHEDDIR_REGEX = re.compile('([0-9\_\-]{24})-(Tier[123])')
+
 # Verbose print statement
 verboseprint = lambda *a, **k: None
 
@@ -211,7 +214,9 @@ def parseMatchedDetDir(det_dir_path):
     det_count = len(det_files)
 
     # Get datetime and match tier of the directory
-    timestamp, match_tier = det_dir_path.name.split('-')
+    match_regex = MATCHEDDIR_REGEX.match(det_dir_path.name)
+    timestamp   = match_regex.group(1)
+    match_tier  = match_regex.group(2)
 
     ## Sort detections by tier
 

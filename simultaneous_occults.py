@@ -319,7 +319,7 @@ if __name__ == '__main__':
     for i,match_dir in enumerate(tier2):
 
         # Get the coordinates of the match files
-        matched_det_coords = [getRAdec(det) for det in match_dir.iterdir()]
+        matched_det_coords = [readRAdec(det) for det in match_dir.iterdir()]
 
         # Check if the match coordinates are within tolerance of each other
         # Tier 2 if no match, tier 3 if tolerance match
