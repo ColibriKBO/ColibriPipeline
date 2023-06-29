@@ -539,7 +539,7 @@ def analyzeDetectionData(filepath):
 
     # Read in the detection file lightcurve and strip filenames
     lightcurve_data = np.loadtxt(str(filepath),dtype='object')
-    lightcurve_raw  = lightcurve_data[:,1:].astype(float)
+    lightcurve_raw  = lightcurve_data[:,[1,2]].astype(float)
 
     # Return float array with columns
     # [0] = seconds; [1] = flux; [2] = conv_flux
