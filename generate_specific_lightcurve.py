@@ -16,6 +16,7 @@ import multiprocessing
 import gc
 import sep
 import re
+import shutil
 import numpy as np
 import time as timer
 from datetime import datetime,timedelta
@@ -220,7 +221,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
 
 
 def saveLightcurve(lightcurve_paths, star_data, header_times,
-                   obsdate, radec, xy):
+                   obsdate, radec, xy, secondary_save_path=None):
 
     print(f"\n# Write lightcurve to file #")
 
@@ -279,7 +280,11 @@ def saveLightcurve(lightcurve_paths, star_data, header_times,
         for i in range(len(lightcurve_paths)):
             seconds = header_times[i].split(":")[-1]
             filehandle.write(f"{lightcurve_paths[i]} {seconds} {star_data[i,0,2]} N/A\n")
-            
+    
+    # Save secondary file if requested
+    if secondary_save_path is not None:
+        shutil.copy(save_file, secondary_save_path)
+
     # Completed
     print(f"Finished writing.")
 
@@ -343,31 +348,7 @@ def hyphonateDate(obsdate):
 #------------------------------------main-------------------------------------#
 
 
-if __name__ == '__main__':
-
-
-###########################
-## Argument Parser Setup
-###########################
-
-
-    # Generate argument parser
-    arg_parser = argparse.ArgumentParser(description="Force generate a lightcurve from raw images",
-                                         formatter_class=argparse.RawTextHelpFormatter)
-    
-    # Available argument functionality
-    arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed.')
-    arg_parser.add_argument('timestamp' , help='Timestamp of 2-telescope event\'s central peak.')
-    arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',
-                            nargs=2,type=float)
-
-    # Process argparse list as useful variables
-    cml_args = arg_parser.parse_args()
-
-    # Assign cml args input as variables for readability
-    obsdate = (cml_args.date).replace("/","")
-    timestamp = cml_args.timestamp
-    radec = cml_args.radec
+def main(obsdate, timestamp, radec):
 
     # Trim timestamp as necessary
     if len(timestamp) > 26:
@@ -412,3 +393,36 @@ if __name__ == '__main__':
     # Save lightcurve
     saveLightcurve(lightcurve_paths, star_data, header_times,
                    obsdate, radec, star_XY)
+
+
+
+#----------------------------------standalone---------------------------------#
+
+
+if __name__ == '__main__':
+
+
+###########################
+## Argument Parser Setup
+###########################
+
+
+    # Generate argument parser
+    arg_parser = argparse.ArgumentParser(description="Force generate a lightcurve from raw images",
+                                         formatter_class=argparse.RawTextHelpFormatter)
+    
+    # Available argument functionality
+    arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+    arg_parser.add_argument('timestamp' , help='Timestamp of 2-telescope event\'s central peak.')
+    arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',
+                            nargs=2,type=float)
+
+    # Process argparse list as useful variables
+    cml_args = arg_parser.parse_args()
+
+    # Assign cml args input as variables for readability
+    obsdate = (cml_args.date).replace("/","")
+    timestamp = cml_args.timestamp
+    radec = cml_args.radec
+
+    main(obsdate, timestamp, radec)

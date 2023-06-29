@@ -9,6 +9,7 @@ Match dip detection txts throughout 3 telescopes based on time and coordinates, 
 2022-09-21 Roman A. simplified some steps and added data removal output
 """
 
+# Module Imports
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -28,6 +29,9 @@ import math
 import argparse
 from datetime import datetime,date,timedelta
 
+# Custom Script Imports
+import generate_specific_lightcurve as gsl
+
 
 #-------------------------------global vars-----------------------------------#
 
@@ -36,9 +40,12 @@ BASE_PATH = Path('D:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+CENTRAL_PATH = BASE_PATH / 'CentralRepo'
 
 # STRP formats
 BARE_FORMAT = '%Y-%m-%d_%H%M%S_%f'
+MINDIR_FORMAT = '%Y%m%d_%H.%M.%S.%f'
+TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 OBSDATE_FORMAT = '%Y%m%d'
 NICE_FORMAT = '%Y-%m-%d_%H:%M:%S'
 
@@ -334,6 +341,46 @@ if __name__ == '__main__':
                 break
         else:
             print(f"{match_dir.name} is a tier 2 match.")
+
+
+###########################
+## Generate Artificial Lightcurves
+###########################
+
+    # Check which telescopes are represented in each tier
+    for match_dir in matched_dir.iterdir():
+        # If we can find the name in here, request an aritifical lightcurve
+        R_here,G_here,B_here = False,False,False
+
+        # Check which telescopes are represented
+        matched_det_file = [det for det in match_dir.iterdir()]
+        for file in matched_det_file:
+            if "REDBIRD" in file.name:
+                R_here = True
+            elif "GREENBIRD" in file.name:
+                G_here = True
+            elif "BLUEBIRD" in file.name:
+                B_here = True
+
+        # If we don't have all three, request an artificial lightcurve
+        if not R_here:
+            cmd_dir = "RED"
+        elif not G_here:
+            cmd_dir = "GREEN"
+        elif not B_here:
+            cmd_dir = "BLUE"
+        else:
+            continue
+
+        # Get event parameters
+        timestamp = datetime.strftime(match_dir.name.split('-Tier')[0],
+                                        BARE_FORMAT)
+        timestamp = timestamp.strptime(TIMESTAMP_FORMAT)
+        radec = readRAdec(matched_det_file[0])
+
+        # Write command to appropriate directory
+        command = f"python generate_specific_lightcurve.py {obsdate} {timestamp} {radec[0]} {radec[1]}"
+        (CENTRAL_PATH / "Commands" / cmd_dir).touch()
 
 
 ###########################
