@@ -1,5 +1,5 @@
 """
-Filename:   wcsmatching.py
+Filename:   cumulative_stats.py
 Author(s):  Peter Quigley
 Contact:    pquigley@uwo.ca
 Created:    Nov 22, 2022
@@ -7,15 +7,6 @@ Updated:    June 28, 2023
     
 Usage: python cumulative_stats.py <obs_date>
        *This script is intended to run only on GREENBIRD
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Nov 22 14:39:39 2022
-
-Cumulative statistics for detections and occultations, runs only on Green
-
-@author: Roman A.
 """
 
 import sys,os
