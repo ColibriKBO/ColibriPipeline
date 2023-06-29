@@ -224,14 +224,14 @@ def parseMatchedDetDir(det_dir_path):
     # Tier 1 and 2
     if match_tier in ['Tier1', 'Tier2']:
         print(f"Copying {det_dir_path.name} to satellite folder...")
-        shutil.copytree(det_dir_path, SATELLITE_PATH, dirs_exist_ok=True)
+        shutil.copytree(det_dir_path, SATELLITE_PATH / det_dir_path.name, dirs_exist_ok=True)
         return 'satellite'
     
     # Tier 3
     elif (match_tier == 'Tier3') and (det_count == 2):
         # Copy detections to Tier3 folder
         print(f"Copying {det_dir_path.name} to Tier3 folder...")
-        shutil.copytree(det_dir_path, TIER3_PATH, dirs_exist_ok=True)
+        shutil.copytree(det_dir_path, TIER3_PATH / det_dir_path.name, dirs_exist_ok=True)
 
         # Get sigma values
         sigma1 = readSigma(det_files[0])
@@ -243,7 +243,7 @@ def parseMatchedDetDir(det_dir_path):
     elif (match_tier == 'Tier3') and (det_count == 3):
         # Copy detections to Tier3 folder
         print(f"Copying {det_dir_path.name} to Tier3 folder...")
-        shutil.copytree(det_dir_path, TIER3_PATH, dirs_exist_ok=True)
+        shutil.copytree(det_dir_path, TIER3_PATH / det_dir_path.name, dirs_exist_ok=True)
 
         # Get sigma values
         sigma1 = readSigma(det_files[0])
@@ -316,7 +316,7 @@ def plotMatchedCandidates():
     """
 
     # Read in data frame
-    df = pd.read_csv(TIER3_FILE, parse_dates=['timestamp'], index_col='timestamp')
+    df = pd.read_csv(TIER3_FILE, index_col='timestamp')
 
     # Get rows containing 2 and 3 telescope matches
     tel2_df = df[df['sigma3'].isnull()]
@@ -341,10 +341,10 @@ def plotMatchedCandidates():
     ax1.hist(np.clip(list(tel2_min), bins[0], bins[-1]), bins=bins)
 
     # Set plot features
-    ax1.title(f"2-Telescope Cumulative Occultations: {len(tel2_min)}")
-    ax1.xlabel("Pair Min Significance")
-    ax1.ylabel("Count")
-    ax1.xlim(bins[0], bins[-1])
+    ax1.title.set_text(f"2-Telescope Cumulative Occultations: {len(tel2_df)}")
+    ax1.set_xlabel("Pair Min Significance")
+    ax1.set_ylabel("Count")
+    ax1.set_xlim(bins[0], bins[-1])
     ax1.grid(axis='x')
 
     
@@ -355,15 +355,15 @@ def plotMatchedCandidates():
     ax2.hist(np.clip(list(tel3_min), bins[0], bins[-1]), bins=bins)
 
     # Set plot features
-    ax2.title(f"3-TelescopeCumulative Occultation: {len(tel3_min)}")
-    ax2.xlabel("Triplet Min Significance")
-    ax2.ylabel("Count")
-    ax2.xlim(bins[0], bins[-1])
+    ax2.title.set_text(f"3-TelescopeCumulative Occultation: {len(tel3_df)}")
+    ax2.set_xlabel("Triplet Min Significance")
+    ax2.set_ylabel("Count")
+    ax2.set_xlim(bins[0], bins[-1])
     ax2.grid(axis='x')
 
     # Save figure
     print("Saving histograms...")
-    fig.subplots_adjust(hspace=0)
+    fig.subplots_adjust(hspace=0.5)
     fig.savefig(STATS_PATH / 'occ_matches.jpg', dpi=800)
     plt.close()
 
