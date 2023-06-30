@@ -78,13 +78,35 @@ class Telescope:
         if self.obs_archive.exists():
             det_list = list(self.obs_archive.glob("det_*.txt"))
         else:
-            print(f"ERROR: No archive found for {self.name} on {obs_date}!")
+            self.addError(f"ERROR: No archive found for {self.name} on {obs_date}!")
             self.det_list = []
 
         # Analyze time of detections
         self.det_times = [datetime.strptime(DET_TIME_REGEX.match(det.name).group(1), BARE_FORMAT)
                           for det in det_list]
         self.det_dict = dict(zip(self.det_times, det_list))
+
+        # Artificial generation required
+        self.gen_artificial = []
+
+
+    def addError(self, error_msg):
+
+        self.errors.append(error_msg)
+        print(error_msg)
+
+
+    def writeGenerateCmds(self):
+
+        if not self.obs_archive.exists():
+            self.addError(f"ERROR: Could not write artificial generation command for {self.name}!")
+
+        print(f"Writing artificial generation command(s) to {self.name}..")
+        with open((self.obs_archive / 'generate_artificial.txt'), 'w') as gat:
+            for gen_cmd in self.gen_artificial:
+                gat.write(gen_cmd + '\n')
+
+        return self.gen_artificial
 
 
 #-------------------------------functions-------------------------------------#
@@ -362,14 +384,8 @@ if __name__ == '__main__':
             elif "BLUEBIRD" in file.name:
                 B_here = True
 
-        # If we don't have all three, request an artificial lightcurve
-        if not R_here:
-            cmd_dir = "RED"
-        elif not G_here:
-            cmd_dir = "GREEN"
-        elif not B_here:
-            cmd_dir = "BLUE"
-        else:
+        # If all 3 exist, move onto the next matched dir
+        if R_here and G_here and B_here:
             continue
 
         # Get event parameters
@@ -378,10 +394,23 @@ if __name__ == '__main__':
         timestamp = timestamp.strptime(TIMESTAMP_FORMAT)
         radec = readRAdec(matched_det_file[0])
 
-        # Write command to appropriate directory
-        command = f"python generate_specific_lightcurve.py {obsdate} {timestamp} {radec[0]} {radec[1]}"
-        (CENTRAL_PATH / "Commands" / cmd_dir).touch()
+        # If we don't have all three, request an artificial lightcurve
+        if not R_here:
+            command = f"{obsdate} {timestamp} {radec[0]} {radec[1]}"
+            Red.gen_artificial.append(command)
+        elif not G_here:
+            command = f"{obsdate} {timestamp} {radec[0]} {radec[1]}"
+            Green.gen_artificial.append(command)
+        elif not B_here:
+            command = f"{obsdate} {timestamp} {radec[0]} {radec[1]}"
+            Blue.gen_artificial.append(command)
 
+
+    # Write generate_artificial.txt on all 3 telescopes
+    Red.writeGenerateCmds()
+    Green.writeGenerateCmds()
+    Blue.writeGenerateCmds()
+    
 
 ###########################
 ## Rename Directories

@@ -401,6 +401,11 @@ if __name__ == '__main__':
     else:
         print("ERROR: Could not process for current telescope!")
 
+    '''-----------write signal file---------------'''
+    signal_path = ARCHIVE_PATH.joinpath(hyphonateDate(obsdate),'done.txt')
+    if not signal_path.exists():
+        signal_path.touch()
+
 
 ###########################
 ## Matching Stars
@@ -415,4 +420,9 @@ if __name__ == '__main__':
         sys.exit()
     else:
         print("\nBeginning telescope matching...\n")
-        matchNight(obsdate)
+        starhours = matchNight(obsdate)
+
+        # Write to file
+        for starhour_file in (ARCHIVE_PATH / hyphonateDate(obsdate)).glob('starhours*.txt'):
+            starhour_file.unlink()
+        (ARCHIVE_PATH / hyphonateDate(obsdate)/ f'starhours_{starhours}.txt').touch()

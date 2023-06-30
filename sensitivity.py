@@ -529,8 +529,3 @@ if __name__ == '__main__':
     final['dec_diff']  = (final['dec'] - final['Gaia_dec'])
 
     RAdec_diffPlot(final)
-
-    '''-----------write signal file---------------'''
-    signal_path = base_path.joinpath("ColibriArchive",str(obs_date).replace('-', ''),'done.txt')
-    if not signal_path.exists():
-        signal_path.touch()
