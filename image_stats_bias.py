@@ -14,6 +14,7 @@ filename | time | median | mean | mode | sensor temp | base temp | FPGA temp
 14-08-2022 modified by Roman A. : read noise is now written to separate txt file, the script produces 2 graphs
        that show how bias mean and median varies.
 """
+
 import numpy as np
 import numba as nb
 import pandas as pd
@@ -353,7 +354,7 @@ if __name__ == '__main__':
                 #image statistics
                 med = np.median(data_flat)                              #median pixel value of image
                 mean = np.mean(data_flat)                               #mean pixel value of image
-                mode = scipy.stats.mode(data_flat, axis = None)[0][0]   #mode pixel value of image
+                mode = float(scipy.stats.mode(data_flat, axis = None).mode)   #mode pixel value of image
                 
                 RMS = np.sqrt(np.mean(np.square(data_flat)))            #RMS of entire image
                             
