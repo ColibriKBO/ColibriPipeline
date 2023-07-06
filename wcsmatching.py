@@ -12,19 +12,13 @@ Usage: python wcsmatching.py <obs_date>
 # Module Imports
 import os,sys
 import argparse
-import multiprocessing
-import gc
-import sep
 import re
 import itertools
 import numpy as np
 import time as timer
 from pathlib import Path
 from datetime import datetime,timedelta
-from astropy.convolution import RickerWavelet1DKernel
-from astropy.time import Time
 from copy import deepcopy
-from multiprocessing import Pool
 
 # Custom Script Imports
 #import getRAdec

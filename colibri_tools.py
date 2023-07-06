@@ -60,6 +60,11 @@ SITE_LOC  = EarthLocation(lat=SITE_LAT,
                          lon=SITE_LON,
                          height=SITE_HGT)
 
+# Weather Files
+WEATHER_CSV = WEATHER_PATH / 'weather.csv'
+WEATHER_HEADERS = ['unix_time', 'temp', 'humidity', 'wind_speed', 'wind_direction',
+                   'rain_value', 'sky_temp', 'ground_temp', 'alert', 'polaris_mag']
+
 
 #----------------------------------class--------------------------------------#
 
@@ -378,3 +383,23 @@ def calculateAirmass(alt):
     airmass = 1/np.cos(np.radians(90-alt))
     
     return airmass
+
+
+#############################
+## Weather Functions
+#############################
+
+def readWeatherLog(weather_csv_file):
+    """
+    
+    """
+
+
+    if not weather_csv_file.exists():
+        print('WARNING: Weather CSV file does not exist.')
+        return pd.DataFrame([], columns=WEATHER_HEADERS)
+    
+    # Read in CSV file
+    weather_df = pd.read_csv(weather_csv_file, names=WEATHER_HEADERS)
+
+    return weather_df
