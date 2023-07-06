@@ -55,17 +55,4 @@ verboseprint = lambda *a, **k: None
 
 #--------------------------------functions------------------------------------#
 
-def readWeatherCSV(csv_file):
-    """
-    
-    """
 
-
-    if not csv_file.exists():
-        print('WARNING: Weather CSV file does not exist.')
-        return pd.DataFrame([], columns=WEATHER_HEADERS)
-    
-    # Read in CSV file
-    weather_df = pd.read_csv(csv_file, names=WEATHER_HEADERS)
-
-    return weather_df
