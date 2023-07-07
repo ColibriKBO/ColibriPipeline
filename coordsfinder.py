@@ -23,7 +23,7 @@ from datetime import date
 
 # Custom Script Imports
 import astrometrynet_funcs
-import getRAdec
+#import getRAdec
 
 
 
@@ -347,7 +347,7 @@ if __name__ == '__main__':
         
         
         #get star coords in RA/dec
-        star_wcs = getRAdec.getRAdecSingle(transform, (eventData[2], eventData[3]))
+        star_wcs = getRAdecSingle(transform, (eventData[2], eventData[3]))
         star_RA = star_wcs[0]
         star_DEC = star_wcs[1]
         
