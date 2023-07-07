@@ -369,7 +369,6 @@ if __name__ == '__main__':
     # Process argparse list as useful variables
     cml_args  = arg_parser.parse_args()
     obsdate   = cml_args.date
-    proc_all  = cml_args.all
     match_all = cml_args.match
     
     # Update verboseprint function
