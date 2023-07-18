@@ -1229,8 +1229,9 @@ if __name__ == '__main__':
             try:
                 star_hours = np.loadtxt(summarytxt, delimiter=',', converters=parse_summary, 
                                         ndmin=2, dtype=object)
-            except IndexError:
+            except:
                 machine.addError(f"ERROR: Could not read primary summary on {machine.name}!")
+                continue
 
             # Parse data to mark detections and calculate total star-hours
             # Star hours are calculated as num_stars*time
