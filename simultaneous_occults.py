@@ -79,7 +79,7 @@ class Telescope:
             det_list = list(self.obs_archive.glob("det_*.txt"))
         else:
             self.addError(f"ERROR: No archive found for {self.name} on {obs_date}!")
-            self.det_list = []
+            det_list = []
 
         # Analyze time of detections
         self.det_times = [datetime.strptime(DET_TIME_REGEX.match(det.name).group(1), BARE_FORMAT)
