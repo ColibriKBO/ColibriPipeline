@@ -103,7 +103,11 @@ class Telescope:
 
         # Get observation minute directory times
         if self.data_exists:
-            self.data_times = getDataTimes(self.data_path)
+            try:
+                self.data_times = getDataTimes(self.data_path)
+            except ValueError:
+                self.addError("ERROR: {} failed to execute the primary pipeline for {}!".format(name, obs_date))
+                self.data_times = []
         else:
             self.addError("ERROR: {} has no data for {}!".format(name, obs_date))
             self.data_times = []
