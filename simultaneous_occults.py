@@ -310,7 +310,7 @@ if __name__ == '__main__':
 
 
     # Check that at least one match was found
-    if not any(match_dir.iterdir()):
+    if not any(matched_dir.iterdir()):
         print("No time matches tonight!")
         sys.exit()
 

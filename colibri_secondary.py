@@ -554,7 +554,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
     # arg_parser.add_argument('-p', '--procdate', help='Processing date.', default=obs_date)
     cml_args = arg_parser.parse_args()
-    obsYYYYMMDD = cml_args.date
+    obsYYYYMMDD = cml_args.date.strip()
     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
     
     procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
