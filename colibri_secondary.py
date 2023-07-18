@@ -714,6 +714,6 @@ if __name__ == '__main__':
     #                                               line[5], line[6], line[7], line[8]))
 
 
-    print('Time spent on astrometry... %f' % transformtime)
-    print('Time spent on Gaia... %f' % gaiatime)
-    print('Time spend on finding best kernel... %f' % occulttime)
+    #print('Time spent on astrometry... %f' % transformtime)
+    #print('Time spent on Gaia... %f' % gaiatime)
+    #print('Time spend on finding best kernel... %f' % occulttime)

@@ -389,9 +389,9 @@ if __name__ == '__main__':
             continue
 
         # Get event parameters
-        timestamp = datetime.strftime(match_dir.name.split('-Tier')[0],
+        timestamp = datetime.strptime(match_dir.name.split('-Tier')[0],
                                         BARE_FORMAT)
-        timestamp = timestamp.strptime(TIMESTAMP_FORMAT)
+        timestamp = timestamp.strftime(TIMESTAMP_FORMAT)
         radec = readRAdec(matched_det_file[0])
 
         # If we don't have all three, request an artificial lightcurve
