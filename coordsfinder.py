@@ -52,6 +52,8 @@ def getTransform(timestamp, median_stacks, transformations, return_transformatio
 
     #if transformation has already been calculated, get from dictionary
     if timestamp in transformations:
+        if return_transformations:
+            return transformations[timestamp], transformations
         return transformations[timestamp]
     
     #calculate new transformation from astrometry.net
@@ -343,7 +345,8 @@ if __name__ == '__main__':
         timestamp = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
 
     
-        transform,transformations = getTransform(timestamp, median_combos, transformations, True)
+        transform,transformations = getTransform(timestamp, median_combos, 
+                                                 transformations, return_transformations=True)
         
         
         #get star coords in RA/dec
