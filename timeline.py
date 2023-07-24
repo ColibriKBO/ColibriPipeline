@@ -1236,7 +1236,7 @@ if __name__ == '__main__':
             axs.plot(mdates.date2num(star_hours.index), star_hours['stars'],
                      color=machine.colour, linestyle='-', alpha=0.7,
                      zorder=1, label=f"{total_starhours} star-hours")
-            axs.scatter(mdates.date2num(star_hours.index[detec_markers]), star_hours.loc[detec_markers]['detec'],
+            axs.scatter(mdates.date2num(star_hours.index[detec_markers]), star_hours['stars'],
                         color=machine.colour, marker="*", 
                         edgecolors='k', linewidth=0.3, zorder=2)
 
