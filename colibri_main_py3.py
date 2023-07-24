@@ -172,7 +172,12 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print(f"Starfinding in {field_name}...")
     
     ## Create median combined image for star finding
-    stacked = cir.stackImages(minuteDir, savefolder, NUM_TO_SKIP, NUM_TO_STACK, bias)
+    try:
+        stacked = cir.stackImages(minuteDir, savefolder, NUM_TO_SKIP, NUM_TO_STACK, bias)
+    ## Prevents program from crashing if there are corrupt images
+    except UnicodeDecodeError:
+        print(f"ERROR: UnicodeDecodeError in {minuteDir.name}")
+        return minuteDir.name, 0, 0
 
     ## Make list of star coords and half light radii using a conservative
     ## threshold scaled to the number of images stacked
