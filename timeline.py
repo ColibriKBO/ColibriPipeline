@@ -612,7 +612,7 @@ def searchForWeatherLog(obs_date, base_dir):
         return base_dir / 'Logs' / 'Weather' / 'Weather' / 'weather.log'
 
     # Get the weather log path
-    weatherlog_name = "weather.log.{}".format(obs_date)
+    weatherlog_name = "weather.log.{}".format(hyphonateDate(obs_date))
     weatherlog_path = base_dir / 'Logs' / 'Weather' / 'Weather' / weatherlog_name
 
     # Check if the weather log exists
@@ -1227,7 +1227,7 @@ if __name__ == '__main__':
     # Save figure
     timeline_fig.subplots_adjust(hspace=0)
     #plt.title(f"{sunset.strftime(OBSDATE_FORMAT)}:\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)}")
-    plt.title(f"{obs_date_dashed}\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)} UTC")
+    ax1.set_title(f"{obs_date_dashed}\n{sunset.strftime(CLOCK_FORMAT)} - {sunrise.strftime(CLOCK_FORMAT)} UTC")
     timeline_fig.savefig(str(diagnostic_dir / "event.jpg"),dpi=800,bbox_inches='tight')
     img_list.append(str(diagnostic_dir / "event.jpg"))
     plt.close()
