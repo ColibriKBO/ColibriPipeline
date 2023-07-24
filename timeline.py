@@ -1217,32 +1217,11 @@ if __name__ == '__main__':
             continue
         else:
 
-            """
-            # Operation to do on the data table
-            parse_summary = {
-                    0: lambda timestamp: datetime.strptime(timestamp.decode('ascii')+'000', MINUTEDIR_STRP),
-                    1: lambda stars: int(stars),
-                    2: lambda detec: int(detec)
-                         }
-
-            # Load primary_summary.txt
-            try:
-                star_hours = np.loadtxt(summarytxt, delimiter=',', converters=parse_summary, 
-                                        ndmin=2, dtype=object)
-            except:
-                machine.addError(f"ERROR: Could not read primary summary on {machine.name}!")
-                continue
-
-            # Parse data to mark detections and calculate total star-hours
-            # Star hours are calculated as num_stars*time
-            detec_markers = np.where(star_hours[:,2] > 0)
-            total_starhours = np.sum(star_hours[:,1])/60.
-            """
-
             # Load primary_summary.txt as a pandas dataframe
             try:
-                star_hours = pd.read_csv(summarytxt, header=None, comment='#',
+                star_hours = pd.read_csv(summarytxt, header=None, 
                                          names=['timestamp','stars','detec'],
+                                         comment='#', index_col=0,
                                          parse_dates=['timestamp'], date_parser=lambda x: datetime.strptime(x+'000', MINUTEDIR_STRP))
             except:
                 machine.addError(f"ERROR: Could not read primary summary on {machine.name}!")
@@ -1257,7 +1236,7 @@ if __name__ == '__main__':
             axs.plot(mdates.date2num(star_hours.index), star_hours['stars'],
                      color=machine.colour, linestyle='-', alpha=0.7,
                      zorder=1, label=f"{total_starhours} star-hours")
-            axs.scatter(mdates.date2num(star_hours[detec_markers,0]), star_hours[detec_markers,1],
+            axs.scatter(mdates.date2num(star_hours.index[detec_markers]), star_hours.loc[detec_markers]['detec'],
                         color=machine.colour, marker="*", 
                         edgecolors='k', linewidth=0.3, zorder=2)
 
@@ -1270,7 +1249,7 @@ if __name__ == '__main__':
     axs.xaxis.set_tick_params(labelsize=9)
     axs.set_xlabel("Time (UTC)")
     axs.set_ylabel("Star Counts in Minute")
-    #plt.legend()
+    plt.legend()
     plt.grid(which='both',axis='x')
 
     # Save the plot
