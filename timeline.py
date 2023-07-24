@@ -1216,8 +1216,8 @@ if __name__ == '__main__':
             machine.addError(f"WARNING: No primary summary found on {machine.name}!")
             continue
         else:
-            #done_timestamp = []
-            #star_hours = []
+
+            """
             # Operation to do on the data table
             parse_summary = {
                     0: lambda timestamp: datetime.strptime(timestamp.decode('ascii')+'000', MINUTEDIR_STRP),
@@ -1236,10 +1236,25 @@ if __name__ == '__main__':
             # Parse data to mark detections and calculate total star-hours
             # Star hours are calculated as num_stars*time
             detec_markers = np.where(star_hours[:,2] > 0)
-            total_starhours = np.sum(star_hours[:,1])*(len(star_hours[:,1])/60.)
-            
+            total_starhours = np.sum(star_hours[:,1])/60.
+            """
+
+            # Load primary_summary.txt as a pandas dataframe
+            try:
+                star_hours = pd.read_csv(summarytxt, header=None, comment='#',
+                                         names=['timestamp','stars','detec'],
+                                         parse_dates=['timestamp'], date_parser=lambda x: datetime.strptime(x+'000', MINUTEDIR_STRP))
+            except:
+                machine.addError(f"ERROR: Could not read primary summary on {machine.name}!")
+                continue
+
+            # Parse data to mark detections and calculate total star-hours
+            # Star hours are calculated as num_stars*time
+            detec_markers = star_hours['detec'] > 0
+            total_starhours = star_hours['stars'].sum()/60.
+
             # Plot the star-hours
-            axs.plot(mdates.date2num(star_hours[:,0]), star_hours[:,1],
+            axs.plot(mdates.date2num(star_hours.index), star_hours['stars'],
                      color=machine.colour, linestyle='-', alpha=0.7,
                      zorder=1, label=f"{total_starhours} star-hours")
             axs.scatter(mdates.date2num(star_hours[detec_markers,0]), star_hours[detec_markers,1],
