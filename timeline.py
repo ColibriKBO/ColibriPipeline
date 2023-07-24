@@ -15,6 +15,7 @@ nightly operations of the Colibri project. Runs only on Greenbird.
 import os,sys
 import re
 import argparse
+import shutil
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
@@ -577,37 +578,46 @@ def calculateAirmass(alt):
 ## Weather
 #############################
 
-def getCloudData(*obs_dates):
+def getCloudData(*cloud_logs):
 
-    # Find cloud log files
-    weather_data = []
-    for weather_date in obs_dates:
-        # Path names
-        filename = f"weather.log.{hyphonateDate(weather_date)}"
-        filepath = CLOUD_PATH / filename
+    # Read data from each cloud log
+    cloud_data = []
+    for cloud_log in cloud_logs:
+        # Check if this file exists
+        if not cloud_log.exists():
+            print(f"WARNING: {cloud_log} does not exist!")
+            continue
 
-        # Check if this file exists or is "today" and filelines to list
-        if filepath.exists():
-            with open(filepath,'r') as file:
-                for line in file.readlines():
-                    weather_data.append(line.split(','))
-        elif weather_date == datetime.now().strftime(OBSDATE_FORMAT):
-            with open(CLOUD_PATH / "weather.log", 'r') as file:
-                for line in file.readlines():
-                    weather_data.append(line.split(','))
-        else:
-            print(f"WARNING: No log for {weather_date}!")
+        # Read in the data from the cloud log
+        with open(cloud_log, 'r') as file:
+            for line in file.readlines():
+                cloud_data.append(line.split(','))
 
     # Check that at least one weather log exists
-    if weather_data is []:
+    if cloud_data == []:
         print("ERROR: No weather logs found!")
         return
     
     # Convert data list to numpy array for convenience
-    weather_array = np.array(weather_data,dtype=float)
+    weather_array = np.array(cloud_data,dtype=float)
     print("Successfully found and collected cloud/transparency data.")
 
-    return weather_array
+    return weather_array[weather_array[:,0].argsort()]
+
+
+def searchForWeatherLog(obs_date, base_dir):
+    
+    # Check that the date is not today
+    if obs_date == datetime.now().strftime(OBSDATE_FORMAT):
+        return base_dir / 'Logs' / 'Weather' / 'Weather' / 'weather.log'
+
+    # Get the weather log path
+    weatherlog_name = "weather.log.{}".format(obs_date)
+    weatherlog_path = base_dir / 'Logs' / 'Weather' / 'Weather' / weatherlog_name
+
+    # Check if the weather log exists
+    if weatherlog_path.exists():
+        return weatherlog_path
 
 
 #############################
@@ -1075,9 +1085,39 @@ if __name__ == '__main__':
     sunrise_date = sunrise.strftime(OBSDATE_FORMAT)
     if sunset_date == sunrise_date:
         print("Run occurred over one date.")
-        cloud_data = getCloudData(sunset_date)
+
+        for machine in (Green,Red,Blue):
+            # Check if cloud log exists for this date
+            cloud_log = searchForWeatherLog(sunset_date, machine.base_path)
+            if cloud_log is not None:
+                print(f"Found cloud log for {machine.name}!")
+                cloud_data = getCloudData(cloud_log)
+
+                break
+            else:
+                machine.addError(f"WARNING: No cloud log found for {machine.name}!")
+        else:
+            print("ERROR: No cloud logs found!")
+            cloud_data = None
+
     else:
         print("Run occurred over two dates.")
+
+        for machine in (Green,Red,Blue):
+            # Check if cloud logs exist for both dates
+            cloud_log1 = searchForWeatherLog(sunset_date, machine.base_path)
+            cloud_log2 = searchForWeatherLog(sunrise_date, machine.base_path)
+            if (cloud_log1 is not None) and (cloud_log2 is not None):
+                print(f"Found cloud logs for {machine.name}!")
+                cloud_data = getCloudData(cloud_log1,cloud_log2)
+
+                break
+            else:
+                machine.addError(f"WARNING: No cloud logs found for {machine.name}!")
+        else:
+            print("ERROR: No cloud logs found!")
+            cloud_data = None
+
         cloud_data = getCloudData(sunset_date,sunrise_date)
 
     # If cloud data has been passed, plot the transparency plot
@@ -1102,12 +1142,7 @@ if __name__ == '__main__':
         # Set the axes limits and labels of the transparency plot
         ax2.yaxis.set_ticks(np.arange(0, 5, 1)*0.5)
         ax2.set_ylim([0,2.5])
-        #ax.set_yticks([])
-        #ax.set_yticklabels([])
         ax2.set_ylabel('mag')
-        #ax.set_xticklabels([])
-        #ax2.set_xticks([])
-        #ax2.set_xticklabels([])
     
 
 ###########################
