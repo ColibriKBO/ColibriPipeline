@@ -1415,12 +1415,12 @@ if __name__ == '__main__':
     print("\n-------------------------")
     
     # If no errors, report success
-    if (Red.error is []) and (Green.error is []) and (Blue.error is []):
+    if (Red.errors is []) and (Green.errors is []) and (Blue.errors is []):
         print("SUCCESS: No errors were encountered!")
 
     # If any errors were encountered, report them
     else:
         for machine in (Red,Green,Blue):
             print(f"{machine.name} Errors:")
-            for error in machine.error:
+            for error in machine.errors:
                 print("    " + error)
