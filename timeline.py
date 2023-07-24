@@ -1406,3 +1406,21 @@ if __name__ == '__main__':
     summary_path = diagnostic_dir / f'{obs_date}_observation_summary.pdf'
     images[0].save(summary_path, "PDF", resolution=100., save_all=True, append_images=images[1:])
     print("All images saved! You are done!")
+
+
+###########################
+## Error Reporting
+###########################
+
+    print("\n-------------------------")
+    
+    # If no errors, report success
+    if (Red.error is []) and (Green.error is []) and (Blue.error is []):
+        print("SUCCESS: No errors were encountered!")
+
+    # If any errors were encountered, report them
+    else:
+        for machine in (Red,Green,Blue):
+            print(f"{machine.name} Errors:")
+            for error in machine.error:
+                print("    " + error)
