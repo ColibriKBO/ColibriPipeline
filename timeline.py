@@ -980,7 +980,7 @@ if __name__ == '__main__':
     # Check that at least one log file exists
     if not (Red.log_exists | Green.log_exists | Blue.log_exists):
         print("ERROR: No logs exist for this date!")
-        sys.exit()
+        raise FileExistsError("No logs exist for this date!")
 
     # Create a directory for diagnostic files
     diagnostic_dir = BASE_PATH / 'Logs' / 'Operations' / obs_date

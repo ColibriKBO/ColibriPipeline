@@ -54,7 +54,7 @@ DET_TIME_REGEX = re.compile('det_(\d{4}-\d{2}-\d{2}_\d{6}_\d{6})\d{3}')
 
 # Detection tolerances
 TIME_TOLERANCE = 0.2  # seconds
-COORD_TOLERANCE = 0.01  # degrees
+COORD_TOLERANCE = 0.002  # degrees
 
 
 #-------------------------------classes---------------------------------------#
@@ -356,8 +356,7 @@ if __name__ == '__main__':
         # Check if the match coordinates are within tolerance of each other
         # Tier 2 if no match, tier 3 if tolerance match
         for tel1,tel2 in itertools.combinations(matched_det_coords, 2):
-            if (abs(tel1[0] - tel2[0]) <= COORD_TOLERANCE) and \
-               (abs(tel1[1] - tel2[1]) <= COORD_TOLERANCE):
+            if (np.hypot((tel1[0] - tel2[0])/np.cos(tel1[1]*np.pi/180), tel1[1] - tel2[1]) <= COORD_TOLERANCE):
                 
                 # Remove from tier 2 and add to tier 3
                 print(f"{match_dir.name} is a tier 3 match.")
