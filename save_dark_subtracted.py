@@ -14,6 +14,7 @@ import argparse
 import pathlib
 import re
 import numpy as np
+import pandas as pd
 from datetime import datetime
 from astropy.io import fits
 from multiprocessing import cpu_count,Pool
@@ -34,6 +35,9 @@ ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
 # Timestamp format
 OBSDATE_FORMAT = '%Y%m%d'
 TIMESTAMP_FORMAT = '%Y%m%d_%H.%M.%S'
+
+# REGEX format
+DET_REGEX = r'det_(\d{4}-\d{2}-\d{2})_(\d{6}_\d{6})'
 
 # Get name of telescope
 try:
@@ -84,7 +88,115 @@ def process_science_images(image_path_list, start_frame, bias_data, save_dir_pat
     hdu.writeto(fits_image_filename, overwrite=True)
 
 
+def parse_det_file(det_file):
+    """Parse detection file name into date, timestamp, and list of 
+    detection files"""
+
+    # Check that the detection file exists
+    if not det_file.exists():
+        raise FileNotFoundError(f'Detection file {det_file} does not exist.')
+
+    # Read the detection file
+    det_df = pd.read_csv(det_file, sep='\s+', header=None, comment='#',
+                         names=['filename', 'time', 'flux', 'conv_flux'])
+    
+    # Get parent directory of one of the detection files
+    minute_dir = det_df['filename'][0].parent.name
+
+    # Return detection files as list
+    return minute,det_df['filename'].tolist()
+
+
 #------------------------------------main-------------------------------------#
+
+def _save_dark_subtracted_minute(date, minute):
+    """Save dark-subtracted images from a minute directory as fits files
+    *NOTE: This function must be called after main"""
+
+
+    # Get path to minute directory
+    MINUTE_PATH = DATE_PATH / minute
+    if not MINUTE_PATH.exists():
+        raise FileNotFoundError(f'Minute directory {MINUTE_PATH} does not exist. No images to process.')
+    
+    # Create save directory
+    SAVE_PATH = IMGE_PATH / date / minute
+    if not SAVE_PATH.exists():
+        SAVE_PATH.mkdir(parents=True)
+        print(f'Directory {SAVE_PATH} does not exist. Creating directory.')
+    else:
+        print(f'Directory {SAVE_PATH} already exists. Cleaning directory.')
+        for file in SAVE_PATH.glob('*'):
+            file.unlink()
+
+
+    ## Image processing
+
+    # Select bias image
+    bias_timestamps = get_bias_timestamps(MBIAS_PATH)
+    best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
+    
+    # Get list of all files in directory
+    image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
+
+    # Set up multiprocessing
+    pool_size = cpu_count() - 2
+    pool = Pool(pool_size)
+    args = ((image_paths, i, best_bias, SAVE_PATH) for i in range(len(image_paths)))
+
+    # Process images in parallel
+    pool.starmap(process_science_images, args)
+
+    # Close multiprocessing
+    pool.close()
+    pool.join()
+    print('Done.')
+
+
+def _save_dark_subtracted_detec(date, minute, detec_str, file_list):
+    """Save dark-subtracted images from a minute directory as fits files
+    *NOTE: This function must be called after main"""
+
+
+    # Get path to minute directory
+    MINUTE_PATH = DATE_PATH / minute
+    if not MINUTE_PATH.exists():
+        raise FileNotFoundError(f'Minute directory {MINUTE_PATH} does not exist. No images to process.')
+    
+    # Create save directory
+    SAVE_PATH = IMGE_PATH / date / detec_str
+    if not SAVE_PATH.exists():
+        SAVE_PATH.mkdir(parents=True)
+        print(f'Directory {SAVE_PATH} does not exist. Creating directory.')
+    else:
+        print(f'Directory {SAVE_PATH} already exists. Cleaning directory.')
+        for file in SAVE_PATH.glob('*'):
+            file.unlink()
+
+
+    ## Image processing
+
+    # Select bias image
+    bias_timestamps = get_bias_timestamps(MBIAS_PATH)
+    best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
+    
+    # Get list of all files in directory
+    #image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
+
+    # Set up multiprocessing
+    pool_size = cpu_count() - 2
+    pool = Pool(pool_size)
+    args = ((file_list, i, best_bias, SAVE_PATH) for i in range(len(file_list)))
+
+    # Process images in parallel
+    pool.starmap(process_science_images, args)
+
+    # Close multiprocessing
+    pool.close()
+    pool.join()
+    print('Done.')
+
+
 
 if __name__ == '__main__':
 
@@ -102,9 +214,15 @@ if __name__ == '__main__':
                             help="Date of observation (YYYYMMDD)")
     arg_parser.add_argument('-t', '--time', 
                             help="Timestamp of minute directory to save. Default is minute with most stars.")
+    arg_parser.add_argument('-d','--det',
+                            help="Detection file to save. Incompatible with -t option")
 
     # Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
+
+    # Make sure only one or the other option is used
+    if (cml_args.time is not None) and (cml_args.det is not None):
+        raise argparse.ArgumentTypeError('Cannot use both -t and -d options')
 
 
 ###########################
@@ -136,46 +254,18 @@ if __name__ == '__main__':
 
         # Get minute with most stars
         minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
+        _save_dark_subtracted_minute(cml_args.date, minute)
+
+    elif cml_args.det is not None:
+        # Parse detection file name
+        det_file = pathlib.Path(cml_args.det)
+
+        # Get minute directory and list of image files
+        minute,image_files = parse_det_file(det_file)
+        _save_dark_subtracted_detec(cml_args.date, minute, det_file.stem, image_files)
+
 
     else:
         minute = cml_args.time
+        _save_dark_subtracted_minute(cml_args.date, minute)
 
-    # Get path to minute directory
-    MINUTE_PATH = DATE_PATH / minute
-    if not MINUTE_PATH.exists():
-        raise FileNotFoundError(f'Minute directory {MINUTE_PATH} does not exist. No images to process.')
-    
-    # Create save directory
-    SAVE_PATH = IMGE_PATH / cml_args.date / minute
-    if not SAVE_PATH.exists():
-        SAVE_PATH.mkdir(parents=True)
-        print(f'Directory {SAVE_PATH} does not exist. Creating directory.')
-    else:
-        print(f'Directory {SAVE_PATH} already exists. Cleaning directory.')
-        for file in SAVE_PATH.glob('*'):
-            file.unlink()
-
-
-###########################
-## Image processing
-###########################
-
-    # Select bias image
-    bias_timestamps = get_bias_timestamps(MBIAS_PATH)
-    best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
-    
-    # Get list of all files in directory
-    image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
-
-    # Set up multiprocessing
-    pool_size = cpu_count() - 2
-    pool = Pool(pool_size)
-    args = ((image_paths, i, best_bias, SAVE_PATH) for i in range(len(image_paths)))
-
-    # Process images in parallel
-    pool.starmap(process_science_images, args)
-
-    # Close multiprocessing
-    pool.close()
-    pool.join()
-    print('Done.')
