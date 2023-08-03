@@ -104,6 +104,7 @@ class Telescope:
         print(f"Writing artificial generation command(s) to {self.name}..")
         with open((self.obs_archive / 'generate_artificial.txt'), 'w') as gat:
             for gen_cmd in self.gen_artificial:
+                print(" -> " + gen_cmd)
                 gat.write(gen_cmd + '\n')
 
         return self.gen_artificial
@@ -322,6 +323,31 @@ if __name__ == '__main__':
 
 
 ###########################
+## Coordinate Matching
+###########################
+
+    # Check that the matched events are within the coordinate tolerance
+    # Otherwise, delete the match and move on
+    for match_dir in matched_dir.iterdir():
+
+        # Get the coordinates of the match files
+        matched_det_coords = [readRAdec(det) for det in match_dir.iterdir()]
+
+        # Check if the match coordinates are within tolerance of each other
+        # Delete the match directory if not
+        for tel1,tel2 in itertools.combinations(matched_det_coords, 2):
+            if (np.hypot((tel1[0] - tel2[0])/np.cos(tel1[1]*np.pi/180), tel1[1] - tel2[1]) <= COORD_TOLERANCE):
+                
+                # Log the match and break out of the loop
+                # NOTE: This requires only that one pair of coordinates is within tolerance
+                print(f"{match_dir.name} matched stars.")
+                break
+        else:
+            print(f"{match_dir.name} is not matched to the same star. Deleting...")
+            shutil.rmtree(match_dir)
+        
+
+###########################
 ## Refine Second Matching
 ###########################
 
@@ -333,38 +359,32 @@ if __name__ == '__main__':
                             for det in match_dir.iterdir()]
         
         # Check if the match times are within tolerance of each other
-        # Tier 1 if only 1-second match, tier 2 if tolerance match
+        # Tier 1 if only 1-second match, tier 2/3 if tolerance match
         for tel1,tel2 in itertools.combinations(matched_det_times, 2):
             if abs((tel1 - tel2).total_seconds()) <= TIME_TOLERANCE:
-                tier2.append(match_dir)
+
+                # Get number of detections in the match directory
+                num_det = len(list(match_dir.iterdir()))
+                
+                # Log the match as tier 2 if two detection files exist
+                if num_det == 2:
+                    print(f"{match_dir.name} is a tier 2 match.")
+                    tier2.append(match_dir)
+
+                # Log the match as tier 3 if three detection files exist
+                elif num_det == 3:
+                    print(f"{match_dir.name} is a tier 3 match.")
+                    tier3.append(match_dir)
+                
+                # Log the match as tier 1 if an unexpected number of detections exist
+                else:
+                    print(f"{match_dir.name} is a tier 1 match because of strangeness.")
+                    tier1.append(match_dir)
+
                 break
         else:
             print(f"{match_dir.name} is a tier 1 match.")
             tier1.append(match_dir)
-
-
-###########################
-## Coordinate Matching
-###########################
-
-    # Check coordinate matching for tier 2 matches
-    for i,match_dir in enumerate(tier2):
-
-        # Get the coordinates of the match files
-        matched_det_coords = [readRAdec(det) for det in match_dir.iterdir()]
-
-        # Check if the match coordinates are within tolerance of each other
-        # Tier 2 if no match, tier 3 if tolerance match
-        for tel1,tel2 in itertools.combinations(matched_det_coords, 2):
-            if (np.hypot((tel1[0] - tel2[0])/np.cos(tel1[1]*np.pi/180), tel1[1] - tel2[1]) <= COORD_TOLERANCE):
-                
-                # Remove from tier 2 and add to tier 3
-                print(f"{match_dir.name} is a tier 3 match.")
-                del tier2[i]
-                tier3.append(match_dir)
-                break
-        else:
-            print(f"{match_dir.name} is a tier 2 match.")
 
 
 ###########################
