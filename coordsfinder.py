@@ -101,7 +101,7 @@ def getTransform(timestamp, median_stacks, transformations, return_transformatio
             return transform
 
 
-def getRAdec(transform, star_pos_file, savefile=None):
+def updateNPY_RAdec(transform, star_pos_file, savefile=None):
     '''get WCS transform from astrometry.net header
     input: astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
     returns: coordinate transform'''
@@ -111,10 +111,10 @@ def getRAdec(transform, star_pos_file, savefile=None):
 #    transform = wcs.WCS(transform_im[0].header)
     
     #get star coordinates from observation image (.npy file)
-    star_pos = np.load(star_pos_file)[:,[0,1]]
+    star_pos = np.load(star_pos_file)
     
     #get transformation
-    world = transform.all_pix2world(star_pos, 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
+    world = transform.all_pix2world(star_pos[:,[0,1]], 0,ra_dec_order=True)[:,[0,1]] #2022-07-21 Roman A. changed solution function to fit SIP distortion
    # print(world)
    # px = transform.wcs_world2pix(world, 0)
    # print(px)
@@ -126,9 +126,9 @@ def getRAdec(transform, star_pos_file, savefile=None):
     
             for i in range(0, len(star_pos)):
                 #output table: | x | y | RA | Dec | 
-                filehandle.write('%f %f %f %f\n' %(star_pos[i][0], star_pos[i][1], world[i][0], world[i][1]))
+                filehandle.write('%f %f %f %f\n' %(star_pos[i][0], star_pos[i][1], star_pos[i][2], world[i][0], world[i][1]))
       
-    coords = np.array([star_pos[:,0], star_pos[:,1], world[:,0], world[:,1]]).transpose()
+    coords = np.hstack((star_pos, world)).transpose()
     return coords
 
 

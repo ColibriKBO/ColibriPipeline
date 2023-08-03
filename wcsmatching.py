@@ -24,7 +24,7 @@ from copy import deepcopy
 #import getRAdec
 import colibri_image_reader as cir
 import colibri_photometry as cp
-from coordsfinder import getTransform, getRAdec
+from coordsfinder import getTransform, updateNPY_RAdec
 
 # Disable Warnings
 import warnings
@@ -112,7 +112,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         star_table = np.load(npy_file)
 
         # If npy file already contains ra/dec information
-        if star_table.shape[1] == 4:
+        if star_table.shape[1] == 5:
             verboseprint("  Already proccessed.")
             continue
 
@@ -122,11 +122,11 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
 
         # Generate WCS transformation and the RA/Dec
         transform  = getTransform(timestamp, medstack_file_list, {})
-        star_radec = getRAdec(transform, npy_file)
+        star_radec = updateNPY_RAdec(transform, npy_file)
         verboseprint("  Successfully generated RA/DEC.")
 
         # Save the array of star positions as an .npy file again
-        # Format: x  |  y  | ra | dec :: No half-light radius data saved!
+        # Format: x  |  y  |  r  |  ra  |  dec
         npy_file.unlink()
         np.save(npy_file, star_radec)
 
@@ -188,17 +188,17 @@ def matchNight(obsdate):
         # Get ra/dec from each npy file
         # TODO: WCS mapping if not already done
         try:
-            Red_stars   = np.load(Red_file)[:,[2,3]]
+            Red_stars   = np.load(Red_file)[:,[3,4]]
         except IndexError:
             print(f"ERROR: {Red_file} has not been updated!")
             continue
         try:
-            Green_stars = np.load(Green_file)[:,[2,3]]
+            Green_stars = np.load(Green_file)[:,[3,4]]
         except IndexError:
             print(f"ERROR: {Green_file} has not been updated!")
             continue
         try:
-            Blue_stars  = np.load(Blue_file)[:,[2,3]]
+            Blue_stars  = np.load(Blue_file)[:,[3,4]]
         except IndexError:
             print(f"ERROR: {Blue_file} has not been updated!")
             continue
