@@ -60,6 +60,7 @@ SEC_TO_SAVE = 1.  # seconds on either side of event to save
 EXCLUDE_IMAGES = 1
 STARFINDING_STACK = 9
 APERTURE_RADIUS = 3.0
+DEFAULT_STAR_RADIUS = 1.5
 EXPOSURE_TIME = 0.025
 STAR_DETEC_THRESH = 4.0
 
@@ -164,6 +165,13 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
         target_star_index_y = np.where(abs(first_positions[:,1] - star_Y) < APERTURE_RADIUS)
         target_star_radius  = initial_radii[np.intersect1d(target_star_index_x,target_star_index_y)]
 
+    # Select star radius if available. Otherwise, use default.
+    if len(target_star_radius) == 0:
+        print(f"WARNING: Star was not found by SEP in {minute_dir.name}")
+        target_star_radius = DEFAULT_STAR_RADIUS
+    else:
+        target_star_radius = target_star_radius[0]
+    
     ## Generate lightcurve ##
 
     # Initialize lightcurve container
