@@ -37,9 +37,9 @@ ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
 STATS_PATH = BASE_PATH / 'CentralRepo' / 'CumulativeStats'
 DETEC_PATH = STATS_PATH / 'AllDetections'
 SATELLITE_PATH = STATS_PATH / 'Matches-Satellite'
-TIER3_PATH = STATS_PATH / 'Matches-Tier3'
-TIER3_FILE = TIER3_PATH / 'tier3_log.csv'
-STATS_FILE = STATS_PATH /'cumulative_stats.csv'
+SSO_PATH = STATS_PATH / 'Matches-SSO'
+SSO_LOG = SSO_PATH / 'sso_log.csv'
+STATS_LOG = STATS_PATH /'cumulative_stats.csv'
 
 # STRP formats
 OBSDATE_FORMAT = '%Y%m%d'
@@ -221,17 +221,17 @@ def parseMatchedDetDir(det_dir_path):
 
     ## Sort detections by tier
 
-    # Tier 1 and 2
-    if match_tier in ['Tier1', 'Tier2']:
+    # Tier 1
+    if match_tier == 'Tier1':
         print(f"Copying {det_dir_path.name} to satellite folder...")
         shutil.copytree(det_dir_path, SATELLITE_PATH / det_dir_path.name, dirs_exist_ok=True)
         return 'satellite'
     
-    # Tier 3
-    elif (match_tier == 'Tier3') and (det_count == 2):
+    # Tier 2
+    elif match_tier == 'Tier2':
         # Copy detections to Tier3 folder
-        print(f"Copying {det_dir_path.name} to Tier3 folder...")
-        shutil.copytree(det_dir_path, TIER3_PATH / det_dir_path.name, dirs_exist_ok=True)
+        print(f"Copying {det_dir_path.name} to SSO folder...")
+        shutil.copytree(det_dir_path, SSO_PATH / det_dir_path.name, dirs_exist_ok=True)
 
         # Get sigma values
         sigma1 = readSigma(det_files[0])
@@ -240,10 +240,10 @@ def parseMatchedDetDir(det_dir_path):
         # Return both values
         return 'double', timestamp, sigma1, sigma2
     
-    elif (match_tier == 'Tier3') and (det_count == 3):
+    elif match_tier == 'Tier3':
         # Copy detections to Tier3 folder
         print(f"Copying {det_dir_path.name} to Tier3 folder...")
-        shutil.copytree(det_dir_path, TIER3_PATH / det_dir_path.name, dirs_exist_ok=True)
+        shutil.copytree(det_dir_path, SSO_PATH / det_dir_path.name, dirs_exist_ok=True)
 
         # Get sigma values
         sigma1 = readSigma(det_files[0])
@@ -429,7 +429,7 @@ if __name__ == '__main__':
     # [7] Blue observing time (hours); [8] Blue star hours; [9] Blue occultations;
     # [10] Matched star hours; [11] satellite matches;
     # [12] 2-telescope matched occultations; [13] 3-telescope matched occultations
-    stats_df = pd.read_csv(STATS_FILE, parse_dates=['obsdate'], index_col='obsdate')
+    stats_df = pd.read_csv(STATS_LOG, parse_dates=['obsdate'], index_col='obsdate')
     verboseprint("SUCCESS: Loaded cumulative statistics.")
 
     # Check that this night has not been added already
@@ -448,18 +448,17 @@ if __name__ == '__main__':
 
     ## Count matched detections
     # Tier 1: matched to the second (candidates for satellite)
-    # Tier 2: matched to the 0.1 second (needs further examination)
-    # Tier 3: matched in RA/Dec (candidate for KBO)
+    # Tier 2: matched to the 0.02 second (candidate for KBO)
+    # Tier 2 has 2 telescopes, Tier 3 has 3 telescopes
     obs_match_dir = Green.obs_archive / 'matched'
 
-    # Load the tier3 dataframe
-    tier3_df = pd.read_csv(TIER3_FILE, index_col='timestamp')
+    # Load the SSO dataframe
+    sso_df = pd.read_csv(SSO_LOG, index_col='timestamp')
 
 
     # Check that detection matching has been done
     if not obs_match_dir.exists():
-        print(f"ERROR: No matched directory for {obsdate}!")
-        satellite_matches, match2, match3 = np.nan, np.nan, np.nan
+        raise FileNotFoundError("No matched directory for {obsdate}!")
     
     # Process the matched events and track each kind
     else:
@@ -478,10 +477,10 @@ if __name__ == '__main__':
                     satellite_matches += 1
                 elif parse_output[0] == 'double':
                     match2 += 1
-                    tier3_df.loc[parse_output[1]] = [parse_output[2], parse_output[3], np.nan]
+                    sso_df.loc[parse_output[1]] = [parse_output[2], parse_output[3], np.nan]
                 elif parse_output[0] == 'triple':
                     match3 += 1
-                    tier3_df.loc[parse_output[1]] = [parse_output[2], parse_output[3], parse_output[4]]
+                    sso_df.loc[parse_output[1]] = [parse_output[2], parse_output[3], parse_output[4]]
 
 
 ###########################
@@ -496,11 +495,11 @@ if __name__ == '__main__':
     print(stats_df.loc[obsdate])
     
     # Save the updated dataframes as CSVs
-    #STATS_FILE.unlink()
-    stats_df.to_csv(STATS_FILE)
-    tier3_df.to_csv(TIER3_FILE)
+    #STATS_LOG.unlink()
+    stats_df.to_csv(STATS_LOG)
+    sso_df.to_csv(SSO_LOG)
 
     # Generate plots
     if gen_plot:
         plotOccCandidates()
-        plotMatchedCandidates(tier3_df)
+        plotMatchedCandidates(sso_df)
