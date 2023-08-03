@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
     # Generate argument parser
     description = "Match occultation candidate events. Tiers are as follows:\n" +\
-                   "1. Match to 1 second\n2. Match to 0.2 seconds\n3. Match in time and coordinates"
+                   "1. Match to 1 second\n2. 2 files matched to 0.2s\n3. 3 files matched to 0.2s\n"
     arg_parser = argparse.ArgumentParser(description=description,
                                          formatter_class=argparse.RawTextHelpFormatter)
     
