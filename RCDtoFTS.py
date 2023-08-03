@@ -139,7 +139,7 @@ if __name__ == '__main__':
 	if len(sys.argv) > 2:
 		imgain = sys.argv[2]
 	else:
-		imgain = 'low'	# Which image/s to work with. Options: low, high, both (still to implement)
+		imgain = 'high'	# Which image/s to work with. Options: low, high, both (still to implement)
 
 	globpath = inputdir + '*.rcd'
 	print(globpath)
