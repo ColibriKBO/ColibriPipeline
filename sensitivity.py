@@ -7,28 +7,54 @@ Update: Jan. 24, 2022, 11:20
 @author: Rachel A Brown
 """
 
+# Module imports
+import sys, os, time
+import argparse
+import sep
+import pathlib
+import astropy
+import astropy.stats
+import numba as nb
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from copy import deepcopy
 from datetime import datetime, date
-import astropy
-import astropy.stats
 from astropy.io import fits
 from astropy import wcs
 from astropy.time import Time 
+
+# Custom module imports
 import getRAdec
-import pathlib
+import VizieR_query
+import astrometrynet_funcs
 import snplots
 import lightcurve_maker
 import lightcurve_looker
 import read_npy
-import VizieR_query
-import astrometrynet_funcs
-import sys, os, time
-import argparse
-import numba as nb
-from copy import deepcopy
-import sep
+
+
+#-------------------------------global vars-----------------------------------#
+
+#image_index = '2'                               #index of image to use (if uploading to astrometry.net manually)
+polynom_order = '4th'                           #order of astrometry.net plate solution polynomial
+ap_r = 3                                        #radius of aperture for photometry
+gain = 'high'                                   #which gain to take from rcd files ('low' or 'high')
+global telescope
+telescope = os.environ['COMPUTERNAME']       #telescope identifier
+#field_name = 'field1'                           #name of field observed
+
+# Telescope Code Dictionary
+TELESCOPE_BASE_DIR = {'REDBIRD':pathlib.Path('R:'),
+                      'GREENBIRD':pathlib.Path('G:'),
+                      'BLUEBIRD':pathlib.Path('B:')}
+
+# Datetime Formats
+MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S.%f'
+OBSTIME_STRP = '%H.%M.%S'
+
+
+#--------------------------------functions------------------------------------#
 
 def initialFindFITS(data, detect_thresh):
     """ Locates the stars in the initial time slice 
@@ -251,7 +277,35 @@ def RAdec_diffPlot(matched):
     plt.gca().set_aspect('equal', adjustable='box')
 
     plt.savefig(save_path.joinpath('RA-dec_diff_' + gain + '_' + str(detect_thresh) + 'sig_' +  telescope + '_' + str(field_centre) + '_' + str(obs_date) + '_' + str(obs_time).replace(':','.') + '.png'))
+
+
+def primarysummaryReader(summary_path):
+    """
+    Read primary_summary.txt file and return a dataframe
     
+    Args:
+        summary_path (pathlib.Path): path to primary_summary.txt file
+    
+    Returns:
+        df (dataframe): dataframe containing summary information
+    
+    """
+
+    # Load primary_summary.txt as a pandas dataframe
+    try:
+        star_hours = pd.read_csv(summary_path, header=None, 
+                                    names=['timestamp','stars','detec'],
+                                    comment='#', index_col=0,
+                                    parse_dates=['timestamp'], date_parser=lambda x: datetime.strptime(x+'000', MINUTEDIR_STRP))
+        return star_hours
+    
+    # If primary pipeline failed, return None (to be ignored)
+    except:
+        print(f"ERROR: Could not read primary summary on {summary_path.anchor}!")
+        return None
+
+    
+
 '''---------------------------------SCRIPT STARTS HERE--------------------------------------------'''
 
 '''------------set up--------------------'''
@@ -284,12 +338,55 @@ if __name__ == '__main__':
 
 
     minute_dirs=[f.name for f in data_path.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)]
+    minute_dirs_datetime = [datetime.strptime(f, MINUTEDIR_STRP) for f in minute_dirs]
 
-
-
-
+    # If no minute is specified, read the other telescopes' primary_done.txt to find best minute
     if not cml_args.minute:
-        obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
+
+        # Defunct code to find the middle minute directory
+        #obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
+
+        # Substitute current telescope basedir with D:
+        TELESCOPE_BASE_DIR[telescope] = pathlib.Path('D:')
+
+        # Construct the path to the primary_done.txt file for each telescope
+        primary_summary_files = [TELESCOPE_BASE_DIR[instrument].joinpath('ColibriArchive', str(obs_date)), 'primary_summary.txt' 
+                                 for instrument in TELESCOPE_BASE_DIR.keys()]
+        
+        # Check that the primary_summary.txt file exists for each telescope
+        # If not, wait for 5 minutes and check again
+        printed_waiting_message = False
+        while not all([primary_summary_file.exists() for primary_summary_file in primary_summary_files]):
+            if printed_waiting_message is False:
+                print(f'Waiting for primary processing of {obs_date} to finish...')
+                printed_waiting_message = True
+            time.sleep(300)
+        
+        # Read the primary_summary.txt file for each telescope into a dictionary
+        primary_summary_dfs = {instrument: primarysummaryReader(primary_summary_file) 
+                               for instrument, primary_summary_file 
+                               in zip(TELESCOPE_BASE_DIR.keys(), primary_summary_files)}
+        
+        # Try each telescope to find the one with the most stars detected
+        for instrument in TELESCOPE_BASE_DIR.keys():
+            # If the primary_summary.txt file exists for this telescope
+            if primary_summary_dfs[instrument] is not None:
+                # Find the minute with the most stars detected
+                max_stars = primary_summary_dfs[instrument]['stars'].max()
+                max_stars_minute = primary_summary_dfs[instrument][primary_summary_dfs[instrument]['stars'] == max_stars].index[0]
+
+                # Check that this minute is within 1 minute of an existing minute_dir
+                # If so, use this minute_dir. Otherwise, use the middle minute_dir
+                for minute_dir in minute_dirs_datetime:
+                    if abs((minute_dir - max_stars_minute).total_seconds()) < 60:
+                        obs_time = minute_dir.strftime(OBSTIME_STRP)
+                        break
+                else:
+                    obs_time = minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
+
+
+
+    # Otherwise, parse the minute directory names to get the time of the observation given
     else:
         try:
             desired_time = str(cml_args.minute)
@@ -315,13 +412,6 @@ if __name__ == '__main__':
 
     # obs_date = datetime.date(2022, 8, 12)           #date of observation
     # obs_time = datetime.time(3, 42, 28)             #time of observation (to the second)
-    #image_index = '2'                               #index of image to use (if uploading to astrometry.net manually)
-    polynom_order = '4th'                           #order of astrometry.net plate solution polynomial
-    ap_r = 3                                        #radius of aperture for photometry
-    gain = 'high'                                   #which gain to take from rcd files ('low' or 'high')
-    global telescope
-    telescope = os.environ['COMPUTERNAME']       #identifier for telescope                              #telescope identifier
-    #field_name = 'field1'                           #name of field observed
                                 #detection threshold
 
     #paths to required files
