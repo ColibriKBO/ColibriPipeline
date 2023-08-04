@@ -322,7 +322,7 @@ if __name__ == '__main__':
         formatter_class=argparse.RawTextHelpFormatter)
 
     arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
-    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
+    arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', required=True)
     arg_parser.add_argument('-t', '--threshold', help='Star detection threshold.', default='4')
     arg_parser.add_argument('-m', '--minute', help='hh.mm.ss to process.')
     arg_parser.add_argument('-l', '--lightcurve', help='Star detection threshold.', default=True)
@@ -331,7 +331,7 @@ if __name__ == '__main__':
     obsYYYYMMDD = cml_args.date
     obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
 
-    cml_args = arg_parser.parse_args()
+    detect_thresh = int(cml_args.threshold)
 
     base_path = pathlib.Path(cml_args.basedir)
     data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''))    #path to data
@@ -341,7 +341,7 @@ if __name__ == '__main__':
     minute_dirs_datetime = [datetime.strptime(f, MINUTEDIR_STRP) for f in minute_dirs]
 
     # If no minute is specified, read the other telescopes' primary_done.txt to find best minute
-    if not cml_args.minute:
+    if cml_args.minute is None:
 
         # Defunct code to find the middle minute directory
         #obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
@@ -350,7 +350,7 @@ if __name__ == '__main__':
         TELESCOPE_BASE_DIR[telescope] = pathlib.Path('D:')
 
         # Construct the path to the primary_done.txt file for each telescope
-        primary_summary_files = [TELESCOPE_BASE_DIR[instrument].joinpath('ColibriArchive', str(obs_date)), 'primary_summary.txt' 
+        primary_summary_files = [TELESCOPE_BASE_DIR[instrument].joinpath('ColibriArchive', str(obs_date), 'primary_summary.txt') 
                                  for instrument in TELESCOPE_BASE_DIR.keys()]
         
         # Check that the primary_summary.txt file exists for each telescope
@@ -406,8 +406,6 @@ if __name__ == '__main__':
             obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
             
 
-    cml_args = arg_parser.parse_args()
-    detect_thresh = int(cml_args.threshold)
 
 
     # obs_date = datetime.date(2022, 8, 12)           #date of observation
