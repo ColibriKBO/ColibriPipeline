@@ -102,10 +102,18 @@ class Telescope:
             self.addError(f"ERROR: Could not write artificial generation command for {self.name}!")
 
         print(f"Writing artificial generation command(s) to {self.name}..")
-        with open((self.obs_archive / 'generate_artificial.txt'), 'w') as gat:
-            for gen_cmd in self.gen_artificial:
-                print(" -> " + gen_cmd)
-                gat.write(gen_cmd + '\n')
+
+        # Write the generate artificial command
+        # If there are none are queued, touch the file
+        if self.gen_artificial == []:
+            (self.obs_archive / 'generate_artificial.txt').touch()
+        
+        # Otherwise, write the commands
+        else:
+            with open((self.obs_archive / 'generate_artificial.txt'), 'w') as gat:
+                for gen_cmd in self.gen_artificial:
+                    print(" -> " + gen_cmd)
+                    gat.write(gen_cmd + '\n')
 
         return self.gen_artificial
 
