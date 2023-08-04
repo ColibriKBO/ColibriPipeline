@@ -343,9 +343,6 @@ if __name__ == '__main__':
     # If no minute is specified, read the other telescopes' primary_done.txt to find best minute
     if cml_args.minute is None:
 
-        # Defunct code to find the middle minute directory
-        #obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
-
         # Substitute current telescope basedir with D:
         TELESCOPE_BASE_DIR[telescope] = pathlib.Path('D:')
 
@@ -377,12 +374,14 @@ if __name__ == '__main__':
 
                 # Check that this minute is within 1 minute of an existing minute_dir
                 # If so, use this minute_dir. Otherwise, use the middle minute_dir
-                for minute_dir in minute_dirs_datetime:
-                    if abs((minute_dir - max_stars_minute).total_seconds()) < 60:
-                        obs_time = minute_dir.strftime(OBSTIME_STRP)
+                for minute_dir_datetime in minute_dirs_datetime:
+                    if abs((minute_dir_datetime - max_stars_minute).total_seconds()) < 60:
+                        minute_dir = minute_dir_datetime.strftime(MINUTEDIR_STRP)[:-3]
+                        obs_time = minute_dir_datetime.strftime(OBSTIME_STRP)
                         break
                 else:
-                    obs_time = minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
+                    minute_dir = minute_dirs[int(len(minute_dirs) / 2)]
+                    obs_time = minute_dir.split('_')[1][:-4]
 
 
 
@@ -399,11 +398,13 @@ if __name__ == '__main__':
                 
                 
                 if desired_time[:-2] in minute_dirs[i]:
+                    minute_dir=minute_dirs[i]
                     obs_time=str(minute_time).replace(':','.')[:-4]
                     print(obs_time)
                     break
         except:
-            obs_time=minute_dirs[int(len(minute_dirs) / 2)].split('_')[1][:-4]
+            minute_dir = minute_dirs[int(len(minute_dirs) / 2)]
+            obs_time = minute_dir.split('_')[1][:-4]
             
 
 
@@ -426,6 +427,7 @@ if __name__ == '__main__':
 
     '''-------------field selection section based on number of stars on image------------''' #2023-04-25 Roman A.
 
+    """ Defunct code to find the minute directory with the most stars
     minute_stars=[] #array for minute and respective number of stars in it
     for minute_dir in minute_dirs:
 
@@ -451,6 +453,7 @@ if __name__ == '__main__':
 
     minute_dir=minute_stars[-1][0]
     print(minute_stars[-1][0])
+    """
 
     '''-------------------------------------------------------------------------------------'''
 
