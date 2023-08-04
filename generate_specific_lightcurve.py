@@ -181,7 +181,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
 
     # Seed lightcurve with first frame data
     star_initial_flux = sep.sum_circle(first_frame, [star_X], [star_Y], [target_star_radius])
-    star_data[0] = [[star_X, star_Y, star_initial_flux[0][0,0], Time(first_time[0], precision=9).unix]]
+    star_data[0] = [[star_X, star_Y, star_initial_flux[0][0], Time(first_time[0], precision=9).unix]]
 
     # Loop through each frame and calculate flux
     header_times = [first_time[0]]
