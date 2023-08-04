@@ -383,6 +383,9 @@ if __name__ == '__main__':
                     minute_dir = minute_dirs[int(len(minute_dirs) / 2)]
                     obs_time = minute_dir.split('_')[1][:-4]
 
+                # Prevent it from iterating if the primary_summary.txt file exists for this telescope
+                break
+
 
 
     # Otherwise, parse the minute directory names to get the time of the observation given
