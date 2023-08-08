@@ -60,7 +60,7 @@ SEC_TO_SAVE = 1.  # seconds on either side of event to save
 EXCLUDE_IMAGES = 1
 STARFINDING_STACK = 9
 APERTURE_RADIUS = 3.0
-DEFAULT_STAR_RADIUS = 1.5
+DEFAULT_STAR_RADIUS = 2.0
 EXPOSURE_TIME = 0.025
 STAR_DETEC_THRESH = 4.0
 
@@ -163,14 +163,10 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     else:
         target_star_index_x = np.where(abs(first_positions[:,0] - star_X) < APERTURE_RADIUS)
         target_star_index_y = np.where(abs(first_positions[:,1] - star_Y) < APERTURE_RADIUS)
-        target_star_radius  = initial_radii[np.intersect1d(target_star_index_x,target_star_index_y)]
 
-    # Select star radius if available. Otherwise, use default.
-    if len(target_star_radius) == 0:
+    # Check if the star was found in both x and y
+    if len(np.intersect1d(target_star_index_x,target_star_index_y)) == 0:
         print(f"WARNING: Star was not found by SEP in {minute_dir.name}")
-        target_star_radius = DEFAULT_STAR_RADIUS
-    else:
-        target_star_radius = target_star_radius[0]
     
     ## Generate lightcurve ##
 
@@ -180,7 +176,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     print(f"num_images = {num_frames}")
 
     # Seed lightcurve with first frame data
-    star_initial_flux = sep.sum_circle(first_frame, [star_X], [star_Y], [target_star_radius])
+    star_initial_flux = sep.sum_circle(first_frame, [star_X], [star_Y], [APERTURE_RADIUS])
     star_data[0] = [[star_X, star_Y, star_initial_flux[0][0], Time(first_time[0], precision=9).unix]]
 
     # Loop through each frame and calculate flux
