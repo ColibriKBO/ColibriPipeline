@@ -128,7 +128,7 @@ def updateNPY_RAdec(transform, star_pos_file, savefile=None):
                 #output table: | x | y | RA | Dec | 
                 filehandle.write('%f %f %f %f\n' %(star_pos[i][0], star_pos[i][1], star_pos[i][2], world[i][0], world[i][1]))
       
-    coords = np.hstack((star_pos, world)).transpose()
+    coords = np.hstack((star_pos, world))
     return coords
 
 
