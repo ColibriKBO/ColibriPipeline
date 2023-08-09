@@ -346,6 +346,19 @@ if __name__ == '__main__':
         # Substitute current telescope basedir with D:
         TELESCOPE_BASE_DIR[telescope] = pathlib.Path('D:')
 
+        # Check to see if each telescope has data for this date
+        # If not, remove it from the dictionary
+        for instrument in TELESCOPE_BASE_DIR.keys():
+            raw_dir = TELESCOPE_BASE_DIR[instrument].joinpath('ColibriData', str(obs_date).replace('-', ''))
+            data_list = [min_dir for min_dir in raw_dir.iterdir() if min_dir.is_dir()]
+            if len(data_list) <= 1:
+                print(f'WARNING: No data for {obs_date} on {instrument}! Ignoring this instrument.')
+                TELESCOPE_BASE_DIR.pop(instrument)
+
+        # Check that there is at least one telescope with data for this date
+        if len(TELESCOPE_BASE_DIR.keys()) == 0:
+            raise ValueError(f'ERROR: No data for {obs_date} on any telescope!')
+
         # Construct the path to the primary_done.txt file for each telescope
         primary_summary_files = [TELESCOPE_BASE_DIR[instrument].joinpath('ColibriArchive', str(obs_date), 'primary_summary.txt') 
                                  for instrument in TELESCOPE_BASE_DIR.keys()]
