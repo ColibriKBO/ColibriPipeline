@@ -348,12 +348,16 @@ if __name__ == '__main__':
 
         # Check to see if each telescope has data for this date
         # If not, remove it from the dictionary
+        empty_telescopes = []
         for instrument in TELESCOPE_BASE_DIR.keys():
             raw_dir = TELESCOPE_BASE_DIR[instrument].joinpath('ColibriData', str(obs_date).replace('-', ''))
             data_list = [min_dir for min_dir in raw_dir.iterdir() if min_dir.is_dir()]
             if len(data_list) <= 1:
                 print(f'WARNING: No data for {obs_date} on {instrument}! Ignoring this instrument.')
-                TELESCOPE_BASE_DIR.pop(instrument)
+                empty_telescopes.append(instrument)
+
+        for instrument in empty_telescopes:
+            TELESCOPE_BASE_DIR.pop(instrument)
 
         # Check that there is at least one telescope with data for this date
         if len(TELESCOPE_BASE_DIR.keys()) == 0:
