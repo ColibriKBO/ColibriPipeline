@@ -320,6 +320,36 @@ def findMinute(obsdate, timestamp):
             # Return the markers
             skip_frame = int(skip_frame)
             return target_dir, skip_frame
+        
+
+def findMatchedDir(obsdate, timestamp):
+
+    # Set Green's basedir
+    if os.environ['COMPUTERNAME'] == 'GREEN':
+        green_path = BASE_PATH
+    else:
+        green_path = pathlib.Path("G:/")
+
+    # Path to matched directory
+    matched_dir = green_path / "ColibriArchive" / hyphonateDate(obsdate) / "matched"
+
+    # Convert the timestamp to the correct format
+    timestamp = datetime.strptime(timestamp, TIMESTAMP_FORMAT)
+    timestamp = timestamp.strftime(BARE_FORMAT)
+
+    # Find the matched directory
+    match_dir = list(matched_dir.glob(f"{timestamp}*"))
+    if len(match_dir) == 0:
+        print(f"ERROR: No matched directory found for {timestamp}")
+        return None
+    elif len(match_dir) > 1:
+        print(f"WARNING: Multiple matched directories found for {timestamp}:")
+        print(f"       {match_dir}")
+        print(f"\nUsing {match_dir[0]}...")
+        
+        return match_dir[0]
+    else:
+        return match_dir[0]
 
 
 def reversePixelMapping(minute_dir, obsdate, RA, DEC):
@@ -354,7 +384,7 @@ def hyphonateDate(obsdate):
 #------------------------------------main-------------------------------------#
 
 
-def main(obsdate, timestamp, radec):
+def main(obsdate, timestamp, radec, matched_dir=None):
 
     # Trim timestamp as necessary
     if len(timestamp) > 26:
@@ -398,7 +428,7 @@ def main(obsdate, timestamp, radec):
 
     # Save lightcurve
     saveLightcurve(lightcurve_paths, star_data, header_times,
-                   obsdate, radec, star_XY)
+                   obsdate, radec, star_XY, secondary_save_path=matched_dir)
 
 
 
@@ -422,6 +452,8 @@ if __name__ == '__main__':
     arg_parser.add_argument('timestamp' , help='Timestamp of 2-telescope event\'s central peak.')
     arg_parser.add_argument('radec', help='RA and Dec of the 2-telescope event (in deg).',
                             nargs=2,type=float)
+    arg_parser.add_argument('-m','--match_dir', help='Save to match directory with matching timestamp.',
+                            action='store_true')
 
     # Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
@@ -431,4 +463,12 @@ if __name__ == '__main__':
     timestamp = cml_args.timestamp
     radec = cml_args.radec
 
-    main(obsdate, timestamp, radec)
+    # If matched_dir is set, set the secondary save path to the matched directory
+    # Find that directory
+    if cml_args.match_dir:
+        match_dir = findMatchedDir(obsdate, timestamp)
+    else:
+        match_dir = None
+
+    # Run main
+    main(obsdate, timestamp, radec, matched_dir=match_dir)
