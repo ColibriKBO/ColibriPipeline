@@ -213,10 +213,17 @@ def matchNight(obsdate):
     # Check that we matched some stars
     if star_minutes == 0:
         print("ERROR: No stars matched! Check that all files have been updated.")
-        return np.nan
+        star_hours = np.nan
     else:
         print(f"\nDone star matching! {star_minutes/60.} star-hours detected.")
-        return star_minutes/60.
+        star_hours = star_minutes/60.
+
+    # Write to file
+    for starhour_file in (ARCHIVE_PATH / hyphonateDate(obsdate)).glob('starhours*.txt'):
+        starhour_file.unlink()
+    (ARCHIVE_PATH / hyphonateDate(obsdate)/ f'starhours_{star_hours}.txt').touch()
+
+    return star_hours
 
 
 def pairMinutes(minute_list1, minute_list2, spacing=60):
@@ -347,6 +354,23 @@ def hyphonateDate(obsdate):
 
 #------------------------------------main-------------------------------------#
 
+def updateNPYwithWCS(current_name, obsdate):
+
+    # Process npy files for the current machine
+    print("Processing current machine...\n")
+    current = Telescope(current_name, BASE_PATH, obsdate)
+    if (current.star_tables) and (current.medstack_file_list != []):
+        npyFileWCSUpdate(current.npy_file_list,
+                            current.medstack_file_list)
+    else:
+        print("ERROR: Could not process for current telescope!")
+
+    '''-----------write signal file---------------'''
+    signal_path = ARCHIVE_PATH.joinpath(hyphonateDate(obsdate),'done.txt')
+    if not signal_path.exists():
+        signal_path.touch()
+
+
 if __name__ == '__main__':
 
 
@@ -361,7 +385,7 @@ if __name__ == '__main__':
     
     # Available argument functionality
     arg_parser.add_argument('date', help='Observation date (YYYYMMDD) of data to be processed.')
-    arg_parser.add_argument('-m', '--match', help='Match stars between telescopes. Blue only.', 
+    arg_parser.add_argument('-m', '--match', help='Mode: Match stars between telescopes. Blue only.', 
                             action='store_true')
     arg_parser.add_argument('-v', '--verbose', help='Increase output verbosity.', 
                             action='store_true')
@@ -380,42 +404,21 @@ if __name__ == '__main__':
 
 
 ###########################
-## WCS Transforms
+## Main Processing
 ###########################
-
-    print("\n## WCS Transformations ##")
 
     # Process npy files for the current machine
-    print("Processing current machine...\n")
-    current = Telescope(current_name, BASE_PATH, obsdate)
-    if (current.star_tables) and (current.medstack_file_list != []):
-        npyFileWCSUpdate(current.npy_file_list,
-                            current.medstack_file_list)
-    else:
-        print("ERROR: Could not process for current telescope!")
-
-    '''-----------write signal file---------------'''
-    signal_path = ARCHIVE_PATH.joinpath(hyphonateDate(obsdate),'done.txt')
-    if not signal_path.exists():
-        signal_path.touch()
-
-
-###########################
-## Matching Stars
-###########################
-
-    # If not matching or not on Blue, we are done at this point
     if match_all is False:
-        print("\nDone!")
-        sys.exit()
-    elif current_name != "BLUEBIRD":
+        print("Mode: WCS Transform\n")
+        updateNPYwithWCS(current_name, obsdate)
+
+    # Calculate matched star hours for all telescopes
+    elif (match_all is True) and (current_name != "BLUEBIRD"):
         print("ERROR: Matching is only designed to run on Blue!")
         sys.exit()
     else:
-        print("\nBeginning telescope matching...\n")
+        print("Mode: Starhour calculation\n")
+
         starhours = matchNight(obsdate)
 
-        # Write to file
-        for starhour_file in (ARCHIVE_PATH / hyphonateDate(obsdate)).glob('starhours*.txt'):
-            starhour_file.unlink()
-        (ARCHIVE_PATH / hyphonateDate(obsdate)/ f'starhours_{starhours}.txt').touch()
+
