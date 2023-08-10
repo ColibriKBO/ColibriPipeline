@@ -289,6 +289,7 @@ def saveLightcurve(lightcurve_paths, star_data, header_times,
     
     # Save secondary file if requested
     if secondary_save_path is not None:
+        print(f"Saving secondary lightcurve to {secondary_save_path}")
         shutil.copy(save_file, secondary_save_path)
 
     # Completed
