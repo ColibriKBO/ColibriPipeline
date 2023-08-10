@@ -137,6 +137,7 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     # Check if drift is within tolerance and if a correction is needed
     if (abs(x_drift) > DRIFT_TOLERANCE) or (abs(y_drift) > DRIFT_TOLERANCE):
         print(f"ERROR: Drift rate is too high for {minute_dir.name}!")
+        print(f"         Drifted by ({x_drift},{y_drift})")
         return None
     elif (abs(x_drift) > DRIFT_THRESHOLD) or (abs(y_drift) > DRIFT_THRESHOLD):
         print(f"WARNING: Drift detected in {minute_dir.name}!")
@@ -159,14 +160,11 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     elif np.all(abs(first_positions[:,0] - star_X) > APERTURE_RADIUS) or \
          np.all(abs(first_positions[:,1] - star_Y) > APERTURE_RADIUS):
         print(f"WARNING: Star was not found by SEP in {minute_dir.name}")
-        return None
     else:
-        target_star_index_x = np.where(abs(first_positions[:,0] - star_X) < APERTURE_RADIUS)
-        target_star_index_y = np.where(abs(first_positions[:,1] - star_Y) < APERTURE_RADIUS)
+        #target_star_index_x = np.where(abs(first_positions[:,0] - star_X) < APERTURE_RADIUS)
+        #target_star_index_y = np.where(abs(first_positions[:,1] - star_Y) < APERTURE_RADIUS)
+        print(f"Star has been found by SEP in {minute_dir.name}")
 
-    # Check if the star was found in both x and y
-    if len(np.intersect1d(target_star_index_x,target_star_index_y)) == 0:
-        print(f"WARNING: Star was not found by SEP in {minute_dir.name}")
     
     ## Generate lightcurve ##
 
@@ -183,6 +181,8 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     header_times = [first_time[0]]
     bkg_medians  = []
     if drift: # If drift correction is needed
+
+        print("\nGenerating lightcurve with drift correction...")
 
         for i in range(num_frames):
             # Raw frame data
@@ -201,6 +201,8 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
             bkg_medians.append(np.median(image_data))
 
     else: # if drift correction is not needed
+
+        print("\nGenerating lightcurve without drift correction...")
 
         for i in range(num_frames):
             # Raw frame data
