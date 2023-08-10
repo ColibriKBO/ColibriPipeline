@@ -326,7 +326,7 @@ def findMinute(obsdate, timestamp):
 def findMatchedDir(obsdate, timestamp):
 
     # Set Green's basedir
-    if os.environ['COMPUTERNAME'] == 'GREEN':
+    if os.environ['COMPUTERNAME'] == 'GREENBIRD':
         green_path = BASE_PATH
     else:
         green_path = pathlib.Path("G:/")
