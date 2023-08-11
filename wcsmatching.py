@@ -218,11 +218,6 @@ def matchNight(obsdate):
         print(f"\nDone star matching! {star_minutes/60.} star-hours detected.")
         star_hours = star_minutes/60.
 
-    # Write to file
-    for starhour_file in (ARCHIVE_PATH / hyphonateDate(obsdate)).glob('starhours*.txt'):
-        starhour_file.unlink()
-    (ARCHIVE_PATH / hyphonateDate(obsdate)/ f'starhours_{star_hours}.txt').touch()
-
     return star_hours
 
 
@@ -421,4 +416,7 @@ if __name__ == '__main__':
 
         starhours = matchNight(obsdate)
 
-
+        # Write to file
+        for starhour_file in (ARCHIVE_PATH / hyphonateDate(obsdate)).glob('starhours_*.txt'):
+            starhour_file.unlink()
+        (ARCHIVE_PATH / hyphonateDate(obsdate)/ f'starhours_{starhours}.txt').touch()
