@@ -1284,6 +1284,7 @@ if __name__ == '__main__':
     axs.xaxis.set_tick_params(labelsize=9)
     axs.set_xlabel("Time (UTC)")
     axs.set_ylabel("Star Counts in Minute")
+    plt.yscale('log')
     plt.legend()
     plt.grid(which='both',axis='x')
 
