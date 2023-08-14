@@ -235,7 +235,7 @@ if __name__ == '__main__':
     # Relevant paths
     DATE_PATH = DATA_PATH / cml_args.date
     MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'masterBiases'
-    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / f'primary_summary.txt'
+    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'primary_summary.txt'
 
     # Check if relevant directories exist
     if not DATE_PATH.exists():
@@ -248,24 +248,29 @@ if __name__ == '__main__':
                                  'and no time was specified. No images to process.')
     
     # Identify minute to save
-    if cml_args.time is None:
+    if cml_args.det is not None:
+        # Parse detection file name
+        det_file = pathlib.Path(cml_args.det)
+
+        print(f"MODE: Save frames saved in {det_file.name}")
+
+        # Get minute directory and list of image files
+        minute,image_files = parse_det_file(det_file)
+        _save_dark_subtracted_detec(cml_args.date, minute, det_file.stem, image_files)
+
+    elif cml_args.time is not None:
+        print(f"MODE: Saving specified minute {cml_args.time}")
+
+        # Save specified minute directory
+        minute = cml_args.time
+        _save_dark_subtracted_minute(cml_args.date, minute)
+
+    else:
+        print("MODE: Saving minute with most stars detected")
+
         # Read starlist
         starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
 
         # Get minute with most stars
         minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
         _save_dark_subtracted_minute(cml_args.date, minute)
-
-    elif cml_args.det is not None:
-        # Parse detection file name
-        det_file = pathlib.Path(cml_args.det)
-
-        # Get minute directory and list of image files
-        minute,image_files = parse_det_file(det_file)
-        _save_dark_subtracted_detec(cml_args.date, minute, det_file.stem, image_files)
-
-
-    else:
-        minute = cml_args.time
-        _save_dark_subtracted_minute(cml_args.date, minute)
-
