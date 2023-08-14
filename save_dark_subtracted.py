@@ -235,7 +235,7 @@ if __name__ == '__main__':
     # Relevant paths
     DATE_PATH = DATA_PATH / cml_args.date
     MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'masterBiases'
-    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / f'{TELESCOPE}_done.txt'
+    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / f'primary_summary.txt'
 
     # Check if relevant directories exist
     if not DATE_PATH.exists():
