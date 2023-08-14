@@ -101,7 +101,7 @@ def parse_det_file(det_file):
                          names=['filename', 'time', 'flux', 'conv_flux'])
     
     # Get parent directory of one of the detection files
-    minute_dir = det_df['filename'][0].parent.name
+    minute = det_df['filename'][0].split('\\')[-2]
 
     # Return detection files as list
     return minute,det_df['filename'].tolist()
