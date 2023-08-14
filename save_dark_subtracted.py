@@ -181,12 +181,12 @@ def _save_dark_subtracted_detec(date, minute, detec_str, file_list):
     best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
     
     # Get list of all files in directory
-    #image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
+    image_paths = [pathlib.Path(file) for file in file_list]
 
     # Set up multiprocessing
     pool_size = cpu_count() - 2
     pool = Pool(pool_size)
-    args = ((file_list, i, best_bias, SAVE_PATH) for i in range(len(file_list)))
+    args = ((image_paths, i, best_bias, SAVE_PATH) for i in range(len(image_paths)))
 
     # Process images in parallel
     pool.starmap(process_science_images, args)
