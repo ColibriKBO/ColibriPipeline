@@ -46,7 +46,6 @@ except KeyError:
     TELESCOPE = "TEST"
 
 # GIF parameters
-MAKE_GIF = False
 LOOPS_PER_SEC = 0.5
 
 
@@ -123,7 +122,7 @@ def compileImagesAsGIF(image_path_list, save_path, skip_frames=1):
     images = [fits.getdata(image_path) for image_path in images_to_read]
 
     # Save images as a looping GIF
-    gif_duration = 1 / LOOPS_PER_SEC / len(images)
+    gif_duration = int(1000. / LOOPS_PER_SEC / len(images))
     imageio.mimsave(save_path, images, duration=gif_duration, loop=0)
 
 
@@ -174,6 +173,8 @@ def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH):
     pool.join()
     print('Done.')
 
+    return SAVE_PATH
+
 
 def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, MBIAS_PATH):
     """Save dark-subtracted images from a minute directory as fits files
@@ -220,8 +221,14 @@ def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, M
     pool.join()
     print('Done.')
 
+    return SAVE_PATH
 
-def main(date, time=None, det=None):
+
+def main(date, time=None, det=None, gif=False, skip=False):
+
+    # Make sure only one or the other option is used
+    if (time is not None) and (det is not None):
+        raise argparse.ArgumentTypeError('Cannot use both -t and -d options')            
 
     # Relevant paths
     DATE_PATH = DATA_PATH / date
@@ -239,7 +246,31 @@ def main(date, time=None, det=None):
                                  'and no time was specified. No images to process.')
     
     # Identify minute to save
-    if det is not None:
+    if skip is True:
+        print("MODE: Skipping saving images as fits files")
+        
+        # Define save directory for other modes
+        if det is not None:
+            # Parse detection file name
+            det_file = pathlib.Path(det)
+
+            # Get minute directory and list of image files
+            minute,image_files = parse_det_file(det_file)
+            save_dir = IMGE_PATH / date / det_file.stem
+        elif time is not None:
+            # Save specified minute directory
+            minute = time
+            save_dir = IMGE_PATH / date / minute
+        else:
+            # Read starlist
+            starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
+
+            # Get minute with most stars
+            minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
+            save_dir = IMGE_PATH / date / minute
+
+
+    elif det is not None:
         # Parse detection file name
         det_file = pathlib.Path(det)
 
@@ -247,14 +278,14 @@ def main(date, time=None, det=None):
 
         # Get minute directory and list of image files
         minute,image_files = parse_det_file(det_file)
-        _save_dark_subtracted_detec(date, minute, det_file.stem, image_files, DATE_PATH, MBIAS_PATH)
+        save_dir = _save_dark_subtracted_detec(date, minute, det_file.stem, image_files, DATE_PATH, MBIAS_PATH)
 
     elif time is not None:
         print(f"MODE: Saving specified minute {time}")
 
         # Save specified minute directory
         minute = time
-        _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
+        save_dir = _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
 
     else:
         print("MODE: Saving minute with most stars detected")
@@ -264,7 +295,26 @@ def main(date, time=None, det=None):
 
         # Get minute with most stars
         minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
-        _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
+        save_dir = _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
+
+
+    # Save images as GIF in specified directory
+    if gif is True:
+        
+        # If detection file is specified, only save 1/10 frames
+        if cml_args.det is not None:
+            GIF_SKIP_FRAMES = 9
+
+        # Otherwise, save 1/1000 frames when saving an entire minute
+        else:
+            GIF_SKIP_FRAMES = 999
+
+        # Get list of all files in directory
+        image_paths = sorted(save_dir.glob('*.fits'))
+
+        # Compile images into GIF
+        gif_save_path = save_dir / f'{save_dir.name}.gif'
+        compileImagesAsGIF(image_paths, gif_save_path, skip_frames=GIF_SKIP_FRAMES)
 
 
 if __name__ == '__main__':
@@ -281,17 +331,17 @@ if __name__ == '__main__':
     # Add arguments
     arg_parser.add_argument('date', type=check_date_regex, 
                             help="Date of observation (YYYYMMDD)")
+    arg_parser.add_argument('-s', '--skip', action='store_true',
+                            help="Skip saving images as fits files. Default is False.")
     arg_parser.add_argument('-t', '--time', 
                             help="Timestamp of minute directory to save. Default is minute with most stars.")
     arg_parser.add_argument('-d','--det',
                             help="Detection file to save. Incompatible with -t option")
+    arg_parser.add_argument('-g', '--gif', action='store_true',
+                            help="Save images as a GIF. Default is False.")
 
     # Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
-
-    # Make sure only one or the other option is used
-    if (cml_args.time is not None) and (cml_args.det is not None):
-        raise argparse.ArgumentTypeError('Cannot use both -t and -d options')
 
 
 ###########################
@@ -299,4 +349,4 @@ if __name__ == '__main__':
 ###########################
 
     # Run main
-    main(cml_args.date, cml_args.time, cml_args.det)
+    main(cml_args.date, cml_args.time, cml_args.det, cml_args.gif, cml_args.skip)
