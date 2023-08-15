@@ -120,6 +120,7 @@ def compileImagesAsGIF(image_path_list, save_path, skip_frames=1):
     # Read in every n images
     images_to_read = image_path_list[::1+skip_frames]
     images = [fits.getdata(image_path) for image_path in images_to_read]
+    print(f'Compiling {len(images)} images into GIF...')
 
     # Save images as a looping GIF
     gif_duration = int(1000. / LOOPS_PER_SEC / len(images))
@@ -300,6 +301,8 @@ def main(date, time=None, det=None, gif=False, skip=False):
 
     # Save images as GIF in specified directory
     if gif is True:
+
+        print(f"MODE: Saving images as GIF in {save_dir}")
         
         # If detection file is specified, only save 1/10 frames
         if cml_args.det is not None:
