@@ -226,7 +226,7 @@ if __name__ == '__main__':
 
 
 ###########################
-## Path management
+## Setup and Main
 ###########################
 
     # Format date as datetime object
