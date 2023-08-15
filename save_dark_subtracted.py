@@ -128,7 +128,7 @@ def compileImagesAsGIF(image_path_list, save_path, skip_frames=1):
 
 #------------------------------------main-------------------------------------#
 
-def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH, obs_date):
+def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH):
     """Save dark-subtracted images from a minute directory as fits files
     *NOTE: This function must be called after main"""
 
@@ -174,7 +174,7 @@ def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH, obs_date):
     print('Done.')
 
 
-def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, MBIAS_PATH, obs_date):
+def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, MBIAS_PATH):
     """Save dark-subtracted images from a minute directory as fits files
     *NOTE: This function must be called after main"""
 
