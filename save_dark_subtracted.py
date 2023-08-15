@@ -47,7 +47,7 @@ except KeyError:
 
 # GIF parameters
 MAKE_GIF = False
-GIF_DURATION = 100
+LOOPS_PER_SEC = 0.5
 
 
 #--------------------------------functions------------------------------------#
@@ -122,8 +122,9 @@ def compileImagesAsGIF(image_path_list, save_path, skip_frames=1):
     images_to_read = image_path_list[::1+skip_frames]
     images = [fits.getdata(image_path) for image_path in images_to_read]
 
-    # Save images as GIF
-    imageio.mimsave(save_path, images, duration=GIF_DURATION, loop=0)
+    # Save images as a looping GIF
+    gif_duration = 1 / LOOPS_PER_SEC / len(images)
+    imageio.mimsave(save_path, images, duration=gif_duration, loop=0)
 
 
 #------------------------------------main-------------------------------------#
