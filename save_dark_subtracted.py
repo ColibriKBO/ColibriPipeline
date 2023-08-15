@@ -197,6 +197,53 @@ def _save_dark_subtracted_detec(date, minute, detec_str, file_list):
     print('Done.')
 
 
+def main(date, time=None, det=None):
+        # Format date as datetime object
+    obs_date = datetime.strptime(date, OBSDATE_FORMAT)
+
+    # Relevant paths
+    DATE_PATH = DATA_PATH / date
+    MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(date) / 'masterBiases'
+    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(date) / 'primary_summary.txt'
+
+    # Check if relevant directories exist
+    if not DATE_PATH.exists():
+        raise FileNotFoundError(f'Date directory {DATE_PATH} does not exist. No images to process.')
+    if not MBIAS_PATH.exists():
+        #TODO: Add option to create master biases
+        raise FileNotFoundError(f'Master bias directory {MBIAS_PATH} does not exist. Cannot execute script.')
+    if (not STARLIST_PATH.exists()) and (time is None):
+        raise FileNotFoundError(f'Archive directory {STARLIST_PATH} does not exist' +\
+                                 'and no time was specified. No images to process.')
+    
+    # Identify minute to save
+    if det is not None:
+        # Parse detection file name
+        det_file = pathlib.Path(det)
+
+        print(f"MODE: Save frames saved in {det_file.name}")
+
+        # Get minute directory and list of image files
+        minute,image_files = parse_det_file(det_file)
+        _save_dark_subtracted_detec(date, minute, det_file.stem, image_files)
+
+    elif time is not None:
+        print(f"MODE: Saving specified minute {time}")
+
+        # Save specified minute directory
+        minute = time
+        _save_dark_subtracted_minute(date, minute)
+
+    else:
+        print("MODE: Saving minute with most stars detected")
+
+        # Read starlist
+        starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
+
+        # Get minute with most stars
+        minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
+        _save_dark_subtracted_minute(date, minute)
+
 
 if __name__ == '__main__':
 
@@ -229,48 +276,5 @@ if __name__ == '__main__':
 ## Setup and Main
 ###########################
 
-    # Format date as datetime object
-    obs_date = datetime.strptime(cml_args.date, OBSDATE_FORMAT)
-
-    # Relevant paths
-    DATE_PATH = DATA_PATH / cml_args.date
-    MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'masterBiases'
-    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'primary_summary.txt'
-
-    # Check if relevant directories exist
-    if not DATE_PATH.exists():
-        raise FileNotFoundError(f'Date directory {DATE_PATH} does not exist. No images to process.')
-    if not MBIAS_PATH.exists():
-        #TODO: Add option to create master biases
-        raise FileNotFoundError(f'Master bias directory {MBIAS_PATH} does not exist. Cannot execute script.')
-    if (not STARLIST_PATH.exists()) and (cml_args.time is None):
-        raise FileNotFoundError(f'Archive directory {STARLIST_PATH} does not exist' +\
-                                 'and no time was specified. No images to process.')
-    
-    # Identify minute to save
-    if cml_args.det is not None:
-        # Parse detection file name
-        det_file = pathlib.Path(cml_args.det)
-
-        print(f"MODE: Save frames saved in {det_file.name}")
-
-        # Get minute directory and list of image files
-        minute,image_files = parse_det_file(det_file)
-        _save_dark_subtracted_detec(cml_args.date, minute, det_file.stem, image_files)
-
-    elif cml_args.time is not None:
-        print(f"MODE: Saving specified minute {cml_args.time}")
-
-        # Save specified minute directory
-        minute = cml_args.time
-        _save_dark_subtracted_minute(cml_args.date, minute)
-
-    else:
-        print("MODE: Saving minute with most stars detected")
-
-        # Read starlist
-        starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
-
-        # Get minute with most stars
-        minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
-        _save_dark_subtracted_minute(cml_args.date, minute)
+    # Run main
+    main(cml_args.date, cml_args.time, cml_args.det)
