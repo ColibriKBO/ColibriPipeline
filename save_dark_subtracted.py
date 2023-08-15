@@ -13,6 +13,7 @@ import os
 import argparse
 import pathlib
 import re
+import imageio
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -21,7 +22,6 @@ from multiprocessing import cpu_count,Pool
 
 # Custom Script Imports
 import colibri_image_reader as cir
-import colibri_photometry as cp
 
 
 #-------------------------------global vars-----------------------------------#
@@ -44,6 +44,10 @@ try:
     TELESCOPE = os.environ['COMPUTERNAME']
 except KeyError:
     TELESCOPE = "TEST"
+
+# GIF parameters
+MAKE_GIF = False
+GIF_FPS = 10
 
 
 #--------------------------------functions------------------------------------#
@@ -107,12 +111,29 @@ def parse_det_file(det_file):
     return minute,det_df['filename'].tolist()
 
 
+def compileImagesAsGIF(image_path_list, save_path, skip_frames=1):
+    """Compile a list of images into a GIF"""
+    
+    # Check that the number of images is less than 100
+    if len(image_path_list) > 100:
+        raise ValueError('Cannot compile more than 100 images into GIF')
+    
+    # Read in every n images
+    images_to_read = image_path_list[::1+skip_frames]
+    images = [fits.getdata(image_path) for image_path in images_to_read]
+
+    # Save images as GIF
+    imageio.mimsave(save_path, images, fps=GIF_FPS)
+
+
 #------------------------------------main-------------------------------------#
 
-def _save_dark_subtracted_minute(date, minute):
+def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH, obs_date):
     """Save dark-subtracted images from a minute directory as fits files
     *NOTE: This function must be called after main"""
 
+    # Format date as datetime object
+    obs_date = datetime.strptime(date, OBSDATE_FORMAT)
 
     # Get path to minute directory
     MINUTE_PATH = DATE_PATH / minute
@@ -153,10 +174,12 @@ def _save_dark_subtracted_minute(date, minute):
     print('Done.')
 
 
-def _save_dark_subtracted_detec(date, minute, detec_str, file_list):
+def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, MBIAS_PATH, obs_date):
     """Save dark-subtracted images from a minute directory as fits files
     *NOTE: This function must be called after main"""
 
+    # Format date as datetime object
+    obs_date = datetime.strptime(date, OBSDATE_FORMAT)
 
     # Get path to minute directory
     MINUTE_PATH = DATE_PATH / minute
@@ -198,8 +221,6 @@ def _save_dark_subtracted_detec(date, minute, detec_str, file_list):
 
 
 def main(date, time=None, det=None):
-        # Format date as datetime object
-    obs_date = datetime.strptime(date, OBSDATE_FORMAT)
 
     # Relevant paths
     DATE_PATH = DATA_PATH / date
@@ -225,14 +246,14 @@ def main(date, time=None, det=None):
 
         # Get minute directory and list of image files
         minute,image_files = parse_det_file(det_file)
-        _save_dark_subtracted_detec(date, minute, det_file.stem, image_files)
+        _save_dark_subtracted_detec(date, minute, det_file.stem, image_files, DATE_PATH, MBIAS_PATH)
 
     elif time is not None:
         print(f"MODE: Saving specified minute {time}")
 
         # Save specified minute directory
         minute = time
-        _save_dark_subtracted_minute(date, minute)
+        _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
 
     else:
         print("MODE: Saving minute with most stars detected")
@@ -242,7 +263,7 @@ def main(date, time=None, det=None):
 
         # Get minute with most stars
         minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
-        _save_dark_subtracted_minute(date, minute)
+        _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
 
 
 if __name__ == '__main__':
