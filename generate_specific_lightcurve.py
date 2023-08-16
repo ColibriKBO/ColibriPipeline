@@ -68,6 +68,10 @@ STAR_DETEC_THRESH = 4.0
 DRIFT_TOLERANCE = 1.0  # maximum drift (in px/s) without throwing an error
 DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift correction
 
+# Verbose print
+VERBOSE = False
+verboseprint = print if VERBOSE else lambda *a, **k: None
+
 
 #--------------------------------functions------------------------------------#
 
@@ -303,10 +307,11 @@ def findMinute(obsdate, timestamp):
     if not obs_path.exists():
         print(f"ERROR: {obs_path} does not exist")
         return None
-    else:
-        minute_dirs = [item for item in obs_path.iterdir() if item.is_dir()]
-        dir_timestamps = [datetime.strptime(item.name+'000', MINDIR_FORMAT)
-                          for item in minute_dirs if item.name != 'Bias']
+    
+    # Define the minute directories and their timestamps
+    minute_dirs    = [item for item in obs_path.iterdir() if item.is_dir()]
+    dir_timestamps = [datetime.strptime(item.name+'000', MINDIR_FORMAT)
+                        for item in minute_dirs if item.name != 'Bias']
 
     # Find the minute directory that contains the timestamp
     timestamp = datetime.strptime(timestamp, TIMESTAMP_FORMAT)
@@ -320,6 +325,7 @@ def findMinute(obsdate, timestamp):
             
             # Return the markers
             skip_frame = int(skip_frame)
+            verboseprint(f"TARGET: {target_dir.name}; frame {skip_frame}")
             return target_dir, skip_frame
         
 
@@ -455,6 +461,8 @@ if __name__ == '__main__':
                             nargs=2,type=float)
     arg_parser.add_argument('-m','--match_dir', help='Save to match directory with matching timestamp.',
                             action='store_true')
+    arg_parser.add_argument('-v','--verbose', help='Print verbose output.',
+                            action='store_true')
 
     # Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
@@ -463,6 +471,7 @@ if __name__ == '__main__':
     obsdate = (cml_args.date).replace("/","")
     timestamp = cml_args.timestamp
     radec = cml_args.radec
+    VERBOSE = cml_args.verbose
 
     # If matched_dir is set, set the secondary save path to the matched directory
     # Find that directory
