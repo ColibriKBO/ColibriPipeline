@@ -79,8 +79,8 @@ verboseprint = print if VERBOSE else lambda *a, **k: None
 ## Lightcurves
 ###########################
 
-def generateLightcurve(minute_dir, central_frame, master_bias_list, 
-                       obsdate, xy):
+def generateLightcurve(minute_dir, timestamp, master_bias_list, 
+                       obsdate, xy, drift_correction=False):
 
     ## Setup image pathing ## 
 
@@ -91,6 +91,18 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     # Get image dimensions & number of images
     image_paths = sorted(minute_dir.glob('*.rcd'))
     x_length, y_length, num_images = cir.getSizeRCD(image_paths)
+
+    # Calculate the number of frames to skip to line up with the directory
+    dir_timestamp = datetime.strptime(minute_dir.name+'000', MINDIR_FORMAT)
+    timediff = (timestamp - dir_timestamp).total_seconds()
+    central_frame = timediff // EXPOSURE_TIME
+    
+    # Read the central frame to get the timestamp
+    _, central_time = cir.importFramesRCD(image_paths, central_frame, 1, dark)
+
+    # Calculate the number of frames to skip to line up with the timestamp
+    timediff = (timestamp - datetime.strptime(central_time[0], TIMESTAMP_FORMAT)).total_seconds()
+    central_frame += timediff // EXPOSURE_TIME
 
     # Determine frames to save
     min_frame = int(central_frame - 1 - (SEC_TO_SAVE // EXPOSURE_TIME))
@@ -328,15 +340,8 @@ def findMinute(obsdate, timestamp):
     for dir_timestamp in dir_timestamps:
         if dir_timestamp <= timestamp < dir_timestamp + timedelta(minutes=1):
             target_dir = minute_dirs[dir_timestamps.index(dir_timestamp)]
-
-            # Calculate the number of frames to skip to line up with the directory
-            timediff = (timestamp - dir_timestamp).total_seconds()
-            skip_frame = timediff // EXPOSURE_TIME
-            
-            # Return the markers
-            skip_frame = int(skip_frame)
-            verboseprint(f"TARGET: {target_dir.name}; frame {skip_frame}")
-            return target_dir, skip_frame
+            verboseprint(f"TARGET: {target_dir.name}")
+            return target_dir
         
 
 def improveCentralFrame(target_timestamp, guessed_timestamp):
@@ -432,15 +437,11 @@ def main(obsdate, timestamp, radec, matched_dir=None):
 ###########################
 
     # Find which minute we expect to build the lightcurve in
-    found_minute = findMinute(obsdate,timestamp)
+    minute_dir = findMinute(obsdate,timestamp)
 
     # Check that this passed
-    if found_minute is None:
-        print("ERROR: No valid minute directory found.")
-        sys.exit()
-
-    # Assign found_minute to variables
-    minute_dir,peak_frame = found_minute
+    if minute_dir is None:
+        raise NotADirectoryError("ERROR: No valid minute directory found.")
 
     # Generate master bias set
     obs_archive = ARCHIVE_PATH / hyphonateDate(obsdate)
@@ -453,7 +454,7 @@ def main(obsdate, timestamp, radec, matched_dir=None):
     star_XY = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
 
     # Generate lightcurve
-    lightcurve = generateLightcurve(minute_dir,peak_frame,mbias_array,
+    lightcurve = generateLightcurve(minute_dir, timestamp, mbias_array,
                                     obsdate,star_XY)
     if lightcurve is None:
         print("ERROR: Failed to generate lightcurve.")
