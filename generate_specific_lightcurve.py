@@ -93,6 +93,7 @@ def generateLightcurve(minute_dir, timestamp, master_bias_list,
     x_length, y_length, num_images = cir.getSizeRCD(image_paths)
 
     # Calculate the number of frames to skip to line up with the directory
+    timestamp = datetime.strptime(timestamp, TIMESTAMP_FORMAT)
     dir_timestamp = datetime.strptime(minute_dir.name+'000', MINDIR_FORMAT)
     timediff = (timestamp - dir_timestamp).total_seconds()
     central_frame = timediff // EXPOSURE_TIME
