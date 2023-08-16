@@ -75,6 +75,10 @@ verboseprint = print if VERBOSE else lambda *a, **k: None
 
 #--------------------------------functions------------------------------------#
 
+###########################
+## Lightcurves
+###########################
+
 def generateLightcurve(minute_dir, central_frame, master_bias_list, 
                        obsdate, xy):
 
@@ -302,6 +306,10 @@ def saveLightcurve(lightcurve_paths, star_data, header_times,
     print(f"Finished writing.")
 
 
+###########################
+## Directory/Timestamp Manipulation
+###########################
+
 def findMinute(obsdate, timestamp):
 
     # Get all minute directories for the given date
@@ -329,6 +337,20 @@ def findMinute(obsdate, timestamp):
             skip_frame = int(skip_frame)
             verboseprint(f"TARGET: {target_dir.name}; frame {skip_frame}")
             return target_dir, skip_frame
+        
+
+def improveCentralFrame(target_timestamp, guessed_timestamp):
+
+    # Convert the timestamps to datetime objects
+    target_dt  = datetime.strptime(target_timestamp, TIMESTAMP_FORMAT)
+    guessed_dt = datetime.strptime(guessed_timestamp, TIMESTAMP_FORMAT)
+
+    # Calculate the difference in seconds
+    timediff = (target_dt - guessed_dt).total_seconds()
+    num_frames = int(timediff // EXPOSURE_TIME)
+
+    # Return the number of frames to skip
+    return num_frames
         
 
 def findMatchedDir(obsdate, timestamp):
@@ -360,6 +382,10 @@ def findMatchedDir(obsdate, timestamp):
     else:
         return match_dir[0]
 
+
+###########################
+## Misc Functions
+###########################
 
 def reversePixelMapping(minute_dir, obsdate, RA, DEC):
 
