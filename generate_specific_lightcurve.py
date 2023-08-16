@@ -128,6 +128,8 @@ def generateLightcurve(minute_dir, central_frame, master_bias_list,
     first_frame, first_time = cir.importFramesRCD(image_paths, EXCLUDE_IMAGES, 1, dark)
     final_frame, final_time = cir.importFramesRCD(image_paths, num_images-1, 1, dark)
 
+    verboseprint(f"First time: {first_time}")
+
     # Refine star positions for first and final frames
     # TODO: Fix the arguments here!!!
     first_positions, _ = cp.refineCentroid(first_frame, first_time[0], initial_positions, mean_guass_sigma)
@@ -471,7 +473,10 @@ if __name__ == '__main__':
     obsdate = (cml_args.date).replace("/","")
     timestamp = cml_args.timestamp
     radec = cml_args.radec
+
+    # Verbosity
     VERBOSE = cml_args.verbose
+    verboseprint = print if VERBOSE else lambda *a, **k: None
 
     # If matched_dir is set, set the secondary save path to the matched directory
     # Find that directory
@@ -482,3 +487,4 @@ if __name__ == '__main__':
 
     # Run main
     main(obsdate, timestamp, radec, matched_dir=match_dir)
+    verboseprint("Verbose")
