@@ -100,9 +100,11 @@ def generateLightcurve(minute_dir, timestamp, master_bias_list,
     
     # Read the central frame to get the timestamp
     _, central_time = cir.importFramesRCD(image_paths, central_frame, 1, dark)
+    verboseprint(f"CENTRAL_TIME: {central_time}")
 
     # Calculate the number of frames to skip to line up with the timestamp
-    timediff = (timestamp - datetime.strptime(central_time[0], TIMESTAMP_FORMAT)).total_seconds()
+    # Since FLI returns nanoseconds, we strip the last 3 digits from central_timestamp
+    timediff = (timestamp - datetime.strptime(central_time[0][:-3], TIMESTAMP_FORMAT)).total_seconds()
     central_frame += timediff // EXPOSURE_TIME
 
     # Determine frames to save
