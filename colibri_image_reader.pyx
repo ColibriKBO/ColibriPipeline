@@ -92,22 +92,99 @@ def readRCD(filename):
     return table, timestamp
 
 
-def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
+def readFITS(filename):
     """
-    Reads in frames from .fits files starting at a specific frame
+    Reads .fits file
+    
+        Parameters:
+            filename (Path): Path to .fits file
+            
+        Returns:
+            table (arr): Table with image pixel data
+            timestamp (str): Timestamp of observation
+    """
+    
+    ## Type definitions
+    cdef np.ndarray table
+    
+    ## Open .fits file and extract the observation timestamp and data
+    with fits.open(filename) as hdul:
+        # Timestamp
+        timestamp = hdul[0].header['DATE-OBS']
+        
+        # Load data portion of file
+        table = hdul[0].data
+    
+    return table, timestamp
+
+
+def importFramesFITS(list image_paths,
+                    int  start_frame=0, 
+                    int  num_frames=1,):
+    """
+    Reads in frames from .fits files starting at a specific frame.
+    Assumes that this has already been converted from .rcd files and bias subtracted!
     
         Parameters:
             imagePaths (list): List of image paths to read in
             startFrameNum (int): Starting frame number
             numFrames (int): How many frames to read in
-            bias (arr): 2D array of fluxes from bias image
             
         Returns:
-            imagesData (arr): Image data
-            imagesTimes (arr): Header times of these images
+            image_array (arr): Image data
+            image_times (list): Header times of these images
     """
 
-    pass
+    ## Type definitions
+    cdef int IMG_DIM,frame,end_frame
+    cdef np.ndarray[UI8, ndim=1] data
+    cdef np.ndarray[F64, ndim=3] img_array
+    cdef list img_times = []
+    cdef list images_to_read
+
+    
+    ## Define end frame. Then evaluate if this is larger than the array
+    frame = 0
+    end_frame = start_frame + num_frames
+    #print(f"Start = {start_frame}; End = {end_frame}; Len = {len(image_paths)}")
+
+    ## Set images to be read
+    if end_frame > len(image_paths):
+        print("Not enough frames in given list to import")
+        images_to_read = image_paths[start_frame:]
+    elif end_frame == len(image_paths):
+        print("At end of given list of frames")
+        images_to_read = image_paths[start_frame:]
+    else:
+        images_to_read = image_paths[start_frame:end_frame]
+
+    ## Define pixel dimension of the square image and the memory array and list
+    IMG_DIM = 2048
+    img_array = np.zeros((len(images_to_read), IMG_DIM, IMG_DIM), dtype=np.float64)
+
+    for fname in images_to_read:
+        #print(frame)
+        
+        # Load in the bias-subtracted image data and header timestamp
+        data,timestamp = readFITS(fname)
+        
+        # Timestamp formatted as YYYY-MM-DDThh:mm:ss.dddddddddZ
+        # Roll over the time if it exceeded 24h
+        hour = timestamp.split('T')[1].split(':')[0]
+        if int(hour) > 23:
+            timestamp = timestamp.replace('T' + hour, 'T' + str(int(hour) % 24))
+        
+        # Add corrected image and time data to appropriate array/list
+        img_array[frame] = data
+        img_times.append(timestamp)
+        frame += 1
+
+    ## Check if only one frame was called: if so, ndim=3 -> ndim=2
+    if num_frames == 1:
+        return img_array[0],img_times
+    else:
+        return img_array,img_times           
+
 
 
 @cython.boundscheck(False)

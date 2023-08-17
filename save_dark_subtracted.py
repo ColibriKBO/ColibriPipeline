@@ -13,6 +13,7 @@ import os
 import argparse
 import pathlib
 import re
+import imageio
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -21,7 +22,6 @@ from multiprocessing import cpu_count,Pool
 
 # Custom Script Imports
 import colibri_image_reader as cir
-import colibri_photometry as cp
 
 
 #-------------------------------global vars-----------------------------------#
@@ -44,6 +44,9 @@ try:
     TELESCOPE = os.environ['COMPUTERNAME']
 except KeyError:
     TELESCOPE = "TEST"
+
+# GIF parameters
+LOOPS_PER_SEC = 0.5
 
 
 #--------------------------------functions------------------------------------#
@@ -107,12 +110,31 @@ def parse_det_file(det_file):
     return minute,det_df['filename'].tolist()
 
 
+def compileImagesAsGIF(image_path_list, save_path, skip_frames=1):
+    """Compile a list of images into a GIF"""
+    
+    # Check that the number of images is less than 100
+    if len(image_path_list) > 100:
+        raise ValueError('Cannot compile more than 100 images into GIF')
+    
+    # Read in every n images
+    images_to_read = image_path_list[::1+skip_frames]
+    images = [fits.getdata(image_path) for image_path in images_to_read]
+    print(f'Compiling {len(images)} images into GIF...')
+
+    # Save images as a looping GIF
+    gif_duration = int(1000. / LOOPS_PER_SEC / len(images))
+    imageio.mimsave(save_path, images, duration=gif_duration, loop=0)
+
+
 #------------------------------------main-------------------------------------#
 
-def _save_dark_subtracted_minute(date, minute):
+def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH):
     """Save dark-subtracted images from a minute directory as fits files
     *NOTE: This function must be called after main"""
 
+    # Format date as datetime object
+    obs_date = datetime.strptime(date, OBSDATE_FORMAT)
 
     # Get path to minute directory
     MINUTE_PATH = DATE_PATH / minute
@@ -152,11 +174,15 @@ def _save_dark_subtracted_minute(date, minute):
     pool.join()
     print('Done.')
 
+    return SAVE_PATH
 
-def _save_dark_subtracted_detec(date, minute, detec_str, file_list):
+
+def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, MBIAS_PATH):
     """Save dark-subtracted images from a minute directory as fits files
     *NOTE: This function must be called after main"""
 
+    # Format date as datetime object
+    obs_date = datetime.strptime(date, OBSDATE_FORMAT)
 
     # Get path to minute directory
     MINUTE_PATH = DATE_PATH / minute
@@ -196,6 +222,102 @@ def _save_dark_subtracted_detec(date, minute, detec_str, file_list):
     pool.join()
     print('Done.')
 
+    return SAVE_PATH
+
+
+def main(date, time=None, det=None, gif=False, skip=False):
+
+    # Make sure only one or the other option is used
+    if (time is not None) and (det is not None):
+        raise argparse.ArgumentTypeError('Cannot use both -t and -d options')            
+
+    # Relevant paths
+    DATE_PATH = DATA_PATH / date
+    MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(date) / 'masterBiases'
+    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(date) / 'primary_summary.txt'
+
+    # Check if relevant directories exist
+    if not DATE_PATH.exists():
+        raise FileNotFoundError(f'Date directory {DATE_PATH} does not exist. No images to process.')
+    if not MBIAS_PATH.exists():
+        #TODO: Add option to create master biases
+        raise FileNotFoundError(f'Master bias directory {MBIAS_PATH} does not exist. Cannot execute script.')
+    if (not STARLIST_PATH.exists()) and (time is None):
+        raise FileNotFoundError(f'Archive directory {STARLIST_PATH} does not exist' +\
+                                 'and no time was specified. No images to process.')
+    
+    # Identify minute to save
+    if skip is True:
+        print("MODE: Skipping saving images as fits files")
+        
+        # Define save directory for other modes
+        if det is not None:
+            # Parse detection file name
+            det_file = pathlib.Path(det)
+
+            # Get minute directory and list of image files
+            minute,image_files = parse_det_file(det_file)
+            save_dir = IMGE_PATH / date / det_file.stem
+        elif time is not None:
+            # Save specified minute directory
+            minute = time
+            save_dir = IMGE_PATH / date / minute
+        else:
+            # Read starlist
+            starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
+
+            # Get minute with most stars
+            minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
+            save_dir = IMGE_PATH / date / minute
+
+
+    elif det is not None:
+        # Parse detection file name
+        det_file = pathlib.Path(det)
+
+        print(f"MODE: Save frames saved in {det_file.name}")
+
+        # Get minute directory and list of image files
+        minute,image_files = parse_det_file(det_file)
+        save_dir = _save_dark_subtracted_detec(date, minute, det_file.stem, image_files, DATE_PATH, MBIAS_PATH)
+
+    elif time is not None:
+        print(f"MODE: Saving specified minute {time}")
+
+        # Save specified minute directory
+        minute = time
+        save_dir = _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
+
+    else:
+        print("MODE: Saving minute with most stars detected")
+
+        # Read starlist
+        starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
+
+        # Get minute with most stars
+        minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
+        save_dir = _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH)
+
+
+    # Save images as GIF in specified directory
+    if gif is True:
+
+        print(f"MODE: Saving images as GIF in {save_dir}")
+        
+        # If detection file is specified, only save 1/10 frames
+        if cml_args.det is not None:
+            GIF_SKIP_FRAMES = 9
+
+        # Otherwise, save 1/1000 frames when saving an entire minute
+        else:
+            GIF_SKIP_FRAMES = 999
+
+        # Get list of all files in directory
+        image_paths = sorted(save_dir.glob('*.fits'))
+
+        # Compile images into GIF
+        gif_save_path = save_dir / f'{save_dir.name}.gif'
+        compileImagesAsGIF(image_paths, gif_save_path, skip_frames=GIF_SKIP_FRAMES)
 
 
 if __name__ == '__main__':
@@ -212,65 +334,22 @@ if __name__ == '__main__':
     # Add arguments
     arg_parser.add_argument('date', type=check_date_regex, 
                             help="Date of observation (YYYYMMDD)")
+    arg_parser.add_argument('-s', '--skip', action='store_true',
+                            help="Skip saving images as fits files. Default is False.")
     arg_parser.add_argument('-t', '--time', 
                             help="Timestamp of minute directory to save. Default is minute with most stars.")
     arg_parser.add_argument('-d','--det',
                             help="Detection file to save. Incompatible with -t option")
+    arg_parser.add_argument('-g', '--gif', action='store_true',
+                            help="Save images as a GIF. Default is False.")
 
     # Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
-
-    # Make sure only one or the other option is used
-    if (cml_args.time is not None) and (cml_args.det is not None):
-        raise argparse.ArgumentTypeError('Cannot use both -t and -d options')
 
 
 ###########################
 ## Setup and Main
 ###########################
 
-    # Format date as datetime object
-    obs_date = datetime.strptime(cml_args.date, OBSDATE_FORMAT)
-
-    # Relevant paths
-    DATE_PATH = DATA_PATH / cml_args.date
-    MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'masterBiases'
-    STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(cml_args.date) / 'primary_summary.txt'
-
-    # Check if relevant directories exist
-    if not DATE_PATH.exists():
-        raise FileNotFoundError(f'Date directory {DATE_PATH} does not exist. No images to process.')
-    if not MBIAS_PATH.exists():
-        #TODO: Add option to create master biases
-        raise FileNotFoundError(f'Master bias directory {MBIAS_PATH} does not exist. Cannot execute script.')
-    if (not STARLIST_PATH.exists()) and (cml_args.time is None):
-        raise FileNotFoundError(f'Archive directory {STARLIST_PATH} does not exist' +\
-                                 'and no time was specified. No images to process.')
-    
-    # Identify minute to save
-    if cml_args.det is not None:
-        # Parse detection file name
-        det_file = pathlib.Path(cml_args.det)
-
-        print(f"MODE: Save frames saved in {det_file.name}")
-
-        # Get minute directory and list of image files
-        minute,image_files = parse_det_file(det_file)
-        _save_dark_subtracted_detec(cml_args.date, minute, det_file.stem, image_files)
-
-    elif cml_args.time is not None:
-        print(f"MODE: Saving specified minute {cml_args.time}")
-
-        # Save specified minute directory
-        minute = cml_args.time
-        _save_dark_subtracted_minute(cml_args.date, minute)
-
-    else:
-        print("MODE: Saving minute with most stars detected")
-
-        # Read starlist
-        starlist = np.loadtxt(STARLIST_PATH, dtype=str, delimiter=',')
-
-        # Get minute with most stars
-        minute = starlist[np.argmax(starlist[:,1].astype(int)),0]
-        _save_dark_subtracted_minute(cml_args.date, minute)
+    # Run main
+    main(cml_args.date, cml_args.time, cml_args.det, cml_args.gif, cml_args.skip)
