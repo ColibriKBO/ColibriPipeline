@@ -515,27 +515,35 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     minSNR = 5               #median/stddev limit to look for detections
     minLightcurveLen = FramesperMin/4    #minimum length of lightcurve
     
+    # reject lightcurves that dip below zero
+    if np.min(light_curve) < 0:
+        print(f"Negative flux: star {num}")
+        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan
+
+    # reject stars with SNR too low
+    if np.median(light_curve)/np.std(light_curve) < minSNR:
+        print(f"Signal to Noise too low: star {num}")
+        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
+
     # reject stars that go out of frame to rapidly
     if len(light_curve) < minLightcurveLen:
         print(f"Light curve too short: star {num}")
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
     
-    #TODO: what should the limits actually be?
-    # reject tracking failures
-    if abs(np.mean(light_curve[:FramesperMin]) - np.mean(light_curve[-FramesperMin:])) > np.std(light_curve[:FramesperMin]):
-        print(f"Tracking failure: star {num}")
-        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan 
     
-    # reject stars with SNR too low
-    if np.median(light_curve)/np.std(light_curve) < minSNR:
-        print(f"Signal to Noise too low: star {num}")
-        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
+    # reject tracking failures
+    # Depreciated: this doesn't actually do anything... Consider revising to compare only first and last frame
+    #if abs(np.mean(light_curve[:FramesperMin]) - np.mean(light_curve[-FramesperMin:])) > np.std(light_curve[:FramesperMin]):
+    #    print(f"Tracking failure: star {num}")
+    #    return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan 
+    
 
     #uncomment to save light curve of each star (doesn't look for dips)
     #return num, light_curve
 
 
     '''convolve light curve with ricker wavelet kernel'''
+    
     #will throw error if try to normalize (sum of kernel too close to 0)
     conv = convolve_fft(light_curve, kernel, normalize_kernel=False)    #convolution of light curve with Ricker wavelet
     minLoc = np.argmin(conv)    #index of minimum value of convolution
