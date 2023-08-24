@@ -530,11 +530,9 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print (datetime.datetime.now(), "Closing:", minuteDir)
     print ("\n")
 
-    #print("Drift calcs",c3)
-    
     # return number of stars in field
     gc.collect()
-    return minuteDir.name, num_stars, len(save_frames)
+    return minuteDir.name, num_stars, len(save_frames), lightcurve_mean/lightcurve_std
     
 
 #------------------------------------main-------------------------------------#
@@ -654,7 +652,8 @@ if __name__ == '__main__':
     if runPar == True:
         print('Running in parallel...')
         start_time = timer.time()
-        finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), 'primary_summary.txt')
+        finish_txt = ARCHIVE_PATH / str(obs_date) / 'primary_summary.txt'
+        (ARCHIVE_PATH / str(obs_date) / 'SNR').mkdir(parents=True, exist_ok=True)
         
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
@@ -676,6 +675,10 @@ if __name__ == '__main__':
                 f.write("#--------------------#\n")
                 for results in star_counts:
                     f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
+
+                    # save SNR data
+                    snr_txt = ARCHIVE_PATH / str(obs_date) / 'SNR' / f'SNR_{results[0]}'
+                    np.savetxt(snr_txt, results[3], delimiter=',')
         except:
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
