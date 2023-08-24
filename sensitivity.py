@@ -32,6 +32,7 @@ import snplots
 import lightcurve_maker
 import lightcurve_looker
 import read_npy
+from colibri_tools import ErrorTracker
 
 
 #-------------------------------global vars-----------------------------------#
@@ -53,6 +54,10 @@ TELESCOPE_BASE_DIR = {'REDBIRD':pathlib.Path('R:'),
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S.%f'
 OBSTIME_STRP = '%H.%M.%S'
 
+
+#----------------------------------class--------------------------------------#
+
+err = ErrorTracker()
 
 #--------------------------------functions------------------------------------#
 
@@ -301,7 +306,7 @@ def primarysummaryReader(summary_path):
     
     # If primary pipeline failed, return None (to be ignored)
     except:
-        print(f"ERROR: Could not read primary summary on {summary_path.anchor}!")
+        err.addError(f"ERROR: Could not read primary summary on {summary_path.anchor}!")
         return None
 
     

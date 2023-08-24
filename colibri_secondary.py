@@ -8,19 +8,31 @@ Update: 2022-09-21 Roman A. : modified output graph and deleted astnet solution 
 -secondary Colibri pipeline for matching identified events to a kernel
 """
 
-
-import numpy as np
-from astropy.io import fits
-import pandas as pd
-import pathlib
-import matplotlib.pyplot as plt
-import datetime
-import VizieR_query
-from astropy import wcs
-import getRAdec
-import astrometrynet_funcs
+# Module Imports
 import sys, os, time
 import argparse
+import pathlib
+import datetime
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from astropy.io import fits
+from astropy import wcs
+
+# Custom Imports
+import VizieR_query
+from colibri_tools import ErrorTracker
+
+
+#-------------------------------global vars-----------------------------------#
+
+global telescope
+telescope = os.environ['COMPUTERNAME']       #identifier for telescope
+gain = 'high'           #gain level for .rcd files ('low' or 'high')
+
+err = ErrorTracker()
+
+#--------------------------------functions------------------------------------#
 
 def readRAdec(filepath):                                    #modified readFile from Colibri Pipeline
     '''read in a .txt detection file and get information from it'''
@@ -474,71 +486,11 @@ def readFile(filepath):
     #return all event data from file as a tuple    
     return (starData, event_frame, star_x, star_y, event_time, significance, star_med, star_std)
     #return starData, event_frame, star_x, star_y, event_time, event_type, star_med, star_std
-    
-    
-#def getTransform(date):
-#    '''get astrometry.net transform for a given minute'''
-#
-#    #if transformation has already been calculated, get from dictionary
-#    if date in transformations:
-#        return transformations[date]
-#    
-#    #calculate new transformation from astrometry.net
-#    else:
-#        #get median combined image
-#        median_image = [f for f in median_combos if date in f.name][0]
-#        
-#        #get name of transformation header file to save
-#        transform_file = median_image.with_name(median_image.name.strip('_medstacked.fits') + '_wcs.fits')
-#        
-#        #check if the tranformation has already been calculated and saved
-#        if transform_file.exists():
-#            
-#            #open file and get transformation
-#            wcs_header = fits.open(transform_file)
-#            transform = wcs.WCS(wcs_header[0])
-#
-#        #calculate new transformation
-#        else:
-#            #get WCS header from astrometry.net plate solution
-#            wcs_header = astrometrynet_funcs.getSolution(median_image, transform_file, soln_order)
-#        
-#            #calculate coordinate transformation
-#            transform = wcs.WCS(wcs_header)
-#        
-#        #add to dictionary
-#        transformations[date] = transform
-#        
-#        return transform
-    
-    
+        
+
+#----------------------------------main---------------------------------------#
+
 '''-----------code starts here -----------------------'''
-
-''' set up parameters for running the code '''
-global telescope
-telescope = os.environ['COMPUTERNAME']       #identifier for telescope
-gain = 'high'           #gain level for .rcd files ('low' or 'high')
-#soln_order = 4      #tweak order for astrometry.net solution
-# obs_date = datetime.date(2021, 8, 4)    #date observations 
-# process_date = datetime.date(2022, 4, 26)
-# base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
-
-# '''get arguments - Added by MJM'''
-# if len(sys.argv) > 1:
-#     base_path = pathlib.Path(sys.argv[1])
-#     obsYYYYMMDD = sys.argv[2]
-#     obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-# else:
-#     base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #path to main directory
-# obs_date = datetime.date(2021, 8, 4)    #date observations 
-
-# procYMD = str(datetime.datetime.today().strftime('%Y/%m/%d'))
-# procyear = int(datetime.datetime.today().strftime('%Y'))
-# procmonth = int(datetime.datetime.today().strftime('%m'))
-# procday = int(datetime.datetime.today().strftime('%d'))
-# # process_date = datetime.date(procyear, procmonth, procday)
-# process_date = obs_date
-# print(process_date)
 
 '''begin program'''
 if __name__ == '__main__':

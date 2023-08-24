@@ -30,6 +30,7 @@ import getRAdec
 import colibri_image_reader as cir
 import colibri_photometry as cp
 from coordsfinder import getTransform
+from colibri_tools import ErrorTracker
 
 # Disable Warnings
 import warnings
@@ -71,6 +72,9 @@ DRIFT_THRESHOLD = 0.025  # maximum drif (in px/s) without applying a drift corre
 # Verbose print
 VERBOSE = False
 verboseprint = print if VERBOSE else lambda *a, **k: None
+
+# Error tracking
+err = ErrorTracker()
 
 
 #--------------------------------functions------------------------------------#

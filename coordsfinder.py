@@ -23,8 +23,11 @@ from datetime import date
 
 # Custom Script Imports
 import astrometrynet_funcs
-#import getRAdec
+from colibri_tools import ErrorTracker
 
+#----------------------------------class--------------------------------------#
+
+err = ErrorTracker()
 
 
 #--------------------------------functions------------------------------------#
