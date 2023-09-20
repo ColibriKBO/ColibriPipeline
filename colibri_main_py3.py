@@ -651,9 +651,10 @@ if __name__ == '__main__':
  
     # Get unprocessed minute directories and master bias list
     minute_dirs, MasterBiasList = getUnprocessedMinutes(str(obs_date).replace('-',''), reprocess=reprocess)
+    night_dir = base_path.joinpath('ColibriData', str(obs_date).replace('-',''))
 
     ## Check if there is a valid GPS lock
-    imagePaths = sorted(minute_dirs[0].glob('*.rcd'))
+    imagePaths = sorted(minute_dirs.glob('*.rcd'))[0]
     print(imagePaths[0])
     if not cir.testGPSLock(imagePaths[0]):
         print(datetime.datetime.now(), "No GPS Lock established, skipping...")
