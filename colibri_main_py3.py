@@ -114,7 +114,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
 
     # Check that the archive directory exists
     obsdate_archive = ARCHIVE_PATH.joinpath(ct.hyphonateDate(obsdate))
-    masterbias_dir = obsdate_archive.joinpath('masterBias')
+    masterbias_dir = obsdate_archive.joinpath('masterBiases')
     if not obsdate_archive.exists():
         obsdate_archive.mkdir()
 
@@ -719,7 +719,7 @@ if __name__ == '__main__':
 ###########################  
 
     else:
-        #raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
+        raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
         # Added a check to see if the fits conversion has been done. - MJM 
         #only run this check if we want to process fits files - RAB
