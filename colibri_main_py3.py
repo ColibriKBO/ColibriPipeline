@@ -653,8 +653,13 @@ if __name__ == '__main__':
     minute_dirs, MasterBiasList = getUnprocessedMinutes(str(obs_date).replace('-',''), reprocess=reprocess)
     night_dir = base_path.joinpath('ColibriData', str(obs_date).replace('-',''))
 
+    # Check if there are any unprocessed minutes
+    if len(minute_dirs) == 0:
+        print(datetime.datetime.now(), "No unprocessed minutes found, exiting...")
+        sys.exit()
+
     ## Check if there is a valid GPS lock
-    imagePaths = sorted(minute_dirs.glob('*.rcd'))[0]
+    imagePaths = sorted(minute_dirs[0].glob('*.rcd'))
     print(imagePaths[0])
     if not cir.testGPSLock(imagePaths[0]):
         print(datetime.datetime.now(), "No GPS Lock established, skipping...")
@@ -698,14 +703,22 @@ if __name__ == '__main__':
             #print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
             print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
             
-            with open(finish_txt, 'w') as f:
-                f.write(f'# Ran for {end_time - start_time} seconds\n')
+            # Write summary file
+            # If it exists, append to it. Otherwise, create it.
+            if not finish_txt.exists():
+                with open(finish_txt, 'w') as f:
+                    f.write(f'# Ran for {end_time - start_time} seconds\n')
 
-                #f.write(f'#Calculated {starhours} star-hours\n')
-                f.write("# time, star count\n")
-                f.write("#--------------------#\n")
-                for results in star_counts:
-                    f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
+                    #f.write(f'#Calculated {starhours} star-hours\n')
+                    f.write("# time, star count\n")
+                    f.write("#--------------------#\n")
+                    for results in star_counts:
+                        f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
+            else:
+                with open(finish_txt, 'a') as f:
+                    # TODO: add current runtime to summary file's header
+                    for results in star_counts:
+                        f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
         except:
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
