@@ -115,7 +115,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     # Check that the archive directory exists
     obsdate_archive = ARCHIVE_PATH.joinpath(ct.hyphonateDate(obsdate))
     masterbias_dir = obsdate_archive.joinpath('masterBiases')
-    if not obsdate_archive.exists():
+    if (not obsdate_archive.exists()) or (not masterbias_dir.exists()):
         obsdate_archive.mkdir()
 
         # Make master bias set
