@@ -736,6 +736,10 @@ if __name__ == '__main__':
     print(imagePaths[0])
     if not cir.testGPSLock(imagePaths[0]):
         print(datetime.datetime.now(), "No GPS Lock established, skipping...")
+
+        if not ('ColibriArchive' / str(obs_date) / 'primary_summary.txt').exists():
+            writePrimarySummary(obs_date)
+
         
         with open(os.path.join(night_dir,"error.txt"),"w") as f:
             f.write("")
@@ -778,7 +782,7 @@ if __name__ == '__main__':
             
             # Write summary file
             writePrimarySummary(obs_date, processing_time=(end_time - start_time))
-            
+
         except:
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
