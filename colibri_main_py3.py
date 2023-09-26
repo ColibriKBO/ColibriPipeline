@@ -105,10 +105,11 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     ## Collect raw data lists
 
     # Get list of all minute directories for the given date
-    minute_dirs = [min_dir for min_dir in DATA_PATH.joinpath(obsdate).iterdir() if min_dir.is_dir()]
+    minute_dirs = [min_dir for min_dir in DATA_PATH.joinpath(str(obsdate).replace("-","")).iterdir()
+                    if min_dir.is_dir()]
     minute_dirs = [min_dir for min_dir in minute_dirs if 'Bias' not in min_dir.name]
     minute_dirs.sort()
-    bias_dir = DATA_PATH.joinpath(obsdate, 'Bias')
+    bias_dir = DATA_PATH.joinpath(str(obsdate).replace("-",""), 'Bias')
     
     # If reprocessing, remake the master bias list and return all minute dirs
     if reprocess:
@@ -118,7 +119,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     ## Generate/collect master bias list
 
     # Check that the archive directory exists
-    obsdate_archive = ARCHIVE_PATH.joinpath(ct.hyphonateDate(obsdate))
+    obsdate_archive = ARCHIVE_PATH.joinpath(str(obsdate))
     masterbias_dir = obsdate_archive.joinpath('masterBiases')
     if (not obsdate_archive.exists()) or (not masterbias_dir.exists()):
         obsdate_archive.mkdir(exist_ok=True)
@@ -129,7 +130,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     # Check that there are the same number of items in masterBias directory as in Bias directory
     elif len(list(bias_dir.iterdir())) != len(list(masterbias_dir.iterdir())):
         # Get list of master biases and times
-        master_bias_list = cir.getMasterBiasList(obsdate, BASE_PATH)
+        master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
 
     # Else, use the masterbias list from the archive
     else:
@@ -141,7 +142,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
 
     # Get list of all minute directories that have already been processed
     # NPY filenames of of the format "YYYYMMDD_HH.MM.SS.fff_3.3sig_pos.npy"
-    processed_minutes = list(ARCHIVE_PATH.joinpath(ct.hyphonateDate(obsdate)).glob('*_pos.npy'))
+    processed_minutes = list(ARCHIVE_PATH.joinpath(str(obsdate)).glob('*_pos.npy'))
     processed_minutes = [x.name[:21] for x in processed_minutes]
 
     # Remove processed minutes from list of all minutes
@@ -721,7 +722,7 @@ if __name__ == '__main__':
     '''get filepaths'''
  
     # Get unprocessed minute directories and master bias list
-    minute_dirs, MasterBiasList = getUnprocessedMinutes(str(obs_date).replace('-',''), reprocess=reprocess)
+    minute_dirs, MasterBiasList = getUnprocessedMinutes(obs_date, reprocess=reprocess)
     night_dir = base_path.joinpath('ColibriData', str(obs_date).replace('-',''))
 
     # Check if there are any unprocessed minutes
