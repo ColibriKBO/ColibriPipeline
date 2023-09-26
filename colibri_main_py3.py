@@ -727,7 +727,7 @@ if __name__ == '__main__':
     # Check if there are any unprocessed minutes
     if len(minute_dirs) == 0:
         print(datetime.datetime.now(), "No unprocessed minutes found, exiting...")
-        if not ('ColibriArchive' / str(obs_date) / 'primary_summary.txt').exists():
+        if not (ARCHIVE_PATH / str(obs_date) / 'primary_summary.txt').exists():
             writePrimarySummary(obs_date)
         sys.exit()
 
@@ -737,7 +737,7 @@ if __name__ == '__main__':
     if not cir.testGPSLock(imagePaths[0]):
         print(datetime.datetime.now(), "No GPS Lock established, skipping...")
 
-        if not ('ColibriArchive' / str(obs_date) / 'primary_summary.txt').exists():
+        if not (ARCHIVE_PATH / str(obs_date) / 'primary_summary.txt').exists():
             writePrimarySummary(obs_date)
 
         
