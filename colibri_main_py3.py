@@ -19,6 +19,7 @@ import multiprocessing
 import datetime
 import gc
 import sep
+import re
 import numpy as np
 import time as timer
 from astropy.convolution import RickerWavelet1DKernel
@@ -51,6 +52,10 @@ OBSDATE_FORMAT = '%Y%m%d'
 MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%f'
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 BARE_FORMAT = '%Y-%m-%d_%H%M%S_%f'
+
+# Regex patterns
+NPY_PATTERN = r'(\d{8}_\d{2}.\d{2}.\d{2}.\d{3})'
+DET_PATTERN = r'det_(\d{4}-\d{2}-\d{2}_\d{8}_\d{6})'
 
 # Star detection parameters
 AP_R = 3.  # aperture radius
@@ -144,6 +149,72 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
 
     # Return the list of unprocessed minutes
     return minute_dirs, master_bias_list
+
+
+def readDetTimestamp(det_file):
+    """
+    Read minute dir of origin from det file
+
+        Parameters:
+            det_file (str): Path to det file.
+
+        Returns:
+            timestamp (str): Timestamp of det file.
+    
+    """
+
+    # Read the 5th line of the det file
+    with open(det_file, 'r') as f:
+        for i in range(5):
+            event_file = f.readline()
+
+    minute_dir = re.search(NPY_PATTERN, event_file).group(1)
+    return minute_dir
+
+
+def writePrimarySummary(obsdate, processing_time='None'):
+    """
+    Write a summary file for the given observation date. The summary file
+    contains the number of stars detected in each minute directory, as well as
+    the number of detections in each minute directory.
+
+        Parameters:
+            obsdate (str): Date of observation (as YYYY-MM-DD).
+            processing_time (str): Time taken to process the observation date.
+
+        Returns:
+            None.
+
+    """
+
+    # Define paths
+    obsdate_archive = ARCHIVE_PATH.joinpath(obsdate)
+    summary_path = obsdate_archive.joinpath('primary_summary.txt')
+
+    # Get list of npy and det files
+    npy_files = list(obsdate_archive.glob('*_pos.npy'))
+    det_files = list(obsdate_archive.glob('det_*.txt'))
+
+    # Read minute dirs from det files
+    det_minutes = [readDetTimestamp(det_file) for det_file in det_files]
+
+    # Read number of stars in each file and write to summary file
+    with open(summary_path, 'w') as f:
+
+        # Write header
+        f.write(f'# Ran for {processing_time} seconds\n')
+        f.write("# time, star count\n")
+        f.write("#--------------------#\n")
+
+        # Write data
+        for npy in npy_files:
+            # Get minute dir, number of stars, and detections
+            minute_dir = npy.name[:21]
+            star_count = np.load(npy).shape[0]
+            detections = det_minutes.count(minute_dir)
+
+            # Write to file
+            f.write(f'{minute_dir}, {star_count}, {detections}\n')
 
 
 ###########################
@@ -656,6 +727,8 @@ if __name__ == '__main__':
     # Check if there are any unprocessed minutes
     if len(minute_dirs) == 0:
         print(datetime.datetime.now(), "No unprocessed minutes found, exiting...")
+        if not ('ColibriArchive' / str(obs_date) / 'primary_summary.txt').exists():
+            writePrimarySummary(obs_date)
         sys.exit()
 
     ## Check if there is a valid GPS lock
@@ -704,21 +777,8 @@ if __name__ == '__main__':
             print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
             
             # Write summary file
-            # If it exists, append to it. Otherwise, create it.
-            if not finish_txt.exists():
-                with open(finish_txt, 'w') as f:
-                    f.write(f'# Ran for {end_time - start_time} seconds\n')
-
-                    #f.write(f'#Calculated {starhours} star-hours\n')
-                    f.write("# time, star count\n")
-                    f.write("#--------------------#\n")
-                    for results in star_counts:
-                        f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
-            else:
-                with open(finish_txt, 'a') as f:
-                    # TODO: add current runtime to summary file's header
-                    for results in star_counts:
-                        f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
+            writePrimarySummary(obs_date, processing_time=(end_time - start_time))
+            
         except:
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
