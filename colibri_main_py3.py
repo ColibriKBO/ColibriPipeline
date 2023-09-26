@@ -121,7 +121,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     obsdate_archive = ARCHIVE_PATH.joinpath(ct.hyphonateDate(obsdate))
     masterbias_dir = obsdate_archive.joinpath('masterBiases')
     if (not obsdate_archive.exists()) or (not masterbias_dir.exists()):
-        obsdate_archive.mkdir()
+        obsdate_archive.mkdir(exist_ok=True)
 
         # Make master bias set
         master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
@@ -188,7 +188,7 @@ def writePrimarySummary(obsdate, processing_time='None'):
     """
 
     # Define paths
-    obsdate_archive = ARCHIVE_PATH.joinpath(obsdate)
+    obsdate_archive = ARCHIVE_PATH.joinpath(str(obsdate))
     summary_path = obsdate_archive.joinpath('primary_summary.txt')
 
     # Get list of npy and det files
