@@ -124,19 +124,9 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     if (not obsdate_archive.exists()) or (not masterbias_dir.exists()):
         obsdate_archive.mkdir(exist_ok=True)
 
-        # Make master bias set
-        master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
+    # Make master bias set
+    master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
     
-    # Check that there are the same number of items in masterBias directory as in Bias directory
-    elif len(list(bias_dir.iterdir())) != len(list(masterbias_dir.iterdir())):
-        # Get list of master biases and times
-        master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
-
-    # Else, use the masterbias list from the archive
-    else:
-        # Get list of master biases and times
-        master_bias_list = list(masterbias_dir.iterdir())
-
     
     ## Remove processed minutes from list of all minutes
 
