@@ -681,13 +681,20 @@ if __name__ == '__main__':
     if cml_args.test:
         # Processing parameters
         RCDfiles,gain_high = True,True
-        runPar = cml_args.noparallel
+        runPar = False
         reprocess = True
         sigma_threshold = cml_args.sigma
         
         # Target data
         base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')
         obs_date = datetime.date(2023, 10, 5)
+
+        # Paths
+        BASE_PATH = base_path
+        DATA_PATH = BASE_PATH / 'ColibriData'
+        IMGE_PATH = BASE_PATH / 'ColibriImages'
+        ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
         
     else:
         # Processing parameters
@@ -777,50 +784,39 @@ if __name__ == '__main__':
 ## Run in Sequence 
 ###########################  
 
+    elif cml_args.test:
+        
+        print('##      Running in sequence for testing purposes      ##')
+        start_time = timer.time()
+
+        # Try to run this in sequence
+        star_counts = []
+        for f in range(len(minute_dirs)):
+            star_count = firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
+                                        base_path,obs_date,telescope,RCDfiles,gain_high)
+            star_counts.append(star_count)
+
+        # Write summary file
+        end_time = timer.time()
+        writePrimarySummary(obs_date, processing_time=(end_time - start_time))
+        print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
+
     else:
         raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
-        # Added a check to see if the fits conversion has been done. - MJM 
-        #only run this check if we want to process fits files - RAB
-        if RCDfiles == False:
-                
-            #check if conversion indicator file is present
-            if not minute_dirs[f].joinpath('converted.txt').is_file():
-                        
-                print('Converting to .fits')
-                
-                #make conversion indicator file
-                with open(minute_dirs[f].joinpath('converted.txt'), 'a'):
-                    os.utime(str(minute_dirs[f].joinpath('converted.txt')))
-                            
-                #do .rcd -> .fits conversion using the desired gain level
-                if gain_high:
-                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]) + ' high')
-                else:
-                    os.system("python .\\RCDtoFTS.py " + str(minute_dirs[f]))
-                    
-        else:
-            print('Already converted raw files to fits format.')
-            print('Remove file converted.txt if you want to overwrite.')
-        
+        print('##      Running in sequence      ##')
+        start_time = timer.time()
+
+        # Try to run this in sequence
+        star_counts = []
         for f in range(len(minute_dirs)):
-           
+            star_count = firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
+                                        base_path,obs_date,telescope,RCDfiles,gain_high)
+            star_counts.append(star_count)
 
-
-            print(f"Running on... {minute_dirs[f]}")
-
-            start_time = timer.time()
-
-            print('Running sequentially...')
-            firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
-                           base_path,obs_date,telescope,RCDfiles,gain_high)
-            
-            gc.collect()
-
-            end_time = timer.time()
-            print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
-
-#           with open("logs/timing.log","a") as f:
-#               f.write(f"Ran for {end_time - start_time} seconds\n\n")
+        # Write summary file
+        end_time = timer.time()
+        writePrimarySummary(obs_date, processing_time=(end_time - start_time))
+        print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
 
 
