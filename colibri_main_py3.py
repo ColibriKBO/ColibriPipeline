@@ -687,7 +687,7 @@ if __name__ == '__main__':
         
         # Target data
         base_path = pathlib.Path('/', 'home', 'pquigley', 'ColibriRepos')
-        obs_date = datetime.date(2022, 8, 12)
+        obs_date = datetime.date(2023, 10, 5)
         
     else:
         # Processing parameters
