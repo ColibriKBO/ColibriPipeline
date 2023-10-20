@@ -298,16 +298,6 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     star_find_results = tuple(x for x in star_find_results if x[0] + edge_buffer < x_length and x[0] - edge_buffer > 0)
     star_find_results = tuple(y for y in star_find_results if y[1] + edge_buffer < x_length and y[1] - edge_buffer > 0)
 
-
-    ## Save the array of star positions as an .npy file
-    ## Format: x  |  y  | half light radius
-    if len(star_find_results) >= NPY_STARS:
-        star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(DETECT_THRESH) + 'sig_pos.npy')
-        if star_pos_file.exists():
-            star_pos_file.unlink()
-        np.save(star_pos_file, star_find_results)
-
-
     ## Enforce a minimum number of visible stars in each image
     if len(star_find_results) < MIN_STARS:
         print(f"Insufficient stars in minute: {minuteDir}")
@@ -637,6 +627,16 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print (datetime.datetime.now(), "Candidate events in this minute:", len(save_frames))
     print (datetime.datetime.now(), "Closing:", minuteDir)
     print ("\n")
+
+    ## Save the array of star positions as an .npy file
+    ## Format: x  |  y  | half light radius
+    star_pos_file = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + str(DETECT_THRESH) + 'sig_pos.npy')
+    if star_pos_file.exists():
+        star_pos_file.unlink()
+    star_SNR = lightcurve_mean/lightcurve_std
+    star_find_results = np.c_[star_find_results, star_SNR]
+    np.save(star_pos_file, star_find_results)
+
 
     # return number of stars in field
     gc.collect()

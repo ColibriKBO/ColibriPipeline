@@ -521,21 +521,23 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan
 
     # reject stars with SNR too low
-    if np.median(light_curve)/np.std(light_curve) < minSNR:
+    lightcurve_median=np.median(light_curve)
+    lightcurve_std=np.std(light_curve)
+    if lightcurve_median/lightcurve_std < minSNR:
         print(f"Signal to Noise too low: star {num}")
-        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
+        return -2, [], [], lightcurve_std, lightcurve_median, np.nan, np.nan, -2, np.nan  
 
     # reject stars that go out of frame to rapidly
     if len(light_curve) < minLightcurveLen:
         print(f"Light curve too short: star {num}")
-        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
+        return -2, [], [], lightcurve_std, lightcurve_median, np.nan, np.nan, -2, np.nan  
     
     
     # reject tracking failures
     # Depreciated: this doesn't actually do anything... Consider revising to compare only first and last frame
     #if abs(np.mean(light_curve[:FramesperMin]) - np.mean(light_curve[-FramesperMin:])) > np.std(light_curve[:FramesperMin]):
     #    print(f"Tracking failure: star {num}")
-    #    return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan 
+    #    return -2, [], [], lightcurve_std, lightcurve_median, np.nan, np.nan, -2, np.nan 
     
 
     #uncomment to save light curve of each star (doesn't look for dips)
@@ -583,7 +585,7 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
         
     else:
         print(f"Event cutoff star: {num}")
-        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  # reject events that are cut off at the start/end of time series
+        return -2, [], [], lightcurve_std, lightcurve_median, np.nan, np.nan, -2, np.nan  # reject events that are cut off at the start/end of time series
 
     #if minimum < background - 3.75*sigma
     # if minVal < np.mean(bkgZone) - dipdetection * np.std(bkgZone):  
@@ -597,8 +599,6 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     # else:
     #     return -1, [], ''  # reject events that do not pass dip detection
     
-    lightcurve_std=np.std(light_curve)
-    
     # event_std=np.std(conv)
     conv_bkg_mean=np.mean(bkgZone)
     #event_mean=np.mean(conv)
@@ -611,8 +611,8 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
         critFrame = np.where(fluxProfile == light_curve[minLoc])[0]
         print(f"Found significant dip in star: {num} at frame: {critFrame[0]}")
         
-        return critFrame[0], light_curve, conv, lightcurve_std, np.mean(light_curve), np.std(bkgZone),conv_bkg_mean,minVal,significance
+        return critFrame[0], light_curve, conv, lightcurve_std, lightcurve_median, np.std(bkgZone),conv_bkg_mean,minVal,significance
         
     else:
-        return -1, light_curve, conv, np.nan, np.nan, np.nan, np.nan, np.nan, significance  # reject events that do not pass dip detection
+        return -1, light_curve, conv, lightcurve_std, lightcurve_median, np.nan, np.nan, np.nan, significance  # reject events that do not pass dip detection
 
