@@ -19,6 +19,7 @@ import multiprocessing
 import datetime
 import gc
 import sep
+import re
 import numpy as np
 import time as timer
 from astropy.convolution import RickerWavelet1DKernel
@@ -29,6 +30,7 @@ from multiprocessing import Pool
 # Custom Script Imports
 import colibri_image_reader as cir
 import colibri_photometry as cp
+import colibri_tools as ct
 
 # Disable Warnings
 import warnings
@@ -51,11 +53,16 @@ MINDIR_FORMAT  = '%Y%m%d_%H.%M.%S.%f'
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 BARE_FORMAT = '%Y-%m-%d_%H%M%S_%f'
 
+# Regex patterns
+NPY_PATTERN = r'(\d{8}_\d{2}.\d{2}.\d{2}.\d{3})'
+DET_PATTERN = r'det_(\d{4}-\d{2}-\d{2}_\d{8}_\d{6})'
+
 # Star detection parameters
 AP_R = 3.  # aperture radius
 DETECT_THRESH = 3.3  # sigma threshold for detection
 NUM_TO_SKIP  = 1  # number of images to skip for star detection
 NUM_TO_STACK = 9  # number of images to stack for star detection
+BIASES_TO_STACK = 9       #number of bias images to combine in median bias images
 EDGE_BUFFER  = 10  # px from edge of image to ignore
 NPY_STARS = 10  # number of stars to save in .npy file
 MIN_STARS = 30  # minimum number of stars to analyze minute
@@ -75,34 +82,135 @@ verboseprint = lambda *a, **k: None
 
 #--------------------------------functions------------------------------------#
 
-def runParallel(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold):
-    """
-    Wrapper to run primary pipeline in parallel. *In theory* should return the
-    number of detected stars*number of hours observed for each tread.
+###########################
+## Directory Selection
+###########################
 
-    Parameters:
-        minuteDir (str): Filepath to current directory
-        MasterBiasList (list): List of master biases and times
-        kernel (arr): Ricker wavelet kernel
-        exposure_time (int/float): Camera exposure time (in __)
-        sigma_threshold (float): Sensitivity of the detection filter
+def getUnprocessedMinutes(obsdate, reprocess=False):
+    """
+    Return list of unprocessed minute directories for a given date.
+    References a list of .npy starlists in the archive directory to determine
+    which minutes have already been processed.
     
-    Returns:
-        __ (str): Printout of processing tasks
-        __ (.npy): .npy format file with star positions (if doesn't exist)
-        __ (.txt): .txt format file for each occultation event with names
-                   of images to be saved
-        __ (int/float): time of saved occultation event images
-        __ (float): flux of occulted star in saved images
-        star_minutes (float): Number of detected stars*observation duration of
-                              the given minuteDir
+        Parameters:
+            obsdate (str): Date of observation (as marked on the data 
+                           directory to be analyzed).
+
+        Returns:
+            minute_dirs (list): List of unprocessed minute directories.
+            master_bias_list (list): List of master biases and times.
 
     """
-    star_minutes = firstOccSearch(minuteDir, MasterBiasList, ricker_kernel, exposure_time, sigma_threshold)
-    gc.collect()
-    
-    return star_minutes
 
+    ## Collect raw data lists
+
+    # Get list of all minute directories for the given date
+    minute_dirs = [min_dir for min_dir in DATA_PATH.joinpath(str(obsdate).replace("-","")).iterdir()
+                    if min_dir.is_dir()]
+    minute_dirs = [min_dir for min_dir in minute_dirs if 'Bias' not in min_dir.name]
+    minute_dirs.sort()
+    bias_dir = DATA_PATH.joinpath(str(obsdate).replace("-",""), 'Bias')
+    
+    # If reprocessing, remake the master bias list and return all minute dirs
+    if reprocess:
+        master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
+        return minute_dirs, master_bias_list
+
+    ## Generate/collect master bias list
+
+    # Check that the archive directory exists
+    obsdate_archive = ARCHIVE_PATH.joinpath(str(obsdate))
+    masterbias_dir = obsdate_archive.joinpath('masterBiases')
+    if (not obsdate_archive.exists()) or (not masterbias_dir.exists()):
+        obsdate_archive.mkdir(exist_ok=True)
+
+    # Make master bias set
+    master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
+    
+    
+    ## Remove processed minutes from list of all minutes
+
+    # Get list of all minute directories that have already been processed
+    # NPY filenames of of the format "YYYYMMDD_HH.MM.SS.fff_3.3sig_pos.npy"
+    processed_minutes = list(ARCHIVE_PATH.joinpath(str(obsdate)).glob('*_pos.npy'))
+    processed_minutes = [x.name[:21] for x in processed_minutes]
+
+    # Remove processed minutes from list of all minutes
+    minute_dirs = [x for x in minute_dirs if x.name not in processed_minutes]
+
+    # Return the list of unprocessed minutes
+    return minute_dirs, master_bias_list
+
+
+def readDetTimestamp(det_file):
+    """
+    Read minute dir of origin from det file
+
+        Parameters:
+            det_file (str): Path to det file.
+
+        Returns:
+            timestamp (str): Timestamp of det file.
+    
+    """
+
+    # Read the 5th line of the det file
+    with open(det_file, 'r') as f:
+        for i in range(5):
+            event_file = f.readline()
+
+    minute_dir = re.search(NPY_PATTERN, event_file).group(1)
+    return minute_dir
+
+
+def writePrimarySummary(obsdate, processing_time='None'):
+    """
+    Write a summary file for the given observation date. The summary file
+    contains the number of stars detected in each minute directory, as well as
+    the number of detections in each minute directory.
+
+        Parameters:
+            obsdate (str): Date of observation (as YYYY-MM-DD).
+            processing_time (str): Time taken to process the observation date.
+
+        Returns:
+            None.
+
+    """
+
+    # Define paths
+    obsdate_archive = ARCHIVE_PATH.joinpath(str(obsdate))
+    summary_path = obsdate_archive.joinpath('primary_summary.txt')
+
+    # Get list of npy and det files
+    npy_files = list(obsdate_archive.glob('*_pos.npy'))
+    det_files = list(obsdate_archive.glob('det_*.txt'))
+
+    # Read minute dirs from det files
+    det_minutes = [readDetTimestamp(det_file) for det_file in det_files]
+
+    # Read number of stars in each file and write to summary file
+    with open(summary_path, 'w') as f:
+
+        # Write header
+        f.write(f'# Ran for {processing_time} seconds\n')
+        f.write("# time, star count\n")
+        f.write("#--------------------#\n")
+
+        # Write data
+        for npy in npy_files:
+            # Get minute dir, number of stars, and detections
+            minute_dir = npy.name[:21]
+            star_count = np.load(npy).shape[0]
+            detections = det_minutes.count(minute_dir)
+
+            # Write to file
+            f.write(f'{minute_dir}, {star_count}, {detections}\n')
+
+
+###########################
+## Main Functions
+###########################
 
 def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_threshold,
                    base_path,obs_date,
@@ -557,6 +665,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('-p', '--noparallel', help='Disable parallelism, run in sequence instead', action='store_false')
     arg_parser.add_argument('-g', '--lowgain', help='Analyze low-gain images', action='store_false')
     arg_parser.add_argument('-t', '--test', help='Test functionality for Peter Quigley', action='store_true')
+    arg_parser.add_argument('-r', '--reprocess', help='Reprocess all data', action='store_true')
     
     ## Process argparse list as useful variables
     cml_args = arg_parser.parse_args()
@@ -565,6 +674,7 @@ if __name__ == '__main__':
         # Processing parameters
         RCDfiles,gain_high = True,True
         runPar = cml_args.noparallel
+        reprocess = True
         sigma_threshold = cml_args.sigma
         
         # Target data
@@ -577,7 +687,8 @@ if __name__ == '__main__':
         runPar = cml_args.noparallel
         gain_high = cml_args.lowgain
         sigma_threshold = cml_args.sigma
-        
+        reprocess = cml_args.reprocess
+
         # Target data
         base_path = pathlib.Path(cml_args.path) # path to data directory
         obsYYYYMMDD = cml_args.date # date to be analyzed formatted as "YYYY/MM/DD"
@@ -598,39 +709,31 @@ if __name__ == '__main__':
     
     '''get filepaths'''
  
-    #directory for night-long dataset
-    night_dir = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''))      #path to data
- 
-    #subdirectories of minute-long datasets (~2400 images per directory)
-    minute_dirs = [f for f in night_dir.iterdir() if f.is_dir()]  
-    
-    #parent directory of bias images
-    bias_dir = [f for f in minute_dirs if 'Bias' in f.name][0]
-    
-    #remove bias directory from list of image directories and sort
-    minute_dirs = [f for f in minute_dirs if 'Bias' not in f.name]
-    minute_dirs.sort()
-    
-    print ('folders', [f.name for f in minute_dirs])
-    
+    # Get unprocessed minute directories and master bias list
+    minute_dirs, MasterBiasList = getUnprocessedMinutes(obs_date, reprocess=reprocess)
+    night_dir = base_path.joinpath('ColibriData', str(obs_date).replace('-',''))
+
+    # Check if there are any unprocessed minutes
+    if len(minute_dirs) == 0:
+        print(datetime.datetime.now(), "No unprocessed minutes found, exiting...")
+        if not (ARCHIVE_PATH / str(obs_date) / 'primary_summary.txt').exists():
+            writePrimarySummary(obs_date)
+        sys.exit()
+
     ## Check if there is a valid GPS lock
     imagePaths = sorted(minute_dirs[0].glob('*.rcd'))
     print(imagePaths[0])
     if not cir.testGPSLock(imagePaths[0]):
         print(datetime.datetime.now(), "No GPS Lock established, skipping...")
+
+        if not (ARCHIVE_PATH / str(obs_date) / 'primary_summary.txt').exists():
+            writePrimarySummary(obs_date)
+
         
         with open(os.path.join(night_dir,"error.txt"),"w") as f:
             f.write("")
         
         sys.exit()
-    
-    
-    '''get median bias image to subtract from all frames'''
-    
-    NumBiasImages = 9       #number of bias images to combine in median bias images
-
-    #get 2d numpy array with bias datetimes and master bias filepaths
-    MasterBiasList = cir.makeBiasSet(bias_dir, base_path, obs_date, NumBiasImages)
     
 
     ''' prepare RickerWavelet/Mexican hat kernel to convolve with light curves'''
@@ -667,18 +770,9 @@ if __name__ == '__main__':
             #print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
             print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
             
-            with open(finish_txt, 'w') as f:
-                f.write(f'# Ran for {end_time - start_time} seconds\n')
+            # Write summary file
+            writePrimarySummary(obs_date, processing_time=(end_time - start_time))
 
-                #f.write(f'#Calculated {starhours} star-hours\n')
-                f.write("# time, star count\n")
-                f.write("#--------------------#\n")
-                for results in star_counts:
-                    f.write(f"{results[0]}, {results[1]}, {results[2]}\n")
-
-                    # save SNR data
-                    snr_txt = ARCHIVE_PATH / str(obs_date) / 'SNR' / f'SNR_{results[0]}'
-                    np.savetxt(snr_txt, results[3], delimiter=',')
         except:
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
@@ -693,7 +787,7 @@ if __name__ == '__main__':
 ###########################  
 
     else:
-        #raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
+        raise NotImplementedError("Not running in parallel needs maitenance.\nSorry for the inconvenience!\n-Peter Q (2022/11/05)")
         
         # Added a check to see if the fits conversion has been done. - MJM 
         #only run this check if we want to process fits files - RAB
