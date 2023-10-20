@@ -514,15 +514,16 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     FramesperMin = 2400      #ideal number of frames in a directory (1 minute)
     minSNR = 5               #median/stddev limit to look for detections
     minLightcurveLen = FramesperMin/4    #minimum length of lightcurve
+    lightcurve_median=np.median(light_curve)
+    lightcurve_std=np.std(light_curve)
+
     
     # reject lightcurves that dip below zero
     if np.min(light_curve) < 0:
         print(f"Negative flux: star {num}")
-        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan
+        return -2, [], [], lightcurve_std, lightcurve_median, np.nan, np.nan, -2, np.nan
 
     # reject stars with SNR too low
-    lightcurve_median=np.median(light_curve)
-    lightcurve_std=np.std(light_curve)
     if lightcurve_median/lightcurve_std < minSNR:
         print(f"Signal to Noise too low: star {num}")
         return -2, [], [], lightcurve_std, lightcurve_median, np.nan, np.nan, -2, np.nan  
