@@ -22,6 +22,7 @@ from copy import deepcopy
 
 # Custom Script Imports
 #import getRAdec
+import VizieR_query
 import colibri_image_reader as cir
 import colibri_photometry as cp
 from coordsfinder import getTransform, updateNPY_RAdec
@@ -108,11 +109,11 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         verboseprint(f"Processing {npy_file.name}...")
 
         # Read in data from npy file
-        # Format x | y | half-light radius
+        # Format x | y | half-light radius | SNR
         star_table = np.load(npy_file)
 
         # If npy file already contains ra/dec information
-        if star_table.shape[1] == 5:
+        if star_table.shape[1] == 6:
             verboseprint("  Already proccessed.")
             continue
 
@@ -126,7 +127,7 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         verboseprint("  Successfully generated RA/DEC.")
 
         # Save the array of star positions as an .npy file again
-        # Format: x  |  y  |  r  |  ra  |  dec
+        # Format: x  |  y  |  r  |  SNR  |  ra  |  dec
         npy_file.unlink()
         np.save(npy_file, star_radec)
 
@@ -188,17 +189,17 @@ def matchNight(obsdate):
         # Get ra/dec from each npy file
         # TODO: WCS mapping if not already done
         try:
-            Red_stars   = np.load(Red_file)[:,[3,4]]
+            Red_stars   = np.load(Red_file)[:,[4,5]]
         except IndexError:
             print(f"ERROR: {Red_file} has not been updated!")
             continue
         try:
-            Green_stars = np.load(Green_file)[:,[3,4]]
+            Green_stars = np.load(Green_file)[:,[4,5]]
         except IndexError:
             print(f"ERROR: {Green_file} has not been updated!")
             continue
         try:
-            Blue_stars  = np.load(Blue_file)[:,[3,4]]
+            Blue_stars  = np.load(Blue_file)[:,[4,5]]
         except IndexError:
             print(f"ERROR: {Blue_file} has not been updated!")
             continue

@@ -26,7 +26,7 @@ def getRAdec(transform, star_pos_file, savefile):
 #    transform = wcs.WCS(transform_im[0].header)
     
     #get star coordinates from observation image (.npy file)
-    star_pos = np.load(star_pos_file)
+    star_pos = np.load(star_pos_file)[:,[0,1]]
     
     #get transformation
     world = transform.all_pix2world(star_pos, 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
@@ -74,7 +74,7 @@ def getRAdecfromFile(transform_file, star_pos_file, savefile):
     transform = wcs.WCS(transform_im[0].header)
     
     #get star coordinates from observation image (.npy file)
-    star_pos = np.load(star_pos_file)
+    star_pos = np.load(star_pos_file)[:, [0,1]]
     
     #get transformation
     world = transform.all_pix2world(star_pos, 0,ra_dec_order=True) #2022-07-21 Roman A. changed solution function to fit SIP distortion
@@ -104,7 +104,7 @@ def getXY(transform_file, star_pos_file, savefile=None):
     transform = wcs.WCS(transform_im[0].header)
     
     #get star coordinates from observation image (.npy file)
-    star_pos = np.load(star_pos_file)
+    star_pos = np.load(star_pos_file)[:, [4,5]]
     
     #get transformation
     px = transform.wcs_world2pix(star_pos, 0)
@@ -116,8 +116,8 @@ def getXY(transform_file, star_pos_file, savefile=None):
             filehandle.write('#\n#\n#\n#\n#X  Y  RA  Dec\n')
     
             for i in range(0, len(star_pos)):
-                #output table: | x | y | RA | Dec | 
-                filehandle.write('%f %f %f %f\n' %(star_pos[i][0], star_pos[i][1], px[i][0], px[i][1]))
+                #output table: | RA | Dec | x | y | 
+                filehandle.write('%f %f %f %f\n' %(star_pos[i][4], star_pos[i][5], px[i][0], px[i][1]))
       
     coords = np.array([star_pos[:,0], star_pos[:,1], px[:,0], px[:,1]]).transpose()
     return coords

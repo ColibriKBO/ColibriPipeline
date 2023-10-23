@@ -18,8 +18,6 @@ def makeQuery(field_centre, SR):
     input: field centre [RA, dec] in degrees, Search radius [degrees]
     returns: dataframe with query'''
     Vizier.ROW_LIMIT = -1
-  #  field_centre = ["314.880936108 +81.2324069629"]
-   # field_centre = [314.88, 81.23]
     result = Vizier.query_region(coord.SkyCoord(ra=field_centre[0], dec=field_centre[1], 
                                             unit=(u.deg, u.deg), frame = 'icrs'),  
                              radius=coord.Angle(SR, "deg"), catalog='I/345/gaia2',
@@ -31,4 +29,3 @@ def makeQuery(field_centre, SR):
     
     return query
 
-#q = makeQuery([273.72721111111, -18.631111111], 1.5)
