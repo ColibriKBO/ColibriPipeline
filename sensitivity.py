@@ -391,36 +391,6 @@ if __name__ == '__main__':
     # minute_dir=minute_dirs[0] #start from the first minute dir to look for most stars
     #minute_dir = '20220518_05.40.22.844'                                           #minute label (if don't have data)
 
-    '''-------------field selection section based on number of stars on image------------''' #2023-04-25 Roman A.
-
-    """ Defunct code to find the minute directory with the most stars
-    minute_stars=[] #array for minute and respective number of stars in it
-    for minute_dir in minute_dirs:
-
-
-        frame=[f for f in data_path.joinpath(minute_dir).iterdir()][1]
-        
-        fid = open(frame, 'rb')
-        
-        fid.seek(384,0)
-        
-        table = np.fromfile(fid, dtype=np.uint8, count=12582912)
-        testimages=nb_read_data(table)
-
-        # image = split_images(testimages, 2048, 2048, 'high')
-        interimg = np.reshape(testimages, [2*2048,2048])
-        image = interimg[1::2] #high gain
-        image=np.array(image, dtype='float64')
-        star_pos=list(initialFindFITS(image,detect_thresh)) #find stars on 2D array 
-        minute_stars.append([minute_dir,len(star_pos)])
-
-    minute_stars.sort(key = lambda x: x[1])
-
-
-    minute_dir=minute_stars[-1][0]
-    print(minute_stars[-1][0])
-    """
-
     '''-------------------------------------------------------------------------------------'''
 
     #path to output files
