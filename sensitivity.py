@@ -58,60 +58,6 @@ OBSTIME_STRP = '%H.%M.%S'
 
 #--------------------------------functions------------------------------------#
 
-def initialFindFITS(data, detect_thresh):
-    """ Locates the stars in the initial time slice 
-    input: flux data in 2D array for a fits image, star detection threshold (float)
-    returns: [x, y, half light radius] of all stars in pixels"""
-
-    ''' Background extraction for initial time slice'''
-    data_new = deepcopy(data)           #make copy of data
-    bkg = sep.Background(data_new)      #get background array
-    bkg.subfrom(data_new)               #subtract background from data
-    thresh = detect_thresh * bkg.globalrms         # set detection threshold to mean + 3 sigma
-
-    #sep.set_extract_pixstack(600000)
-    ''' Identify stars in initial time slice '''
-    objects = sep.extract(data_new, thresh)#, deblend_nthresh = 1)
-
-
-    ''' Characterize light profile of each star '''
-    halfLightRad = np.sqrt(objects['npix'] / np.pi) / 2.  # approximate half light radius as half of radius
-
-    
-    ''' Generate tuple of (x,y,r) positions for each star'''
-    positions = zip(objects['x'], objects['y'], halfLightRad)
-    
-
-    return positions
-
-'''-------------------------------------------RCD section------------------------'''
-
-
-# Function to read 12-bit data with Numba to speed things up
-@nb.njit(nb.uint16[::1](nb.uint8[::1]),fastmath=True,parallel=True)
-
-def nb_read_data(data_chunk):
-    """data_chunk is a contigous 1D array of uint8 data)
-    eg.data_chunk = np.frombuffer(data_chunk, dtype=np.uint8)"""
-    #ensure that the data_chunk has the right length
-
-    assert np.mod(data_chunk.shape[0],3)==0
-
-    out=np.empty(data_chunk.shape[0]//3*2,dtype=np.uint16)
-    image1 = np.empty((2048,2048),dtype=np.uint16)
-    image2 = np.empty((2048,2048),dtype=np.uint16)
-
-    for i in nb.prange(data_chunk.shape[0]//3):
-        fst_uint8=np.uint16(data_chunk[i*3])
-        mid_uint8=np.uint16(data_chunk[i*3+1])
-        lst_uint8=np.uint16(data_chunk[i*3+2])
-
-        out[i*2] =   (fst_uint8 << 4) + (mid_uint8 >> 4)
-        out[i*2+1] = ((mid_uint8 % 16) << 8) + lst_uint8
-
-    return out
-
-
 
 '''----------------------------------------------RCD section end-----------------------------------'''
 
@@ -493,36 +439,6 @@ if __name__ == '__main__':
     # minute_dir = [f for f in minute_dirs if obs_time in f][0]    #minute we're interested in #2023-04-25 Roman A.
     # minute_dir=minute_dirs[0] #start from the first minute dir to look for most stars
     #minute_dir = '20220518_05.40.22.844'                                           #minute label (if don't have data)
-
-    '''-------------field selection section based on number of stars on image------------''' #2023-04-25 Roman A.
-
-    """ Defunct code to find the minute directory with the most stars
-    minute_stars=[] #array for minute and respective number of stars in it
-    for minute_dir in minute_dirs:
-
-
-        frame=[f for f in data_path.joinpath(minute_dir).iterdir()][1]
-        
-        fid = open(frame, 'rb')
-        
-        fid.seek(384,0)
-        
-        table = np.fromfile(fid, dtype=np.uint8, count=12582912)
-        testimages=nb_read_data(table)
-
-        # image = split_images(testimages, 2048, 2048, 'high')
-        interimg = np.reshape(testimages, [2*2048,2048])
-        image = interimg[1::2] #high gain
-        image=np.array(image, dtype='float64')
-        star_pos=list(initialFindFITS(image,detect_thresh)) #find stars on 2D array 
-        minute_stars.append([minute_dir,len(star_pos)])
-
-    minute_stars.sort(key = lambda x: x[1])
-
-
-    minute_dir=minute_stars[-1][0]
-    print(minute_stars[-1][0])
-    """
 
     '''-------------------------------------------------------------------------------------'''
 

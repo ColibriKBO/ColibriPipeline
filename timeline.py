@@ -1118,8 +1118,6 @@ if __name__ == '__main__':
             print("ERROR: No cloud logs found!")
             cloud_data = None
 
-        cloud_data = getCloudData(sunset_date,sunrise_date)
-
     # If cloud data has been passed, plot the transparency plot
     # TODO: Fix this so if transparency data could not be found on Green, it will look at other telescopes
     if cloud_data is not None:
