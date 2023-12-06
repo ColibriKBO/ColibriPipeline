@@ -519,6 +519,7 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
 
     
     # reject lightcurves that dip below zero
+    # Designed to remove satellites
     if np.min(light_curve) < 0:
         print(f"Negative flux: star {num}")
         return -2, [], [], lightcurve_std, lightcurve_median, np.nan, np.nan, -2, np.nan

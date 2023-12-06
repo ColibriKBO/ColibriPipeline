@@ -260,7 +260,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     del imagePaths[0]
         
     ## Idenitify important characteristics from name and length of images list
-    field_name = imagePaths[0].name.split('_')[0]  #which of 11 fields are observed
+    field_name = imagePaths[0].name.split('_')[0]  #which of 24 fields are observed
     x_length, y_length, num_images = cir.getSizeRCD(imagePaths)
 
     print(datetime.datetime.now(), "Imported", num_images, "frames")
@@ -269,6 +269,12 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     minNumImages = len(kernel.array)*3         #3x kernel length
     if num_images < minNumImages:
         print(datetime.datetime.now(), "Insufficient number of images, skipping...")
+        return minuteDir.name, 0, 0
+    
+    ## Check if there is a valid GPS lock
+    print(datetime.datetime.now(), "Checking GPS lock for ", minuteDir.name)
+    if not cir.testGPSLock(imagePaths[0]):
+        print(datetime.datetime.now(), "No GPS Lock established, skipping...")
         return minuteDir.name, 0, 0
     
 
@@ -719,22 +725,6 @@ if __name__ == '__main__':
         if not (ARCHIVE_PATH / str(obs_date) / 'primary_summary.txt').exists():
             writePrimarySummary(obs_date)
         sys.exit()
-
-    ## Check if there is a valid GPS lock
-    imagePaths = sorted(minute_dirs[0].glob('*.rcd'))
-    print(imagePaths[0])
-    if not cir.testGPSLock(imagePaths[0]):
-        print(datetime.datetime.now(), "No GPS Lock established, skipping...")
-
-        if not (ARCHIVE_PATH / str(obs_date) / 'primary_summary.txt').exists():
-            writePrimarySummary(obs_date)
-
-        
-        with open(os.path.join(night_dir,"error.txt"),"w") as f:
-            f.write("")
-        
-        sys.exit()
-    
 
     ''' prepare RickerWavelet/Mexican hat kernel to convolve with light curves'''
     exposure_time = 0.025    # exposure length in seconds
