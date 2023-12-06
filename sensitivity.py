@@ -267,7 +267,7 @@ def findSimilarMinute(timestamp, target_df):
     """
 
     # Find all timestamps within 1 minute of the target timestamp
-    similar_timestamps = target_df[(target_df['timestamp'] - timestamp).abs() < pd.Timedelta(minutes=1)]
+    similar_timestamps = target_df[np.abs((target_df.index - timestamp).total_seconds()) < 60.]
 
     # If there are no similar timestamps, return None
     if len(similar_timestamps) == 0:
@@ -275,7 +275,7 @@ def findSimilarMinute(timestamp, target_df):
 
     # Otherwise, return the earlier timestamp
     else:
-        return similar_timestamps['timestamp'].min()
+        return similar_timestamps.index.min()
     
 
 '''---------------------------------SCRIPT STARTS HERE--------------------------------------------'''
@@ -397,7 +397,7 @@ if __name__ == '__main__':
                                                 for timestamp in primary_summary_dfs[telescope].index])]
             obs_time = minute_dir.split('_')[1][:-4]
         else:
-            minute_dir = matched_minute[telescope].strftime(MINUTEDIR_STRP)
+            minute_dir = matched_minute[telescope].strftime(MINUTEDIR_STRP)[:-3]
             obs_time = matched_minute[telescope].strftime(OBSTIME_STRP)
 
     # Otherwise, parse the minute directory names to get the time of the observation given
@@ -456,6 +456,7 @@ if __name__ == '__main__':
     '''-------------make light curves of data----------------------'''
     if cml_args.lightcurve==True:
         print('making light curve .txt files')
+        print("DATA PATH: ", data_path.joinpath(minute_dir))
         lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
 
     #save .png plots of lightcurves
