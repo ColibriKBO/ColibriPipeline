@@ -640,8 +640,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     if star_pos_file.exists():
         star_pos_file.unlink()
     star_SNR = lightcurve_mean/lightcurve_std
-    star_find_results = np.c_[star_find_results, star_SNR]
-    np.save(star_pos_file, star_find_results.astype(float))
+    star_find_results = np.c_[star_find_results, star_SNR.astype(float)]
+    np.save(star_pos_file, star_find_results)
 
 
     # return number of stars in field
