@@ -22,7 +22,7 @@ from copy import deepcopy
 from datetime import datetime, date
 from astropy.io import fits
 from astropy import wcs
-from astropy.time import Time 
+from astropy.time import Time
 
 # Custom module imports
 import getRAdec
@@ -48,6 +48,8 @@ telescope = os.environ['COMPUTERNAME']       #telescope identifier
 TELESCOPE_BASE_DIR = {'REDBIRD':pathlib.Path('R:'),
                       'GREENBIRD':pathlib.Path('G:'),
                       'BLUEBIRD':pathlib.Path('B:')}
+SELF_BASE_DIR = pathlib.Path('D:')
+TELESCOPE_ORDER = ['REDBIRD', 'GREENBIRD', 'BLUEBIRD']
 
 # Datetime Formats
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S.%f'
@@ -250,6 +252,30 @@ def primarysummaryReader(summary_path):
         print(f"ERROR: Could not read primary summary on {summary_path.anchor}!")
         return None
 
+
+def findSimilarMinute(timestamp, target_df):
+    """
+    Find all minutes within 1 minute of the target timestamp and return the earlier time.
+
+    Args:
+        timestamp (datetime): timestamp to match
+        target_df (dataframe): dataframe containing timestamps to match against
+
+    Returns:
+        timestamp (datetime): timestamp of the closest minute
+    
+    """
+
+    # Find all timestamps within 1 minute of the target timestamp
+    similar_timestamps = target_df[np.abs((target_df.index - timestamp).total_seconds()) < 60.]
+
+    # If there are no similar timestamps, return None
+    if len(similar_timestamps) == 0:
+        return None
+
+    # Otherwise, return the earlier timestamp
+    else:
+        return similar_timestamps.index.min()
     
 
 '''---------------------------------SCRIPT STARTS HERE--------------------------------------------'''
@@ -304,6 +330,7 @@ if __name__ == '__main__':
 
         for instrument in empty_telescopes:
             TELESCOPE_BASE_DIR.pop(instrument)
+            TELESCOPE_ORDER.remove(instrument)
 
         # Check that there is at least one telescope with data for this date
         if len(TELESCOPE_BASE_DIR.keys()) == 0:
@@ -327,29 +354,51 @@ if __name__ == '__main__':
                                for instrument, primary_summary_file 
                                in zip(TELESCOPE_BASE_DIR.keys(), primary_summary_files)}
         
+        
         # Try each telescope to find the one with the most stars detected
-        for instrument in TELESCOPE_BASE_DIR.keys():
-            # If the primary_summary.txt file exists for this telescope
-            if primary_summary_dfs[instrument] is not None:
-                # Find the minute with the most stars detected
-                max_stars = primary_summary_dfs[instrument]['stars'].max()
-                max_stars_minute = primary_summary_dfs[instrument][primary_summary_dfs[instrument]['stars'] == max_stars].index[0]
+        matched_minute = {}
+        for i in range(len(TELESCOPE_ORDER)):
 
-                # Check that this minute is within 1 minute of an existing minute_dir
-                # If so, use this minute_dir. Otherwise, use the middle minute_dir
-                for minute_dir_datetime in minute_dirs_datetime:
-                    if abs((minute_dir_datetime - max_stars_minute).total_seconds()) < 60:
-                        minute_dir = minute_dir_datetime.strftime(MINUTEDIR_STRP)[:-3]
-                        obs_time = minute_dir_datetime.strftime(OBSTIME_STRP)
+            # Sort the primary_summary.txt dataframe by number of stars detected and iterate
+            # through the timestamp in descending order
+            for timestamp in primary_summary_dfs[TELESCOPE_ORDER[i]].sort_values(by='stars', ascending=False).index:
+                matched_mintues = {TELESCOPE_ORDER[i]: timestamp}
+
+                # Iterate from the minute with the most stars to the least
+                # Compare each minute with the other two telescopes to see if they have data
+                # within 1 minute of this minute. If so, use this minute.
+                for comparison_telescope in TELESCOPE_ORDER[i+1:]:
+                    comparison_timestamp = findSimilarMinute(timestamp, primary_summary_dfs[comparison_telescope])
+                    
+                    # If there is a similar minute, add it to the matched_minutes dictionary
+                    # and continue to the next telescope.
+                    # If there is no similar minute, break out of the loop and try the next timestamp.
+                    if comparison_timestamp is not None:
+                        matched_minute[TELESCOPE_ORDER[i]] = timestamp
+                        matched_minute[comparison_telescope] = comparison_timestamp
+                    else:
                         break
+
+                # If all telescopes have a similar minute, break out of the loop
                 else:
-                    minute_dir = minute_dirs[int(len(minute_dirs) / 2)]
-                    obs_time = minute_dir.split('_')[1][:-4]
+                    break
+            
+            # If all telescopes did not have a similar minute, try with this telescope removed
+            else:
+                continue
 
-                # Prevent it from iterating if the primary_summary.txt file exists for this telescope
-                break
-
-
+            # Otherwise, break out of the loop
+            break
+            
+        # Check the returned dictionary. If the current telescope is not in it, use the minute with
+        # the most stars detected.
+        if telescope not in matched_minute.keys():
+            minute_dir = minute_dirs[np.argmax([primary_summary_dfs[telescope].loc[timestamp, 'stars'] 
+                                                for timestamp in primary_summary_dfs[telescope].index])]
+            obs_time = minute_dir.split('_')[1][:-4]
+        else:
+            minute_dir = matched_minute[telescope].strftime(MINUTEDIR_STRP)[:-3]
+            obs_time = matched_minute[telescope].strftime(OBSTIME_STRP)
 
     # Otherwise, parse the minute directory names to get the time of the observation given
     else:
@@ -407,6 +456,7 @@ if __name__ == '__main__':
     '''-------------make light curves of data----------------------'''
     if cml_args.lightcurve==True:
         print('making light curve .txt files')
+        print("DATA PATH: ", data_path.joinpath(minute_dir))
         lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
 
     #save .png plots of lightcurves
