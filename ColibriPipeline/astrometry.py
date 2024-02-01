@@ -548,103 +548,90 @@ def plotAstVSColibriSNR(matched):
 '''----------------------------------------------------------------------------------------'''
 '''----------------------------------------------------------------------------------------'''
 
-'''--------------observation & solution info----------------'''
-obs_date = datetime.date(2022, 5, 18)           #date of observation
-obs_time = datetime.time(5, 41, 54)             #time of observation (to the second)
-image_index = 'medstacked'                      #index of image to use
-order = '4th'                                   #tweak order of solution polynomial
+if __name__ == '__main__':
 
-telescope = 'Green'                             #telescope identifier
-field_name = 'field1'                           #name of field observed
+    '''--------------observation & solution info----------------'''
+    obs_date = datetime.date(2022, 5, 18)           #date of observation
+    obs_time = datetime.time(5, 41, 54)             #time of observation (to the second)
+    image_index = 'medstacked'                      #index of image to use
+    order = '4th'                                   #tweak order of solution polynomial
 
-
-'''-------set up paths to files----------------------------'''
-
-#path to base directory
-base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri')
-
-#path to directory that holds images
-#data_path = base_path.joinpath(telescope, 'ColibriData', str(obs_date).replace('-', ''))    #path that holds data
-data_path = base_path.joinpath(telescope, 'Elginfield' + telescope, str(obs_date).replace('-','') + '_diagnostics', 'Sensitivity') 
-
-#get exact name of desired minute directory
-subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory
-minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]    #minute we're interested in
-
-#path to save output files to
-#save_path = base_path.joinpath(telescope, 'ColibriArchive', str(obs_date), minute_dir)    #path to save outputs in
-save_path = data_path.joinpath(minute_dir)
-
-matchTol = 0.1            #matching tolerance [px]
+    telescope = 'Green'                             #telescope identifier
+    field_name = 'field1'                           #name of field observed
 
 
-'''-----------make star transform file---------------------'''
+    '''-------set up paths to files----------------------------'''
 
-#get coordinate solution from astrometry.net and apply to list of X,Y coords
-coords = getRAdec.getRAdecfromFile(sorted(save_path.glob('*' + image_index + '_new-image_' + order + '.fits'))[0],                            
-                           sorted(save_path.glob('*.npy'))[0], 
-                           save_path.joinpath(minute_dir + '_' + order + '_xy_RD.txt'))
+    #path to base directory
+    base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri')
 
-#read in list of converted coordinates
-colibri_stars = pd.read_csv(save_path.joinpath(minute_dir + '_' + order + '_xy_RD.txt'), delim_whitespace = True, header = 4)
+    #path to directory that holds images
+    #data_path = base_path.joinpath(telescope, 'ColibriData', str(obs_date).replace('-', ''))    #path that holds data
+    data_path = base_path.joinpath(telescope, 'Elginfield' + telescope, str(obs_date).replace('-','') + '_diagnostics', 'Sensitivity') 
 
+    #get exact name of desired minute directory
+    subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory
+    minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]    #minute we're interested in
 
-'''----------read in astrometry.net results---------------'''
+    #path to save output files to
+    #save_path = base_path.joinpath(telescope, 'ColibriArchive', str(obs_date), minute_dir)    #path to save outputs in
+    save_path = data_path.joinpath(minute_dir)
 
-#output files from astrometry.net
-wcs_header, newimage_header, newimage_data, axy_header, axy_data, rdls_header, rdls_data, corr_header, corr_data = get_results(image_index)
-
-#make dataframe of correlating stars between astrometry.net's finds and catalogs
-corr_df = pd.DataFrame(np.array(corr_data).byteswap().newbyteorder())
-
-
-'''------match astrometry stars with colibri stars--------'''
-
-matched = match_XY(corr_df, colibri_stars, 1)
+    matchTol = 0.1            #matching tolerance [px]
 
 
-'''------read in star table from sensitivity tests to get Gaia data -------'''
-#comment out below if sensitivity tests haven't been done
+    '''-----------make star transform file---------------------'''
 
-#table with detected stars and their sky coords + Gaia magnitudes
-starTableFile = sorted(save_path.glob('starTable*'+ order + '*.txt'))[0]
-starTable = pd.read_csv(starTableFile, delim_whitespace = True)         #load into dataframe
+    #get coordinate solution from astrometry.net and apply to list of X,Y coords
+    coords = getRAdec.getRAdecfromFile(sorted(save_path.glob('*' + image_index + '_new-image_' + order + '.fits'))[0],                            
+                            sorted(save_path.glob('*.npy'))[0], 
+                            save_path.joinpath(minute_dir + '_' + order + '_xy_RD.txt'))
 
-#match this table with astrometry.net results
-matched = matchColibriAstnet(matched, starTable, matchTol)
-
-
-'''-------make plots----------------'''
-
-#test astrometry.net solution with itself
-plotAstFieldvsIndexXY_diff(corr_df)     #plot (X, Y) differences between ast.net measured coords and expected coords
-plotAstFieldvsIndexRAdec_diff(corr_df)  #plot (RA, dec) differences between ast.net transformed measured coords and catalog coords
-
-#test astrometry.net solution with Colibri SEP
-plotAstFieldVSColibriXY_diff(matched)       #plot diff between ast.net measured coords and Colibri SEP measured coords (XY)
-plotAstVSColibriSNR(matched)            #plot ast.net SNR vs Colibri SNR
-plotAstVSColibriXY_diff(matched)        #plot diff between ast.net index and Colibri (X, Y)
-plotAstVSColibriRAdec_diff(matched)     #plot diff between ast.net index and Colibri (RA, dec)
-plotXYArrows(matched)                   #plot star (X, Y) coords with vectors showing magnitude and direction of difference between Colibri and ast.index
-plotRAdecArrows(matched)                #plot star (RA, dec) coords with vectors showing magnitude and direction of difference between Colibri and ast.index
-
-#test astrometry.net solution with Gaia catalog
-plotGaiaVSindexCoords(matched)          #plot diff between Gaia and ast.net index (RA, dec)
-
-#plot image with colourbar
-plotImage(newimage_data)                #plot image with colourbar, showing X,Y differences as vectors
+    #read in list of converted coordinates
+    colibri_stars = pd.read_csv(save_path.joinpath(minute_dir + '_' + order + '_xy_RD.txt'), delim_whitespace = True, header = 4)
 
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+    '''----------read in astrometry.net results---------------'''
+
+    #output files from astrometry.net
+    wcs_header, newimage_header, newimage_data, axy_header, axy_data, rdls_header, rdls_data, corr_header, corr_data = get_results(image_index)
+
+    #make dataframe of correlating stars between astrometry.net's finds and catalogs
+    corr_df = pd.DataFrame(np.array(corr_data).byteswap().newbyteorder())
+
+
+    '''------match astrometry stars with colibri stars--------'''
+
+    matched = match_XY(corr_df, colibri_stars, 1)
+
+
+    '''------read in star table from sensitivity tests to get Gaia data -------'''
+    #comment out below if sensitivity tests haven't been done
+
+    #table with detected stars and their sky coords + Gaia magnitudes
+    starTableFile = sorted(save_path.glob('starTable*'+ order + '*.txt'))[0]
+    starTable = pd.read_csv(starTableFile, delim_whitespace = True)         #load into dataframe
+
+    #match this table with astrometry.net results
+    matched = matchColibriAstnet(matched, starTable, matchTol)
+
+
+    '''-------make plots----------------'''
+
+    #test astrometry.net solution with itself
+    plotAstFieldvsIndexXY_diff(corr_df)     #plot (X, Y) differences between ast.net measured coords and expected coords
+    plotAstFieldvsIndexRAdec_diff(corr_df)  #plot (RA, dec) differences between ast.net transformed measured coords and catalog coords
+
+    #test astrometry.net solution with Colibri SEP
+    plotAstFieldVSColibriXY_diff(matched)       #plot diff between ast.net measured coords and Colibri SEP measured coords (XY)
+    plotAstVSColibriSNR(matched)            #plot ast.net SNR vs Colibri SNR
+    plotAstVSColibriXY_diff(matched)        #plot diff between ast.net index and Colibri (X, Y)
+    plotAstVSColibriRAdec_diff(matched)     #plot diff between ast.net index and Colibri (RA, dec)
+    plotXYArrows(matched)                   #plot star (X, Y) coords with vectors showing magnitude and direction of difference between Colibri and ast.index
+    plotRAdecArrows(matched)                #plot star (RA, dec) coords with vectors showing magnitude and direction of difference between Colibri and ast.index
+
+    #test astrometry.net solution with Gaia catalog
+    plotGaiaVSindexCoords(matched)          #plot diff between Gaia and ast.net index (RA, dec)
+
+    #plot image with colourbar
+    plotImage(newimage_data)                #plot image with colourbar, showing X,Y differences as vectors

@@ -3,21 +3,6 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to ColibriPipeline's documentation!
-===========================================
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
 
 Welcome to ColibriPipeline's documentation!
@@ -32,11 +17,18 @@ field of view. It is designed to be run as near to real-time as possible.
 
    This project is under active development.
 
-
-Contents
---------
-
 .. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
-   usage
-   api
+   auxilliary
+   pipeline
+   plotting
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
