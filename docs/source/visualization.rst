@@ -2,10 +2,10 @@
    which are used to create visualizations of the raw data, pipeline outputs,
    or any other Colibri project product.
 
-.. _auxilliary:
+.. _visualization:
 
-Auxilliary Scripts
-=====================
+Visualization Scripts
+======================
 
 .. toctree::
     :maxdepth: 1

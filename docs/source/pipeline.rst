@@ -2,9 +2,9 @@
    which are used directly in the data reduction pipeline and are called
    by the main pipeline script.
 
-.. _auxilliary:
+.. _pipeline:
 
-Auxilliary Scripts
+Pipeline Scripts
 =====================
 
 .. toctree::
