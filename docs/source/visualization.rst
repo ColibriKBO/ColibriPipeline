@@ -4,7 +4,7 @@
 
 .. _auxilliary:
 
-Auxilliary Functions
+Auxilliary Scripts
 =====================
 
 .. toctree::
