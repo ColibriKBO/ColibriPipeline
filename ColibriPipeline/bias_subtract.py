@@ -310,130 +310,133 @@ def makeBiasSet(filepath, numOfBiases, savefolder, gain):
     return biasList
 
 
+#----------------------------------main---------------------------------------#
 
-'''------------set up--------------------'''
-RCDFiles = True                             #set True to read .rcd files, False to read .fits files
+if __name__ == '__main__':
 
-#observation info
-obs_date = datetime.date(2021, 11, 9)            #date of observation
-obs_time = datetime.time(2, 59, 16)              #time of observation (to the second)
-telescope = 'Red'                                #telescope identifier
-field_name = 'field2'                            #name of field observed
+    '''------------set up--------------------'''
+    RCDFiles = True                             #set True to read .rcd files, False to read .fits files
 
-#image info
-image_index = '0000036'                          #index of image to use
-gain = 'high'                                    #gain of image to use
+    #observation info
+    obs_date = datetime.date(2021, 11, 9)            #date of observation
+    obs_time = datetime.time(2, 59, 16)              #time of observation (to the second)
+    telescope = 'Red'                                #telescope identifier
+    field_name = 'field2'                            #name of field observed
 
-
-'''-----------------set up filepaths-----------------'''
-base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #base path for telescope data
-
-data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''))    #path that holds data
-
-#get exact name of desired minute directory
-subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory
-minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]    #minute we're interested in
-
-minute_path = data_path.joinpath(minute_dir)            #path to minute images we're interested in 
-
-saveDirpath = base_path.joinpath('ColibriArchive', str(obs_date).replace('-','') + '_diagnostics')  #path to save images in
-
-subSavepath = saveDirpath.joinpath('subtract_images')               #path to save subtracted images in
-masterBiaspath = saveDirpath.joinpath(gain + '_masterBiases')       #path that holds master bias images
-
-#make directories to hold results in if doesn't already exist
-saveDirpath.mkdir(parents=True, exist_ok=True)
-subSavepath.mkdir(parents=True, exist_ok=True)
-masterBiaspath.mkdir(parents=True, exist_ok=True)
-
-'''---------------make/load median combined bias---------------------'''
-
-#get bias median bias image to subtract
-biasList = sorted(masterBiaspath.glob('*.fits'))
-
-#make median combined bias images if they don't already exist
-if len(biasList) == 0:
-    NumBiasImages = 9           #number of biases to include in median combine
-    biasList = makeBiasSet(base_path.joinpath('ColibriData', str(obs_date).replace('-',''), 'Bias'), NumBiasImages, saveDirpath, gain)  #list of bias combines and times
-
-#need datetimes of bias images if already created
-else:
-    biasList2D = []     #2D list to hold bias dates and images
-    
-    #get time for each bias image in list
-    for biasImPath in biasList:
-        biasTime = getDateTime(biasImPath)
-        biasList2D.append((biasTime, biasImPath))
-    
-    #package into 2D array
-    biasList = np.array(biasList2D)
-    ind = np.argsort(biasList, axis=0)
-    biasList = biasList[ind[:,0]]
-    
-#median combined bias image for correct time of night
-biasMed = chooseBias(minute_path, biasList)  
-
-'''------------------read in images and subtract bias-----------------'''  
-
-#get list of images in minute folder
-if RCDFiles == True:
-    imagepath = sorted(minute_path.glob('*' + image_index + '.rcd'))
-
-#for .fits images
-else:
-    imagepath = sorted(minute_path.glob('*' + image_index + '.fits'))[0]
-
-imagename = imagepath[0].name       #string containing image name
-
-imageSavepath = subSavepath.joinpath(minute_dir + '_' + gain + '_sub_' + imagename.replace('.rcd','.fits'))    #path (incl filename) to save bias subtracted image to
+    #image info
+    image_index = '0000036'                          #index of image to use
+    gain = 'high'                                    #gain of image to use
 
 
-#import desired image and subtract the correct bias
-if RCDFiles == True:
-    #import image and do bias subtraction
-    image = importFramesRCD(minute_dir, imagepath, 0, 1, biasMed, gain)
-    imageData = image[0]
+    '''-----------------set up filepaths-----------------'''
+    base_path = pathlib.Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #base path for telescope data
 
-    #save subtracted image as .fits file (does not preserve header data)
-    hdu = fits.PrimaryHDU(imageData)
-           
-    if not os.path.exists(imageSavepath):
-        hdu.writeto(imageSavepath)
+    data_path = base_path.joinpath('ColibriData', str(obs_date).replace('-', ''))    #path that holds data
+
+    #get exact name of desired minute directory
+    subdirs = [f.name for f in data_path.iterdir() if f.is_dir()]                   #all minutes in night directory
+    minute_dir = [f for f in subdirs if str(obs_time).replace(':', '.') in f][0]    #minute we're interested in
+
+    minute_path = data_path.joinpath(minute_dir)            #path to minute images we're interested in 
+
+    saveDirpath = base_path.joinpath('ColibriArchive', str(obs_date).replace('-','') + '_diagnostics')  #path to save images in
+
+    subSavepath = saveDirpath.joinpath('subtract_images')               #path to save subtracted images in
+    masterBiaspath = saveDirpath.joinpath(gain + '_masterBiases')       #path that holds master bias images
+
+    #make directories to hold results in if doesn't already exist
+    saveDirpath.mkdir(parents=True, exist_ok=True)
+    subSavepath.mkdir(parents=True, exist_ok=True)
+    masterBiaspath.mkdir(parents=True, exist_ok=True)
+
+    '''---------------make/load median combined bias---------------------'''
+
+    #get bias median bias image to subtract
+    biasList = sorted(masterBiaspath.glob('*.fits'))
+
+    #make median combined bias images if they don't already exist
+    if len(biasList) == 0:
+        NumBiasImages = 9           #number of biases to include in median combine
+        biasList = makeBiasSet(base_path.joinpath('ColibriData', str(obs_date).replace('-',''), 'Bias'), NumBiasImages, saveDirpath, gain)  #list of bias combines and times
+
+    #need datetimes of bias images if already created
+    else:
+        biasList2D = []     #2D list to hold bias dates and images
         
-else:
-    #load in image to do subtraction on
-    image = fits.open(imagepath)
-    
-    #do subtraction
-    image[0].data = image[0].data - biasMed
-    imageData = image[0].data
-
-
-    #save new image file
-    image.writeto(imageSavepath)
-
-'''-----calculate and save subtracted image stats'''
-#calculate stats
-med = np.median(imageData)
-mean = np.mean(imageData)
-RMS = np.sqrt(np.mean(np.square(imageData)))
-
-#print stats to console
-print('Image: ', imageSavepath.name)
-print('Median value: ', med)
-print('Mean value: ', mean)
-print('RMS: ', RMS)    
-
-#append statistics to file
-imageStatFile = imageSavepath.parent.joinpath('subtractedImageStats.txt')
-
-#make new file with header if it doesn't exist
-if not imageStatFile.exists():
-    with open(imageStatFile, 'w') as file:
+        #get time for each bias image in list
+        for biasImPath in biasList:
+            biasTime = getDateTime(biasImPath)
+            biasList2D.append((biasTime, biasImPath))
         
-        file.write('#imageName    Median    Mean    RMS\n')
+        #package into 2D array
+        biasList = np.array(biasList2D)
+        ind = np.argsort(biasList, axis=0)
+        biasList = biasList[ind[:,0]]
         
-#write to existing file
-with open(imageStatFile, 'a') as file:
-    file.write('%s %f %f %f\n' %(imageSavepath.name, med, mean, RMS))
-                
+    #median combined bias image for correct time of night
+    biasMed = chooseBias(minute_path, biasList)  
+
+    '''------------------read in images and subtract bias-----------------'''  
+
+    #get list of images in minute folder
+    if RCDFiles == True:
+        imagepath = sorted(minute_path.glob('*' + image_index + '.rcd'))
+
+    #for .fits images
+    else:
+        imagepath = sorted(minute_path.glob('*' + image_index + '.fits'))[0]
+
+    imagename = imagepath[0].name       #string containing image name
+
+    imageSavepath = subSavepath.joinpath(minute_dir + '_' + gain + '_sub_' + imagename.replace('.rcd','.fits'))    #path (incl filename) to save bias subtracted image to
+
+
+    #import desired image and subtract the correct bias
+    if RCDFiles == True:
+        #import image and do bias subtraction
+        image = importFramesRCD(minute_dir, imagepath, 0, 1, biasMed, gain)
+        imageData = image[0]
+
+        #save subtracted image as .fits file (does not preserve header data)
+        hdu = fits.PrimaryHDU(imageData)
+            
+        if not os.path.exists(imageSavepath):
+            hdu.writeto(imageSavepath)
+            
+    else:
+        #load in image to do subtraction on
+        image = fits.open(imagepath)
+        
+        #do subtraction
+        image[0].data = image[0].data - biasMed
+        imageData = image[0].data
+
+
+        #save new image file
+        image.writeto(imageSavepath)
+
+    '''-----calculate and save subtracted image stats'''
+    #calculate stats
+    med = np.median(imageData)
+    mean = np.mean(imageData)
+    RMS = np.sqrt(np.mean(np.square(imageData)))
+
+    #print stats to console
+    print('Image: ', imageSavepath.name)
+    print('Median value: ', med)
+    print('Mean value: ', mean)
+    print('RMS: ', RMS)    
+
+    #append statistics to file
+    imageStatFile = imageSavepath.parent.joinpath('subtractedImageStats.txt')
+
+    #make new file with header if it doesn't exist
+    if not imageStatFile.exists():
+        with open(imageStatFile, 'w') as file:
+            
+            file.write('#imageName    Median    Mean    RMS\n')
+            
+    #write to existing file
+    with open(imageStatFile, 'a') as file:
+        file.write('%s %f %f %f\n' %(imageSavepath.name, med, mean, RMS))
+                    

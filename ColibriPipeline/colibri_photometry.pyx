@@ -1,5 +1,5 @@
 """
-Filename:   colibri_primary_filter
+Filename:   colibri_photometry.py
 Author(s):  Peter Quigley
 Contact:    pquigley@uwo.ca
 Created:    Fri Oct 21 09:23:04 2022

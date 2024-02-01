@@ -23,7 +23,7 @@ field of view. It is designed to be run as near to real-time as possible.
 
    auxilliary
    pipeline
-   plotting
+   visualization
 
 
 Indices and tables
