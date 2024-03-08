@@ -90,7 +90,8 @@ class Telescope:
         sensitivity_dir  = self.base_path.joinpath("ColibriArchive",
                                                    "{}_diagnostics".format(obs_date), 
                                                    "Sensitivity")
-        
+
+
         # Check if log and data directories exist
         self.log_exists  = True if self.log_path.exists() else False
         self.data_exists = True if self.data_path.exists() else False
@@ -1282,9 +1283,11 @@ if __name__ == '__main__':
     axs.xaxis.set_tick_params(labelsize=9)
     axs.set_xlabel("Time (UTC)")
     axs.set_ylabel("Star Counts in Minute")
-    plt.yscale('log')
     plt.legend()
     plt.grid(which='both',axis='x')
+
+    if total_starhours > 0:
+        plt.yscale('log')
 
     # Save the plot
     starhours_fig.savefig(str(diagnostic_dir / 'starhours.jpg'),dpi=800,bbox_inches='tight')
@@ -1440,6 +1443,7 @@ if __name__ == '__main__':
     summary_path = diagnostic_dir / f'{obs_date}_observation_summary.pdf'
     images[0].save(summary_path, "PDF", resolution=100., save_all=True, append_images=images[1:])
     print("All images saved! You are done!")
+    print(summary_path)
 
 
 ###########################
