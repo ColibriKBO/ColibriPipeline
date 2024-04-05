@@ -67,23 +67,23 @@ def format_timestamp_to_datetime(timestamp):
     # NOTE: This ignores the microseconds and assumes UTC
     return datetime.strptime(timestamp, TIMESTAMP_FORMAT)
 
-def get_bias_timestamps(bias_path):
-    """Get timestamps of all bias images in directory for cir.chooseBias"""
+def get_dark_timestamps(dark_path):
+    """Get timestamps of all dark images in directory for cir.chooseDark"""
     # Get list of all files in directory
-    bias_images = bias_path.glob('*.fits')
+    dark_images = dark_path.glob('*.fits')
 
     # Get timestamps
     timestamps = [(format_timestamp_to_datetime(image.name[:16]), image) 
-                  for image in bias_images]
+                  for image in dark_images]
 
     return timestamps
 
-def process_science_images(image_path_list, start_frame, bias_data, save_dir_path):
-    """Read in science images one at a time and save bias-subtracted images as fits files"""
+def process_science_images(image_path_list, start_frame, dark_data, save_dir_path):
+    """Read in science images one at a time and save dark-subtracted images as fits files"""
     #print(f'Processing image {start_frame+1} of {len(image_path_list)}')
 
-    # Read in image and subtract bias
-    subtracted_img,_ = cir.importFramesRCD(image_path_list, start_frame, 1, bias_data)
+    # Read in image and subtract dark
+    subtracted_img,_ = cir.importFramesRCD(image_path_list, start_frame, 1, dark_data)
 
     # Save image as fits file
     fits_image_filename = save_dir_path / (image_path_list[start_frame].name).replace('.rcd', '.fits')
@@ -154,9 +154,9 @@ def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH):
 
     ## Image processing
 
-    # Select bias image
-    bias_timestamps = get_bias_timestamps(MBIAS_PATH)
-    best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
+    # Select dark image
+    dark_timestamps = get_dark_timestamps(MBIAS_PATH)
+    best_dark = cir.chooseDark(MINUTE_PATH, np.array(dark_timestamps), obs_date)
     
     # Get list of all files in directory
     image_paths = sorted(MINUTE_PATH.glob('*.rcd')) 
@@ -164,7 +164,7 @@ def _save_dark_subtracted_minute(date, minute, DATE_PATH, MBIAS_PATH):
     # Set up multiprocessing
     pool_size = cpu_count() - 2
     pool = Pool(pool_size)
-    args = ((image_paths, i, best_bias, SAVE_PATH) for i in range(len(image_paths)))
+    args = ((image_paths, i, best_dark, SAVE_PATH) for i in range(len(image_paths)))
 
     # Process images in parallel
     pool.starmap(process_science_images, args)
@@ -202,9 +202,9 @@ def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, M
 
     ## Image processing
 
-    # Select bias image
-    bias_timestamps = get_bias_timestamps(MBIAS_PATH)
-    best_bias = cir.chooseBias(MINUTE_PATH, np.array(bias_timestamps), obs_date)
+    # Select dark image
+    dark_timestamps = get_dark_timestamps(MBIAS_PATH)
+    best_dark = cir.chooseDark(MINUTE_PATH, np.array(dark_timestamps), obs_date)
     
     # Get list of all files in directory
     image_paths = [pathlib.Path(file) for file in file_list]
@@ -212,7 +212,7 @@ def _save_dark_subtracted_detec(date, minute, detec_str, file_list, DATE_PATH, M
     # Set up multiprocessing
     pool_size = cpu_count() - 2
     pool = Pool(pool_size)
-    args = ((image_paths, i, best_bias, SAVE_PATH) for i in range(len(image_paths)))
+    args = ((image_paths, i, best_dark, SAVE_PATH) for i in range(len(image_paths)))
 
     # Process images in parallel
     pool.starmap(process_science_images, args)
@@ -233,15 +233,15 @@ def main(date, time=None, det=None, gif=False, skip=False):
 
     # Relevant paths
     DATE_PATH = DATA_PATH / date
-    MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(date) / 'masterBiases'
+    MBIAS_PATH = ARCHIVE_PATH / date_to_archive_format(date) / 'masterDarks'
     STARLIST_PATH = ARCHIVE_PATH / date_to_archive_format(date) / 'primary_summary.txt'
 
     # Check if relevant directories exist
     if not DATE_PATH.exists():
         raise FileNotFoundError(f'Date directory {DATE_PATH} does not exist. No images to process.')
     if not MBIAS_PATH.exists():
-        #TODO: Add option to create master biases
-        raise FileNotFoundError(f'Master bias directory {MBIAS_PATH} does not exist. Cannot execute script.')
+        #TODO: Add option to create master darks
+        raise FileNotFoundError(f'Master dark directory {MBIAS_PATH} does not exist. Cannot execute script.')
     if (not STARLIST_PATH.exists()) and (time is None):
         raise FileNotFoundError(f'Archive directory {STARLIST_PATH} does not exist' +\
                                  'and no time was specified. No images to process.')

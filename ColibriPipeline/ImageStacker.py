@@ -65,45 +65,45 @@ def getWCS(image):
     
     return wcs_header
 
-def chooseBias(obs_folder, MasterBiasList):
-    """ choose correct master bias by comparing time to the observation time
-    input: filepath to current minute directory, 2D numpy array of [bias datetimes, bias filepaths]
-    returns: bias image that is closest in time to observation"""
+def chooseDark(obs_folder, MasterDarkList):
+    """ choose correct master dark by comparing time to the observation time
+    input: filepath to current minute directory, 2D numpy array of [dark datetimes, dark filepaths]
+    returns: dark image that is closest in time to observation"""
     
     #current hour of observations
     current_dt = getDateTime(obs_folder)
     
-    '''make array of time differences between current and biases'''
-    bias_diffs = np.array(abs(MasterBiasList[:,0] - current_dt))
-    bias_i = np.argmin(bias_diffs)    #index of best match
+    '''make array of time differences between current and darks'''
+    dark_diffs = np.array(abs(MasterDarkList[:,0] - current_dt))
+    dark_i = np.argmin(dark_diffs)    #index of best match
     
-    '''select best master bias using above index'''
-    bias_image = MasterBiasList[bias_i][1]
+    '''select best master dark using above index'''
+    dark_image = MasterDarkList[dark_i][1]
                 
-    #load in new master bias image
-    bias = fits.getdata(bias_image)
+    #load in new master dark image
+    dark = fits.getdata(dark_image)
         
-    return bias
+    return dark
 
-def chooseBias_Med(img_median, MasterBiasList):
-    """ choose correct master bias by comparing time to the observation time
-    input: filepath to current minute directory, 2D numpy array of [bias datetimes, bias filepaths]
-    returns: bias image that is closest in time to observation"""
+def chooseDark_Med(img_median, MasterDarkList):
+    """ choose correct master dark by comparing time to the observation time
+    input: filepath to current minute directory, 2D numpy array of [dark datetimes, dark filepaths]
+    returns: dark image that is closest in time to observation"""
     
     
     
-    '''make array of time differences between current and biases'''
+    '''make array of time differences between current and darks'''
 
-    bias_diffs = np.array(abs(MasterBiasList[:,2] - img_median))
-    bias_i = np.argmin(bias_diffs)    #index of best match
+    dark_diffs = np.array(abs(MasterDarkList[:,2] - img_median))
+    dark_i = np.argmin(dark_diffs)    #index of best match
     
-    '''select best master bias using above index'''
-    bias_image = MasterBiasList[bias_i][1]
+    '''select best master dark using above index'''
+    dark_image = MasterDarkList[dark_i][1]
                 
-    #load in new master bias image
-    bias = fits.getdata(bias_image)
+    #load in new master dark image
+    dark = fits.getdata(dark_image)
 
-    return bias
+    return dark
 
 def getDateTime(folder):
     """function to get date and time of folder, then make into python datetime object
@@ -146,10 +146,10 @@ def readRCD(filename):
 
     return table, hdict
 
-def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
+def importFramesRCD(parentdir, filenames, start_frame, num_frames, dark, gain):
     """ reads in frames from .rcd files starting at frame_num
     input: parent directory (minute), list of filenames to read in, starting frame number, how many frames to read in, 
-    bias image (2D array of fluxes)
+    dark image (2D array of fluxes)
     returns: array of image data arrays, array of header times of these images"""
     
     imagesData = []    #array to hold image data
@@ -172,7 +172,7 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
 
         images = nb_read_data(data)
         image = split_images(images, hnumpix, vnumpix, imgain)
-        image = np.subtract(image,bias)
+        image = np.subtract(image,dark)
 
         #change time if time is wrong (29 hours)
         hour = str(headerTime).split('T')[1].split(':')[0]
@@ -217,10 +217,10 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
         
     return imagesData, imagesTimes
 
-def getBias(filepath, numOfBiases, gain):
-    """ get median bias image from a set of biases (length =  numOfBiases) from filepath
-    input: bias image directory (path object), number of bias images to take median from (int), gain level ('low' or 'high')
-    return: median bias image"""
+def getDark(filepath, numOfDarks, gain):
+    """ get median dark image from a set of darks (length =  numOfDarks) from filepath
+    input: dark image directory (path object), number of dark images to take median from (int), gain level ('low' or 'high')
+    return: median dark image"""
     
     #FOR FITS:
     # Added a check to see if the fits conversion has been done.
@@ -239,69 +239,69 @@ def getBias(filepath, numOfBiases, gain):
  # #       print('Remove file converted.txt if you want to overwrite.')
 
  #    #for .fits files
- #    '''get list of bias images to combine'''
- #   biasFileList = sorted(filepath.glob('*.fits'))
- #   biases = []   #list to hold bias data
+ #    '''get list of dark images to combine'''
+ #   darkFileList = sorted(filepath.glob('*.fits'))
+ #   darks = []   #list to hold dark data
     
- #    '''append data from each bias image to list of biases'''
- #   for i in range(0, numOfBiases):
- #        biases.append(fits.getdata(biasFileList[i]))
+ #    '''append data from each dark image to list of darks'''
+ #   for i in range(0, numOfDarks):
+ #        darks.append(fits.getdata(darkFileList[i]))
  
      
         
     #for rcd files:
     '''get list of images to combine'''
-    rcdbiasFileList = sorted(filepath.glob('*.rcd'))
+    rcddarkFileList = sorted(filepath.glob('*.rcd'))
     
-    #import images, using array of zeroes as bias
-    rcdbiases = importFramesRCD(filepath, rcdbiasFileList, 0, numOfBiases, np.zeros((2048,2048)), gain)[0]
+    #import images, using array of zeroes as dark
+    rcddarks = importFramesRCD(filepath, rcddarkFileList, 0, numOfDarks, np.zeros((2048,2048)), gain)[0]
     
-    '''take median of bias images'''
-    biasMed = np.median(rcdbiases, axis=0)
+    '''take median of dark images'''
+    darkMed = np.median(rcddarks, axis=0)
     
-    return biasMed
+    return darkMed
 
-def makeBiasSet(filepath, numOfBiases, savefolder, gain):
-    """ get set of median-combined biases for entire night that are sorted and indexed by time,
+def makeDarkSet(filepath, numOfDarks, savefolder, gain):
+    """ get set of median-combined darks for entire night that are sorted and indexed by time,
     these are saved to disk and loaded in when needed
-    input: filepath (string) to bias image directories, number of biases images to combine for master
-    return: array with bias image times and filepaths to saved biases on disk"""
+    input: filepath (string) to dark image directories, number of darks images to combine for master
+    return: array with dark image times and filepaths to saved darks on disk"""
     
-    biasFolderList = [f for f in filepath.iterdir() if f.is_dir()]   #list of bias folders
+    darkFolderList = [f for f in filepath.iterdir() if f.is_dir()]   #list of dark folders
     
-    ''' create folder for results, save bias images '''
-    bias_savepath = savefolder.joinpath(gain + '_masterBiases')
+    ''' create folder for results, save dark images '''
+    dark_savepath = savefolder.joinpath(gain + '_masterDarks')
 
-    if not bias_savepath.exists():
-        bias_savepath.mkdir()      #make folder to hold master bias images in
+    if not dark_savepath.exists():
+        dark_savepath.mkdir()      #make folder to hold master dark images in
         
-    #make list of times and corresponding master bias images
-    biasList = []
+    #make list of times and corresponding master dark images
+    darkList = []
     
-    #loop through each folder of biases
-    for folder in biasFolderList:
-        masterBiasImage = getBias(folder, numOfBiases, gain)      #get median combined image from this folder
+    #loop through each folder of darks
+    for folder in darkFolderList:
+        masterDarkImage = getDark(folder, numOfDarks, gain)      #get median combined image from this folder
         
         #save as .fits file if doesn't already exist
-        hdu = fits.PrimaryHDU(masterBiasImage)
-        biasFilepath = bias_savepath.joinpath(folder.name + '_' + gain + '_medbias.fits')
+        hdu = fits.PrimaryHDU(masterDarkImage)
+        darkFilepath = dark_savepath.joinpath(folder.name + '_' + gain + '_meddark.fits')
 
         
-        if not os.path.exists(biasFilepath):
-            hdu.writeto(biasFilepath)
+        if not os.path.exists(darkFilepath):
+            hdu.writeto(darkFilepath)
         
         folderDatetime = getDateTime(folder)
         
-        biasMed=np.median(masterBiasImage)
+        darkMed=np.median(masterDarkImage)
         
-        biasList.append((folderDatetime, biasFilepath, biasMed))
+        darkList.append((folderDatetime, darkFilepath, darkMed))
     
     #package times and filepaths into array, sort by time
-    biasList = np.array(biasList)
-    ind = np.argsort(biasList, axis=0)
-    biasList = biasList[ind[:,0]]
+    darkList = np.array(darkList)
+    ind = np.argsort(darkList, axis=0)
+    darkList = darkList[ind[:,0]]
     
-    return biasList
+    return darkList
 
 '''---------------------------------RCD section---------------------------------'''
 
@@ -471,20 +471,20 @@ if __name__ == '__main__':
     chunk=40 #number of images to stack for each core
     hiclip_value=1 #number of images with high values to cut (less than 5 is okay)
     loclip_value=0 #number of images with low values to cut (usually don't need)
-    NumBiasImages=50 #median stack all biases
+    NumDarkImages=50 #median stack all darks
     data_path=Path('/','D:','/ColibriData',str(obs_date).replace('-','')) #path for night
     base_path=Path('/','D:') 
     
-    bias_save_folder=base_path.joinpath('/StackedData','Biases') #folder to save median stacked biases
+    dark_save_folder=base_path.joinpath('/StackedData','Darks') #folder to save median stacked darks
     
-    if not os.path.exists(bias_save_folder):
-        os.makedirs(bias_save_folder)
+    if not os.path.exists(dark_save_folder):
+        os.makedirs(dark_save_folder)
     
-    print("Getting list of Biases...")
-    MasterBiasList = makeBiasSet(data_path.joinpath('Bias'), NumBiasImages, bias_save_folder, 
-                                 gain) #make list of available biases
+    print("Getting list of Darks...")
+    MasterDarkList = makeDarkSet(data_path.joinpath('Dark'), NumDarkImages, dark_save_folder, 
+                                 gain) #make list of available darks
     
-    minutes=[f for f in data_path.iterdir() if (os.path.isdir(f) and "Bias" not in f.name)]
+    minutes=[f for f in data_path.iterdir() if (os.path.isdir(f) and "Dark" not in f.name)]
     #list of minutes in the night
     
     t1=T.time()#time when it all starts
@@ -556,11 +556,11 @@ if __name__ == '__main__':
         stack_med=stats.sigma_clipped_stats(flat_img, sigma=3, maxiters=100,axis=0)[1] #get sigma clipped median
         print("Stack image median: ",stack_med)
 
-        bias = chooseBias_Med(stack_med, MasterBiasList) #choose best bias according to median, not time
+        dark = chooseDark_Med(stack_med, MasterDarkList) #choose best dark according to median, not time
         
-        print("Bias median: ", np.median(bias))
+        print("Dark median: ", np.median(dark))
 
-        reduced_image = np.subtract(stacked_img,bias) #Image - bias
+        reduced_image = np.subtract(stacked_img,dark) #Image - dark
         
         
         hdu = fits.PrimaryHDU(reduced_image) #save stacked image as .fits
@@ -576,14 +576,14 @@ if __name__ == '__main__':
         print("Stack time: ", stack_time)
         fits.setval(Filepath, 'DATE-OBS', value=stack_time)#add fits header with time
         
-        hdu = fits.PrimaryHDU(bias) #save used bias as .fits
+        hdu = fits.PrimaryHDU(dark) #save used dark as .fits
         
-        save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Bias')#save master bias file just in case
+        save_path=base_path.joinpath('/StackedData',field,str(obs_date),'Dark')#save master dark file just in case
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        Bias_Filepath = save_path.joinpath(minute.name+'_medianbias.fits')
+        Dark_Filepath = save_path.joinpath(minute.name+'_mediandark.fits')
         
-        hdu.writeto(Bias_Filepath, overwrite=True)
+        hdu.writeto(Dark_Filepath, overwrite=True)
         
         print("Finished stacking "+minute.name+" in %.2f seconds" % (T.time() - start_time))
         

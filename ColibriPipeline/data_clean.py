@@ -33,7 +33,7 @@ data_path=Path('/','D:','/ColibriData',str(night_dir).replace('-', '')) #path wi
 print(data_path)
 
 #subdirectories of minute-long datasets (~2400 images per directory)
-minute_dirs = [f for f in data_path.iterdir() if (f.is_dir() and 'Bias' not in f.name)]  
+minute_dirs = [f for f in data_path.iterdir() if (f.is_dir() and 'Dark' not in f.name)]  
 
 minute_dirs.sort() #list of minute folders
 

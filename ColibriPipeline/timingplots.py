@@ -36,7 +36,7 @@ obs_date=input("Input obesrvation date (ex. 2022-07-30): ")  #17-07-2022 Roman A
 nightDir = pathlib.Path('/', 'D:/','ColibriData',str(obs_date).replace('-', ''))
 
 #get list of subdirectories (minute directories)
-minuteDirs = [d for d in nightDir.iterdir() if d.is_dir() and 'Bias' not in d.name and 'badimages' not in d.name ]
+minuteDirs = [d for d in nightDir.iterdir() if d.is_dir() and 'Dark' not in d.name and 'badimages' not in d.name ]
 
 #path to save script output
 outputPath = nightDir.parents[1].joinpath('ColibriArchive', nightDir.name + '_diagnostics', 'timingTests')

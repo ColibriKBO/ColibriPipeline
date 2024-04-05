@@ -62,7 +62,7 @@ AP_R = 3.  # aperture radius
 DETECT_THRESH = 3.3  # sigma threshold for detection
 NUM_TO_SKIP  = 1  # number of images to skip for star detection
 NUM_TO_STACK = 9  # number of images to stack for star detection
-BIASES_TO_STACK = 9       #number of bias images to combine in median bias images
+BIASES_TO_STACK = 9       #number of dark images to combine in median dark images
 EDGE_BUFFER  = 10  # px from edge of image to ignore
 NPY_STARS = 10  # number of stars to save in .npy file
 MIN_STARS = 30  # minimum number of stars to analyze minute
@@ -98,7 +98,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
 
         Returns:
             minute_dirs (list): List of unprocessed minute directories.
-            master_bias_list (list): List of master biases and times.
+            master_dark_list (list): List of master darks and times.
 
     """
 
@@ -107,25 +107,25 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     # Get list of all minute directories for the given date
     minute_dirs = [min_dir for min_dir in DATA_PATH.joinpath(str(obsdate).replace("-","")).iterdir()
                     if min_dir.is_dir()]
-    minute_dirs = [min_dir for min_dir in minute_dirs if 'Bias' not in min_dir.name]
+    minute_dirs = [min_dir for min_dir in minute_dirs if 'Dark' not in min_dir.name]
     minute_dirs.sort()
-    bias_dir = DATA_PATH.joinpath(str(obsdate).replace("-",""), 'Bias')
+    dark_dir = DATA_PATH.joinpath(str(obsdate).replace("-",""), 'Dark')
     
-    # If reprocessing, remake the master bias list and return all minute dirs
+    # If reprocessing, remake the master dark list and return all minute dirs
     if reprocess:
-        master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
-        return minute_dirs, master_bias_list
+        master_dark_list = cir.makeDarkSet(dark_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
+        return minute_dirs, master_dark_list
 
-    ## Generate/collect master bias list
+    ## Generate/collect master dark list
 
     # Check that the archive directory exists
     obsdate_archive = ARCHIVE_PATH.joinpath(str(obsdate))
-    masterbias_dir = obsdate_archive.joinpath('masterBiases')
-    if (not obsdate_archive.exists()) or (not masterbias_dir.exists()):
+    masterdark_dir = obsdate_archive.joinpath('masterDarks')
+    if (not obsdate_archive.exists()) or (not masterdark_dir.exists()):
         obsdate_archive.mkdir(exist_ok=True)
 
-    # Make master bias set
-    master_bias_list = cir.makeBiasSet(bias_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
+    # Make master dark set
+    master_dark_list = cir.makeDarkSet(dark_dir, BASE_PATH, obsdate, BIASES_TO_STACK)
     
     
     ## Remove processed minutes from list of all minutes
@@ -139,7 +139,7 @@ def getUnprocessedMinutes(obsdate, reprocess=False):
     minute_dirs = [x for x in minute_dirs if x.name not in processed_minutes]
 
     # Return the list of unprocessed minutes
-    return minute_dirs, master_bias_list
+    return minute_dirs, master_dark_list
 
 
 def readDetTimestamp(det_file):
@@ -212,7 +212,7 @@ def writePrimarySummary(obsdate, processing_time='None'):
 ## Main Functions
 ###########################
 
-def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_threshold,
+def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_threshold,
                    base_path,obs_date,
                    telescope='TEST',RCDfiles = True, gain_high = True):
     """ 
@@ -221,7 +221,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
         Parameters:
             minuteDir (str): Filepath to current directory
-            MasterBiasList (list): List of master biases and times
+            MasterDarkList (list): List of master darks and times
             kernel (arr): Ricker wavelet kernel
             exposure_time (int/float): Camera exposure time (in s)
             sigma_threshold (float): Sensitivity of the detection filter
@@ -251,8 +251,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     if not savefolder.exists():
         savefolder.mkdir()      
 
-    ## Select and load the master bias closest in time to the current minute
-    bias = cir.chooseBias(minuteDir, MasterBiasList, obs_date)
+    ## Select and load the master dark closest in time to the current minute
+    dark = cir.chooseDark(minuteDir, MasterDarkList, obs_date)
 
     ## Get a sorted list of images in this minute directory, ignoring the first
     ## due to vignetting
@@ -287,7 +287,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     
     ## Create median combined image for star finding
     try:
-        stacked = cir.stackImages(minuteDir, savefolder, NUM_TO_SKIP, NUM_TO_STACK, bias)
+        stacked = cir.stackImages(minuteDir, savefolder, NUM_TO_SKIP, NUM_TO_STACK, dark)
     ## Prevents program from crashing if there are corrupt images
     except UnicodeDecodeError:
         print(f"ERROR: UnicodeDecodeError in {minuteDir.name}")
@@ -340,8 +340,8 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
     print(f"Weighting Radius for Starfinding (GaussSigma) = {GaussSigma}")
 
     ## Import the first frame and last frame for starfinding purposes
-    fframe_data,fframe_time = cir.importFramesRCD(imagePaths, NUM_TO_SKIP, 1, bias)   #import first image
-    lframe_data,lframe_time = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, bias)  #import last image
+    fframe_data,fframe_time = cir.importFramesRCD(imagePaths, NUM_TO_SKIP, 1, dark)   #import first image
+    lframe_data,lframe_time = cir.importFramesRCD(imagePaths, len(imagePaths)-1, 1, dark)  #import last image
     headerTimes = [fframe_time] #list of image header times
 
     ## Refine star positions for first and last image (also returns frame times)
@@ -397,7 +397,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         residual   = (num_images-1)%CHUNK_SIZE
         for i in range((num_images-1)//CHUNK_SIZE):
             # Read in the images in a given chunk
-            imageFile,imageTime = cir.importFramesRCD(imagePaths,CHUNK_SIZE*i+1, CHUNK_SIZE, bias)
+            imageFile,imageTime = cir.importFramesRCD(imagePaths,CHUNK_SIZE*i+1, CHUNK_SIZE, dark)
             headerTimes = headerTimes + imageTime
             for j in range(CHUNK_SIZE):
                 # Process the images in the current chunk
@@ -414,7 +414,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
                                                   num_images-residual,
                                                   residual,
-                                                  bias)
+                                                  dark)
         headerTimes = headerTimes + imageTime
         
         # Process the remaining images
@@ -437,7 +437,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         residual   = (num_images-1)%CHUNK_SIZE
         for i in range((num_images-1)//CHUNK_SIZE):
             # Read in the images in a given chunk
-            imageFile,imageTime = cir.importFramesRCD(imagePaths,CHUNK_SIZE*i+1, CHUNK_SIZE, bias)
+            imageFile,imageTime = cir.importFramesRCD(imagePaths,CHUNK_SIZE*i+1, CHUNK_SIZE, dark)
             headerTimes = headerTimes + imageTime
             # Process the the current chunk all at once
             starData[CHUNK_SIZE*i+1:CHUNK_SIZE*(i+1)+1] = cp.getStationaryFlux(imageFile,
@@ -453,7 +453,7 @@ def firstOccSearch(minuteDir, MasterBiasList, kernel, exposure_time, sigma_thres
         imageFile,imageTime = cir.importFramesRCD(imagePaths,
                                                   num_images-(num_images-1)%CHUNK_SIZE,
                                                   (num_images-1)%CHUNK_SIZE,
-                                                  bias)
+                                                  dark)
         headerTimes = headerTimes + imageTime
         # Process the residual chunk
         starData[num_images-residual:] = cp.getStationaryFlux(imageFile,
@@ -724,8 +724,8 @@ if __name__ == '__main__':
     
     '''get filepaths'''
  
-    # Get unprocessed minute directories and master bias list
-    minute_dirs, MasterBiasList = getUnprocessedMinutes(obs_date, reprocess=reprocess)
+    # Get unprocessed minute directories and master dark list
+    minute_dirs, MasterDarkList = getUnprocessedMinutes(obs_date, reprocess=reprocess)
     night_dir = base_path.joinpath('ColibriData', str(obs_date).replace('-',''))
 
     # Check if there are any unprocessed minutes
@@ -758,7 +758,7 @@ if __name__ == '__main__':
         
         pool_size = multiprocessing.cpu_count() - 2
         pool = Pool(pool_size)
-        args = ((minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
+        args = ((minute_dirs[f], MasterDarkList, ricker_kernel, exposure_time, sigma_threshold,
                  base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(len(minute_dirs)))
         
         try:
@@ -792,7 +792,7 @@ if __name__ == '__main__':
         # Try to run this in sequence
         star_counts = []
         for f in range(len(minute_dirs)):
-            star_count = firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
+            star_count = firstOccSearch(minute_dirs[f], MasterDarkList, ricker_kernel, exposure_time, sigma_threshold,
                                         base_path,obs_date,telescope,RCDfiles,gain_high)
             star_counts.append(star_count)
 
@@ -810,7 +810,7 @@ if __name__ == '__main__':
         # Try to run this in sequence
         star_counts = []
         for f in range(len(minute_dirs)):
-            star_count = firstOccSearch(minute_dirs[f], MasterBiasList, ricker_kernel, exposure_time, sigma_threshold,
+            star_count = firstOccSearch(minute_dirs[f], MasterDarkList, ricker_kernel, exposure_time, sigma_threshold,
                                         base_path,obs_date,telescope,RCDfiles,gain_high)
             star_counts.append(star_count)
 

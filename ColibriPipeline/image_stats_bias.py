@@ -3,7 +3,7 @@
 """
 Created on Wed Sep 15 11:53:28 2021
 Updated on Tues. June 21, 2022
-Read in all bias images from a single night, get the median value, save a text file with 
+Read in all dark images from a single night, get the median value, save a text file with 
 filename | time | median | mean | mode | sensor temp | base temp | FPGA temp
 
 @author: Rachel A. Brown
@@ -12,7 +12,7 @@ filename | time | median | mean | mode | sensor temp | base temp | FPGA temp
             the output txt. Modified date folder input method so that the script can be run easier from powershell
             
 14-08-2022 modified by Roman A. : read noise is now written to separate txt file, the script produces 2 graphs
-       that show how bias mean and median varies.
+       that show how dark mean and median varies.
 """
 
 import numpy as np
@@ -139,10 +139,10 @@ def readRCD(filename):
 
 
 
-def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
+def importFramesRCD(parentdir, filenames, start_frame, num_frames, dark, gain):
     """ reads in frames from .rcd files starting at frame_num
     input: parent directory (minute), list of filenames to read in, starting frame number, how many frames to read in, 
-    bias image (2D array of fluxes)
+    dark image (2D array of fluxes)
     returns: array of image data array, array of header time, tuple of sensor temperatures"""
     
     imagesData = []    #array to hold image data
@@ -168,7 +168,7 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
         #get image with correct gain from data
         images = nb_read_data(data)
         image = split_images(images, hnumpix, vnumpix, imgain)      
-        #image = np.subtract(image,bias)
+        #image = np.subtract(image,dark)
 
         #change time if time is wrong (29 hours)
         hour = str(headerTime).split('T')[1].split(':')[0]
@@ -213,7 +213,7 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, bias, gain):
     return imagesData, imagesTimes, (sensorTemp, baseTemp, FPGAtemp)
 
 #-------------------------Read noise section copied from readnoise.py----------------------#17-07-2022 Roman A.
-def get_ReadNoise(FirstBias,SecondBias,gain): 
+def get_ReadNoise(FirstDark,SecondDark,gain): 
     
     if gain=='high': #gain string to int
         gain=0.82
@@ -222,7 +222,7 @@ def get_ReadNoise(FirstBias,SecondBias,gain):
         gain=18.98
     
     
-    diffImage=FirstBias-SecondBias #subtract one image from another. This results in a differential image of the biases.
+    diffImage=FirstDark-SecondDark #subtract one image from another. This results in a differential image of the darks.
     dev = np.std(diffImage)         #standard deviation of the differential image on a pixel per pixel basis
     ReadNoise=dev*gain/math.sqrt(2) #read noise by https://www.photometrics.com/wp-content/uploads/2019/10/read-noise-calculator.pdf
     return ReadNoise
@@ -262,14 +262,14 @@ if __name__ == '__main__':
 
         #base_path = pathlib.Path('/', 'D:')
 
-        data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''), 'Bias')    #path to bias directories
-        save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Bias_Stats')  #path to save results to
+        data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''), 'Dark')    #path to dark directories
+        save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Dark_Stats')  #path to save results to
         
         save_path.mkdir(parents=True, exist_ok=True)        #make save directory if it doesn't already exist
 
         save_filepath = save_path.joinpath(str(obs_date) + '_stats.txt')        #.txt file to save results to
         
-        minutedirs = [f for f in data_path.iterdir() if f.is_dir()]          #all minutes in night bias directory
+        minutedirs = [f for f in data_path.iterdir() if f.is_dir()]          #all minutes in night dark directory
 
         #create file and make header
         with open(save_filepath, 'w') as filehandle:
@@ -287,7 +287,7 @@ if __name__ == '__main__':
             print('------------------------------------')
             print('working on: ', minute.name)
             images = sorted(minute.glob('*.rcd'))   #list of images
-            biasFileList=images
+            darkFileList=images
             pairs=0 #number of pairs that will be iterrated
             ReadNoise=[] 
             
@@ -297,18 +297,18 @@ if __name__ == '__main__':
             '''----------------------------READ OUT NOISE SECTION------------------------------------'''    
             #17-07-2022 Roman A.
             
-            if len(biasFileList)% 2 == 0: #check for even or odd number of images in the directory
+            if len(darkFileList)% 2 == 0: #check for even or odd number of images in the directory
             
-                for i in range(0,len(biasFileList),2): #iterrate through all pairs of subsequent bias images without dublicates
+                for i in range(0,len(darkFileList),2): #iterrate through all pairs of subsequent dark images without dublicates
         
             
            
                 #getting images for .rcd files - RAB 06212022:
-                    FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
-                    SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+                    FirstDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                    SecondDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
         
                 #get list of readnoises 
-                    ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+                    ReadNoise.append(get_ReadNoise(FirstDark,SecondDark,gain))
                     pairs+=1
                 print(pairs," pairs iterrated")
                 AverageRN=np.average(ReadNoise) 
@@ -319,14 +319,14 @@ if __name__ == '__main__':
                 
             else:
                 
-                for i in range(0,len(biasFileList)-1,2):
+                for i in range(0,len(darkFileList)-1,2):
         
             
-                    FirstBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
-                    SecondBias = lightcurve_maker.importFramesRCD(minute, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+                    FirstDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                    SecondDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
         
             
-                    ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+                    ReadNoise.append(get_ReadNoise(FirstDark,SecondDark,gain))
                     pairs+=1
                 print(pairs," pairs iterrated")
                 AverageRN=np.average(ReadNoise)
@@ -379,12 +379,12 @@ if __name__ == '__main__':
         data_file=save_path
         #data = pd.read_csv('./meanTests/' + night + '_mean_' + scope + '.txt', delim_whitespace = True, nrows = 16764)
         data = pd.read_csv(data_file.joinpath(str(obs_date)+'_stats.txt'), delim_whitespace = True)
-        #data = pd.read_csv(('D:/ColibriArchive/20220731_diagnostics/Bias_Stats/2022-07-31_stats.txt'), delim_whitespace = True)
+        #data = pd.read_csv(('D:/ColibriArchive/20220731_diagnostics/Dark_Stats/2022-07-31_stats.txt'), delim_whitespace = True)
         data[['day','hour']] = data['time'].str.split('T', expand = True)
 
         #find time breaks in data (when a new folder was created)
         
-        #get list of different bias folders, the indices of where these start in the data frame
+        #get list of different dark folders, the indices of where these start in the data frame
         folders = data['filename'].str.split('\\', expand = True)[1]
         minutes = data['hour'].str.split(':', expand = True)[1]
         #folders, index = np.unique(folders, return_index = True)
@@ -402,8 +402,8 @@ if __name__ == '__main__':
         
         ax1.scatter(data['hour'], np.mean(data['mean']) - data['mean'], label = 'mean', s = 2)
         
-        ax1.set_title(scope + ' Bias Levels - ' + data.loc[0]['day'])
-        ax1.set_ylabel('(Overall mean) - (mean bias pixel value)')
+        ax1.set_title(scope + ' Dark Levels - ' + data.loc[0]['day'])
+        ax1.set_ylabel('(Overall mean) - (mean dark pixel value)')
         ax1.vlines(index, lower_m, upper_m, color = 'black', linewidth = 1)
         ax1.set_xticks([])
         ax1.set_xticklabels([])
@@ -425,7 +425,7 @@ if __name__ == '__main__':
         
         #ax2.legend()
         
-        plt.savefig(data_file.joinpath( str(obs_date) + 'meanofmean_bias_stats_' + scope + '.png'),bbox_inches = "tight",dpi=300)
+        plt.savefig(data_file.joinpath( str(obs_date) + 'meanofmean_dark_stats_' + scope + '.png'),bbox_inches = "tight",dpi=300)
     #    plt.show()
         plt.close()
             
@@ -440,7 +440,7 @@ if __name__ == '__main__':
         
         
         
-        plt.title(scope + ' biases - ' + data.loc[0]['day'])
+        plt.title(scope + ' darks - ' + data.loc[0]['day'])
         plt.ylabel('image pixel value')
         plt.vlines(index, np.min(data['med'])-0.5, np.amax(data['med'])+0.5, color = 'black', linewidth = 1) #modified to see whole Graph
         plt.xlabel('time')

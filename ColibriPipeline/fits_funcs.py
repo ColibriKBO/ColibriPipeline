@@ -47,7 +47,7 @@ def getSizeFITS(imagePaths):
     return width, height, frames
 
 
-def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
+def importFramesFITS(imagePaths, startFrameNum, numFrames, dark):
     """
     Reads in frames from .fits files starting at a specific frame
     
@@ -55,7 +55,7 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
             imagePaths (list): List of image paths to read in
             startFrameNum (int): Starting frame number
             numFrames (int): How many frames to read in
-            bias (arr): 2D array of fluxes from bias image
+            dark (arr): 2D array of fluxes from dark image
             
         Returns:
             imagesData (arr): Image data
@@ -68,14 +68,14 @@ def importFramesFITS(imagePaths, startFrameNum, numFrames, bias):
     '''list of filenames to read between starting and ending points'''
     files_to_read = [imagePath for i, imagePath in enumerate(imagePaths) if i >= startFrameNum and i < startFrameNum + numFrames]
 
-    '''get data from each file in list of files to read, subtract bias frame (add 100 first, don't go neg)'''
+    '''get data from each file in list of files to read, subtract dark frame (add 100 first, don't go neg)'''
     for imagePath in files_to_read:
 
         image = fits.open(imagePath)
         
         header = image[0].header
         
-        imageData = image[0].data - bias
+        imageData = image[0].data - dark
         headerTime = header['DATE-OBS']
         
         #change time if time is wrong (29 hours)

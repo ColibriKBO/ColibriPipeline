@@ -309,7 +309,7 @@ if __name__ == '__main__':
     data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''))    #path to data
 
 
-    minute_dirs=[f.name for f in data_path.iterdir() if ('Bias' not in f.name and '.txt' not in f.name)]
+    minute_dirs=[f.name for f in data_path.iterdir() if ('Dark' not in f.name and '.txt' not in f.name)]
     minute_dirs_datetime = [datetime.strptime(f, MINUTEDIR_STRP) for f in minute_dirs]
 
     # If no minute is specified, read the other telescopes' primary_done.txt to find best minute

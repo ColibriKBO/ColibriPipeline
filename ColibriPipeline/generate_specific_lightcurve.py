@@ -79,14 +79,14 @@ verboseprint = print if VERBOSE else lambda *a, **k: None
 ## Lightcurves
 ###########################
 
-def generateLightcurve(minute_dir, timestamp, master_bias_list, 
+def generateLightcurve(minute_dir, timestamp, master_dark_list, 
                        obsdate, xy, drift_correction=False):
 
     ## Setup image pathing ## 
 
     # Get the dark image data
     archive_dir = ARCHIVE_PATH / hyphonateDate(obsdate)
-    dark = cir.chooseBias(minute_dir, master_bias_list, datetime.strptime(obsdate,OBSDATE_FORMAT))
+    dark = cir.chooseDark(minute_dir, master_dark_list, datetime.strptime(obsdate,OBSDATE_FORMAT))
 
     # Get image dimensions & number of images
     image_paths = sorted(minute_dir.glob('*.rcd'))
@@ -336,7 +336,7 @@ def findMinute(obsdate, timestamp):
     # Define the minute directories and their timestamps
     minute_dirs    = [item for item in obs_path.iterdir() if item.is_dir()]
     dir_timestamps = [datetime.strptime(item.name+'000', MINDIR_FORMAT)
-                        for item in minute_dirs if item.name != 'Bias']
+                        for item in minute_dirs if item.name != 'Dark']
 
     # Find the minute directory that contains the timestamp
     timestamp = datetime.strptime(timestamp, TIMESTAMP_FORMAT)
@@ -446,18 +446,18 @@ def main(obsdate, timestamp, radec, matched_dir=None):
     if minute_dir is None:
         raise NotADirectoryError("ERROR: No valid minute directory found.")
 
-    # Generate master bias set
+    # Generate master dark set
     obs_archive = ARCHIVE_PATH / hyphonateDate(obsdate)
-    mbias_path  = obs_archive / 'masterBiases'
-    mbias_array = [(datetime.strptime(bias.name[:-5]+'000',MINDIR_FORMAT), bias) for
-                   bias in mbias_path.iterdir()]
-    mbias_array = np.array(mbias_array)
+    mdark_path  = obs_archive / 'masterDarks'
+    mdark_array = [(datetime.strptime(dark.name[:-5]+'000',MINDIR_FORMAT), dark) for
+                   dark in mdark_path.iterdir()]
+    mdark_array = np.array(mdark_array)
 
     # Get XY pixel coordinates for star of interest from WCS transform
     star_XY = reversePixelMapping(minute_dir, obsdate, radec[0], radec[1])
 
     # Generate lightcurve
-    lightcurve = generateLightcurve(minute_dir, timestamp, mbias_array,
+    lightcurve = generateLightcurve(minute_dir, timestamp, mdark_array,
                                     obsdate,star_XY)
     if lightcurve is None:
         print("ERROR: Failed to generate lightcurve.")

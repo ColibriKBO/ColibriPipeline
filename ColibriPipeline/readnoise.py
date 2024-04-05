@@ -13,7 +13,7 @@ import math
 import lightcurve_maker     #RAB 06212022
 
 '''main function'''
-def get_ReadNoise(FirstBias,SecondBias,gain): 
+def get_ReadNoise(FirstDark,SecondDark,gain): 
     
     if gain=='high': #gain string to int
         gain=0.82
@@ -22,7 +22,7 @@ def get_ReadNoise(FirstBias,SecondBias,gain):
         gain=18.98
     
     
-    diffImage=FirstBias-SecondBias #subtract one image from another. This results in a differential image of the biases.
+    diffImage=FirstDark-SecondDark #subtract one image from another. This results in a differential image of the darks.
     dev = np.std(diffImage)         #standard deviation of the differential image on a pixel per pixel basis
     ReadNoise=dev*gain/math.sqrt(2) #read noise by https://www.photometrics.com/wp-content/uploads/2019/10/read-noise-calculator.pdf
     return ReadNoise
@@ -40,34 +40,34 @@ if __name__ == '__main__':
     base_path = Path('/', 'home', 'rbrown', 'Documents', 'Colibri', telescope)  #RAB 06212022
 
 
-    #bias_path=base_path.joinpath('Bias')                                    #path to bias data
-    bias_path = base_path.joinpath('ColibriData', '20210804', 'Bias', '20210804_00.42.30.541')  #RAB 06212022
-    #biasFileList = sorted(bias_path.glob('*.fit'))                          #get bias files list
-    biasFileList = sorted(bias_path.glob('*.rcd'))         #RAB 06212022
+    #dark_path=base_path.joinpath('Dark')                                    #path to dark data
+    dark_path = base_path.joinpath('ColibriData', '20210804', 'Dark', '20210804_00.42.30.541')  #RAB 06212022
+    #darkFileList = sorted(dark_path.glob('*.fit'))                          #get dark files list
+    darkFileList = sorted(dark_path.glob('*.rcd'))         #RAB 06212022
 
-    #FirstBias=fits.getdata(biasFileList[ImageIndex])*(-1)*(-1) #convert uint to int by multiplying by (-1)
-    #SecondBias=fits.getdata(biasFileList[ImageIndex+1])*(-1)*(-1)
+    #FirstDark=fits.getdata(darkFileList[ImageIndex])*(-1)*(-1) #convert uint to int by multiplying by (-1)
+    #SecondDark=fits.getdata(darkFileList[ImageIndex+1])*(-1)*(-1)
 
 
     ReadNoise=[] #create an array of all read noises
     pairs=0     #number of pairs that will be iterrated
 
 
-    for i in range(0,len(biasFileList),2): #iterrate through all pairs of subsequent bias images without dublicates
+    for i in range(0,len(darkFileList),2): #iterrate through all pairs of subsequent dark images without dublicates
 
         
         #added if/else statement to give option for .rcd files - RAB 06212022
         if RCDfiles == False:
-            FirstBias=fits.getdata(biasFileList[i])*(-1)*(-1) #convert uint16 to int32 by multiplying by (-1) and back
-            SecondBias=fits.getdata(biasFileList[i+1])*(-1)*(-1)
+            FirstDark=fits.getdata(darkFileList[i])*(-1)*(-1) #convert uint16 to int32 by multiplying by (-1) and back
+            SecondDark=fits.getdata(darkFileList[i+1])*(-1)*(-1)
         
         else:
             #for .rcd files - RAB 06212022:
-            FirstBias = lightcurve_maker.importFramesRCD(bias_path, biasFileList, i, 1, np.zeros((2048,2048)), gain)[0]
-            SecondBias = lightcurve_maker.importFramesRCD(bias_path, biasFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+            FirstDark = lightcurve_maker.importFramesRCD(dark_path, darkFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+            SecondDark = lightcurve_maker.importFramesRCD(dark_path, darkFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
 
         
-        ReadNoise.append(get_ReadNoise(FirstBias,SecondBias,gain))
+        ReadNoise.append(get_ReadNoise(FirstDark,SecondDark,gain))
         pairs+=1
         
         

@@ -80,9 +80,9 @@ def plot_wholecurves(directory):
         #make plot
         fig, ax1 = plt.subplots()
 
-      #  biassub = './ColibriArchive/biassubtracted/202106023/20210623_00.52.14.567/sub_field1_25ms-E_0000002.fits'
+      #  darksub = './ColibriArchive/darksubtracted/202106023/20210623_00.52.14.567/sub_field1_25ms-E_0000002.fits'
       #starimage = fits.getdata(eventfile)
-      #  starimage = fits.getdata(biassub)
+      #  starimage = fits.getdata(darksub)
   #  pad = 100
     
     # Define your sub-array

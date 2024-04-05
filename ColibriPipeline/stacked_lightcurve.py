@@ -161,7 +161,7 @@ def getSizeFITS(filenames):
 def importFramesFITS(parentdir, filenames, start_frame, num_frames):
     """ reads in frames from fits files starting at frame_num
     input: parent directory (minute), list of filenames to read in, starting frame number, how many frames to read in, 
-    bias image (2D array of fluxes)
+    dark image (2D array of fluxes)
     returns: array of image data arrays, array of header times of these images"""
 
     imagesData = []    #array to hold image data
@@ -170,14 +170,14 @@ def importFramesFITS(parentdir, filenames, start_frame, num_frames):
     '''list of filenames to read between starting and ending points'''
     files_to_read = [filename for i, filename in enumerate(filenames) if i >= start_frame and i < start_frame + num_frames]
 
-    '''get data from each file in list of files to read, subtract bias frame'''
+    '''get data from each file in list of files to read, subtract dark frame'''
     for filename in files_to_read:
         file = fits.open(filename)
         
         header = file[0].header
         
         ''' Calibration frame correction '''
-        data = (file[0].data) #- bias #- dark)/flat 
+        data = (file[0].data) #- dark #- dark)/flat 
         headerTime = header['DATE-OBS']
             
         file.close()
@@ -412,7 +412,7 @@ results = np.array(results, dtype = object)
 #make directory to save lightcurves in
 lightcurve_savepath = savefolder
 if not lightcurve_savepath.exists():
-    lightcurve_savepath.mkdir()      #make folder to hold master bias images in
+    lightcurve_savepath.mkdir()      #make folder to hold master dark images in
 
 headerJD=[t[0] for t in headerTimes]
 headerJD=Time(headerJD,format='isot', scale='utc')

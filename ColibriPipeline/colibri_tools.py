@@ -164,7 +164,7 @@ def getMinDirTimes(data_dir_path):
 
     # Get all minute directories in the given data directory
     minute_dirs = [folder.name+'000' for folder in data_dir_path.iterdir() \
-                   if ((folder.is_dir()) and (folder.name != 'Bias'))]
+                   if ((folder.is_dir()) and (folder.name != 'Dark'))]
     minute_dirs.sort()
 
     # Get timestamps from the directory names
