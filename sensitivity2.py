@@ -473,6 +473,12 @@ if __name__ == '__main__':
     transform_file = save_path.joinpath(minute_dir + '_' + polynom_order + '_wcs.fits') #path to save WCS header file in
     transform_str=str(transform_file).split('\\')[-1]
 
+    if file_path == '/tmp/airmasssensitivity':
+        wcs_header = astrometrynet_funcs.getSolution(median_image, transform_file, int(polynom_order[0]))
+        transform = wcs.WCS(wcs_header)
+    else:
+        print('not working')
+        sys.exit()
     #check if the tranformation has already been calculated and saved
     if transform_file.exists():
                 
