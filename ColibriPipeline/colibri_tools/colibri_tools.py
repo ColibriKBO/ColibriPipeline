@@ -299,6 +299,27 @@ def readDetectionSigma(filepath):
     return (sigma)
 
 
+def readDetTimestamp(det_file):
+    """
+    Read minute dir of origin from det file
+
+        Parameters:
+            det_file (str): Path to det file.
+
+        Returns:
+            timestamp (str): Timestamp of det file.
+    
+    """
+
+    # Read the 5th line of the det file
+    with open(det_file, 'r') as f:
+        for i in range(5):
+            event_file = f.readline()
+
+    minute_dir = re.search(NPY_PATTERN, event_file).group(1)
+    return minute_dir
+
+
 def analyzeDetectionData(filepath):
     """
     Analyze the data of a detection file.
