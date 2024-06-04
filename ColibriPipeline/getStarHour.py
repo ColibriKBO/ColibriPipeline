@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec 20 11:06:40 2022
-
-@author: Roman A.
-
-Return star-hours for each field observed in the night directory based on number of frames of certain fields and
-number of stars in the mid-frame
-
-This script is used by timeline.py
+Author(s):
+    Roman A.
+Created:
+    Tue Dec 20 11:06:40 2022
+Updated:
+    Thu May 23 2024 by Toni C. Almeida
+Usage:
+    Return star-hours for each field observed in the night directory based on number of frames of certain fields and number of stars in the mid-frame
+    This script is used by timeline.py
+Updates:
+    Small changes on comments to improve documentation. Toni C. Almeida
 """
 from pathlib import Path
 import sep
@@ -88,10 +91,14 @@ def readRCD(filename):
     return table, hdict
 
 def importFramesRCD(filenames, start_frame, num_frames, dark, gain):
-    """ reads in frames from .rcd files starting at frame_num
-    input: parent directory (minute), list of filenames to read in, starting frame number, how many frames to read in, 
-    dark image (2D array of fluxes)
-    returns: array of image data arrays, array of header times of these images"""
+    """ 
+    Reads in frames from .rcd files starting at frame_num
+    
+        Parameters: 
+            Parent directory (minute), list of filenames to read in, starting frame number, how many frames to read in, 
+            Dark image (2D array of fluxes)
+        Returns: 
+            Array of image data arrays, array of header times of these images"""
     
     imagesData = []    #array to hold image data
     
@@ -129,9 +136,13 @@ def importFramesRCD(filenames, start_frame, num_frames, dark, gain):
 #---------------------------------------end of RCD stuff-----------------------------------------------
 
 def initialFindFITS(data, detect_thresh):
-    """ Locates the stars in the initial time slice 
-    input: flux data in 2D array for a fits image, star detection threshold (float)
-    returns: [x, y, half light radius] of all stars in pixels"""
+    """ 
+    Locates the stars in the initial time slice 
+    
+        Parameters: 
+            Flux data in 2D array for a fits image, star detection threshold (float)
+        Returns: 
+            [x, y, half light radius] of all stars in pixels"""
 
     ''' Background extraction for initial time slice'''
     data_new = deepcopy(data)           #make copy of data
@@ -155,9 +166,13 @@ def initialFindFITS(data, detect_thresh):
     return positions
 
 def getDark(filepath, numOfDarks, gain):
-    """ get median dark image from a set of darks (length =  numOfDarks) from filepath
-    input: dark image directory (path object), number of dark images to take median from (int), gain level ('low' or 'high')
-    return: median dark image"""    
+    """ 
+    Get median dark image from a set of darks (length =  numOfDarks) from filepath
+    
+        Parameters: 
+            Dark image directory (path object), number of dark images to take median from (int), gain level ('low' or 'high')
+        Return: 
+            Median dark image"""    
         
     #for rcd files:
     '''get list of images to combine'''
@@ -172,9 +187,13 @@ def getDark(filepath, numOfDarks, gain):
     return darkMed
 
 def getDateTime(folder):
-    """function to get date and time of folder, then make into python datetime object
-    input: filepath 
-    returns: datetime object"""
+    """
+    Function to get date and time of folder, then make into python datetime object
+    
+        Parameters: 
+            Filepath 
+        Returns: 
+            Datetime object"""
     
     #time is in format ['hour', 'minute', 'second', 'msec']
     folderDate = str(folder.name).split('_')[0]                 #get date folder was created from its name
@@ -189,10 +208,13 @@ def getDateTime(folder):
     return folderDatetime
 
 def makeDarkSet(filepath, numOfDarks, savefolder, gain):
-    """ get set of median-combined darks for entire night that are sorted and indexed by time,
-    these are saved to disk and loaded in when needed
-    input: filepath (string) to dark image directories, number of darks images to combine for master
-    return: array with dark image times and filepaths to saved darks on disk"""
+    """ 
+    Get set of median-combined darks for entire night that are sorted and indexed by time, these are saved to disk and loaded in when needed
+    
+        Parameters: 
+            Filepath (string) to dark image directories, number of darks images to combine for master
+        Return: 
+            Array with dark image times and filepaths to saved darks on disk"""
     
     darkFolderList = [f for f in filepath.iterdir() if f.is_dir()]   #list of dark folders
     
@@ -230,9 +252,13 @@ def makeDarkSet(filepath, numOfDarks, savefolder, gain):
     return darkList
 
 def chooseDark(obs_folder, MasterDarkList):
-    """ choose correct master dark by comparing time to the observation time
-    input: filepath to current minute directory, 2D numpy array of [dark datetimes, dark filepaths]
-    returns: dark image that is closest in time to observation"""
+    """ 
+    Choose correct master dark by comparing time to the observation time
+    
+        Parameters: 
+            Filepath to current minute directory, 2D numpy array of [dark datetimes, dark filepaths]
+        Returns: 
+            Dark image that is closest in time to observation"""
     
     #current hour of observations
     current_dt = getDateTime(obs_folder)
@@ -253,15 +279,13 @@ def fieldCoords(fieldname):
     """
     Get field coordinates based on field index
 
-    Parameters
-    ----------
-    fieldname : str
-        Name of the field.
+        Parameters:
+            Fieldname : str
+                Name of the field.
 
-    Returns
-    -------
-    coords : array
-        A 1D array of field coordinates [Ra, dec].
+        Return:
+            coords : array
+                A 1D array of field coordinates [Ra, dec].
 
     """
 

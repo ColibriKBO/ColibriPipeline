@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul  8 14:51:30 2021
-Update: Jan. 24, 2022 11:20
-
-@author: Rachel A Brown
+Author(s):
+    Rachel A. Brown
+Created:
+    Thu Jul  8 14:51:30 2021
+Updated: 
+    Jan. 24, 2022 11:20
+    Thu May 23 2024 by Toni C. Almeida
+Usage: 
+    Functions to analyze WCS transform from astrometry.net header
+Updates:
+    Small changes on comments to improve documentation
 """
 
 import astropy
@@ -17,9 +24,14 @@ from astropy import wcs
 #--------------------------------functions------------------------------------#
 
 def getRAdec(transform, star_pos_file, savefile):
-    '''get WCS transform from astrometry.net header
-    input: astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
-    returns: coordinate transform'''
+    '''
+    Get WCS transform from astrometry.net header
+    
+        Parameters: 
+            Astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
+        Returns: 
+            Coordinate transform
+    '''
     
     #load in transformation information
 #    transform_im = fits.open(transform_file)
@@ -47,9 +59,14 @@ def getRAdec(transform, star_pos_file, savefile):
 
 
 def getRAdec_arrays(transform, star_pos):
-    '''get WCS transform from astrometry.net header
-    input: astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
-    returns: coordinate transform'''
+    '''
+    Get WCS transform from astrometry.net header
+    
+        Parameters: 
+            Astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
+        Returns: 
+            Coordinate transform
+    '''
     
     #load in transformation information
 #    transform_im = fits.open(transform_file)
@@ -65,9 +82,13 @@ def getRAdec_arrays(transform, star_pos):
 
 
 def getRAdecfromFile(transform_file, star_pos_file, savefile):
-    '''get WCS transform from astrometry.net header
-    input: astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
-    returns: coordinate transform'''
+    '''
+    Get WCS transform from astrometry.net header
+    
+        Parameters: 
+            Astrometry.net output file (path object), star position file (.npy path object), filename to save to (path object)
+        Returns: 
+            Coordinate transform'''
     
     #load in transformation information
     transform_im = fits.open(transform_file)
@@ -95,9 +116,13 @@ def getRAdecfromFile(transform_file, star_pos_file, savefile):
 
 
 def getXY(transform_file, star_pos_file, savefile=None):
-    '''get WCS transform ([RA,dec] -> [X,Y]) from astrometry.net header
-    input: astrometry.net output file, star position file (.npy)
-    returns: coordinate transform'''
+    '''
+    Get WCS transform ([RA,dec] -> [X,Y]) from astrometry.net header
+    
+        Parameters: 
+            Astrometry.net output file, star position file (.npy)
+        Returns: 
+            Coordinate transform'''
     
     #load in transformation information
     transform_im = fits.open(transform_file)
@@ -124,9 +149,13 @@ def getXY(transform_file, star_pos_file, savefile=None):
 
 
 def getRAdecSingle(transform, star_pos):
-    '''get WCS transform from astrometry.net header for a single star
-    input: astrometry.net transformation (object), star position (X, Y)
-    returns: star position in RA/dec'''
+    '''
+    Get WCS transform from astrometry.net header for a single star
+        
+        Parameters: 
+            Astrometry.net transformation (object), star position (X, Y)
+        Returns: 
+            Star position in RA/dec'''
         
     #get transformation
     star_pos = np.array([[star_pos[0], star_pos[1]]])
@@ -138,9 +167,13 @@ def getRAdecSingle(transform, star_pos):
     return world[0]
 
 def getXYSingle(transform, star_pos):
-    '''get WCS transform from astrometry.net header for a single star
-    input: astrometry.net transformation (object), star position (RA, dec)
-    returns: star position in X/Y'''
+    '''
+    Get WCS transform from astrometry.net header for a single star
+    
+        Parameters: 
+            Astrometry.net transformation (object), star position (RA, dec)
+        Returns: 
+            Star position in X/Y'''
         
     #get transformation
     star_pos = np.array([[star_pos[0], star_pos[1]]])

@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Nov 25 14:14:16 2021
-look at the output files from astrometry.net, compare star finding
-@author: Rachel A. Brown
+Author(s):
+    Rachel A. Brown
+Created:
+    Thu Nov 25 14:14:16 2021
+Updated:
+    Thu May 23 2024 by Toni C. Almeida
+Usage:
+    Look at the output files from astrometry.net, compare star finding
+Updates: 
+    Small changes on comments to improve documentation. Toni C. Almeida
 """
 #imports
 import pathlib
@@ -17,9 +24,17 @@ import getRAdec
 
 
 def get_results(filename_base):
-    '''read in files form astrometry.net output and put data into variables, also read in xy-radec file
-    input: base name of the file that was analyzed
-    returns: headers and data for astrometry.net files'''
+    """
+    Function to read in files from astrometry.net output and put data into variables, also read in xy-radec file
+    
+        Parameters: 
+            Base name of the file that was analyzed
+    
+        Returns: 
+            Headers and data for astrometry.net files
+                Wcs_header, newimage_header, newimage_data, axy_header, axy_data, rdls_header, rdls_data, corr_header, corr_data
+
+    """
     
 
     axy = fits.open(sorted(save_path.glob('*' + image_index + '_axy_' + order + '.fits'))[0])
@@ -56,11 +71,15 @@ def get_results(filename_base):
     return wcs_header, newimage_header, newimage_data, axy_header, axy_data, rdls_header, rdls_data, corr_header, corr_data
 
 def tableMatch(df1, df2, key1A, key1B, key2A, key2B, tolA, tolB):
-    '''matches two data frames based on 2 sets of column label keys
-    input: data frame to match to, data frame to match from, first col name to match from 1st df, 
-    2nd col name to match from 1st df, 1st col name to match from 2nd df, 2nd col name from 2nd df,
-    match tolerance for 1st col, match tolerance for 2nd col
-    returns: dataframe based off the 2nd df with all rows that match within tolerance'''
+    '''
+    Matches two data frames based on 2 sets of column label keys
+    
+        Parameters: 
+            data frame to match to, data frame to match from, first col name to match from 1st df, 2nd col name to match from 1st df, 1st col name to match from 2nd df, 2nd col name from 2nd df, match tolerance for 1st col, match tolerance for 2nd col
+    
+        Returns: 
+            dataframe based off the 2nd df with all rows that match within tolerance
+    '''
     
     #list of matching indices
     matching_inds = []
@@ -86,10 +105,14 @@ def tableMatch(df1, df2, key1A, key1B, key2A, key2B, tolA, tolB):
         
         
 def match_XY(ast, colibri, SR):
-    '''matches two data frames based on X, Y 
-    input: pandas dataframe of star data with Gaia magnitudes {x, y, RA, dec, 3 magnitudes} 
-    dataframe of star data with SNR {x, y, med, std, snr}
-    returns: original star data frame with SNR data added where a match was found'''
+    '''
+    Matches two data frames based on X, Y 
+
+        Parameters: 
+            Pandas dataframe of star data with Gaia magnitudes {x, y, RA, dec, 3 magnitudes} dataframe of star data with SNR {x, y, med, std, snr}
+        Returns: 
+            Original star data frame with SNR data added where a match was found
+    '''
     
     match_counter = 0
     
@@ -132,9 +155,14 @@ def match_XY(ast, colibri, SR):
     
 
 def plotAstVSColibriXY_diff(matched):
-    '''makes plot of X difference vs Y differences for Colibri and ast.net transformed index
-    input: dataframe containing columns 'x_diff' and 'y_diff'
-    returns: displays and saves plot of xdifferences and y differences, prints out mean and stddev'''
+    '''
+    Makes plot of X difference vs Y differences for Colibri and ast.net transformed index
+    
+        Parameters:
+            Dataframe containing columns 'x_diff' and 'y_diff'
+        Returns: 
+            Displays and saves plot of xdifferences and y differences, prints out mean and stddev
+    '''
     
     #calculate sigma clipped mean difference for X and Y
     clip_sigma = 2
@@ -172,9 +200,14 @@ def plotAstVSColibriXY_diff(matched):
     plt.close()
     
 def plotAstFieldvsIndexXY_diff(corr):
-    '''makes plot of (X, Y) differences for ast.net measured ('field') and expected ('index') coords, calculates mean and stddev
-    input: output correlation table from ast.net containing both field and index star columns
-    returns: displays and saves plot of x differences and y differences, prints out mean and stddev'''
+    '''
+    Makes plot of (X, Y) differences for ast.net measured ('field') and expected ('index') coords, calculates mean and stddev
+    
+        Parameters: 
+            Output correlation table from ast.net containing both field and index star columns
+        Returns: 
+            Displays and saves plot of x differences and y differences, prints out mean and stddev
+    '''
     
     #calculate difference ('field' = measured, 'index' = expected from transformed catalog)
     corr_Xdiff = corr['field_x'] - corr['index_x']
@@ -211,9 +244,14 @@ def plotAstFieldvsIndexXY_diff(corr):
     plt.close()
     
 def plotAstFieldVSColibriXY_diff(matched):
-    '''makes plot of X difference vs Y differences, calculates mean and stddev
-    input: dataframe containing columns 'x_diff' and 'y_diff'
-    returns: displays and saves plot of xdifferences and y differences, prints out mean and stddev'''
+    '''
+    Makes plot of X difference vs Y differences, calculates mean and stddev
+    
+        Parameters: 
+            Dataframe containing columns 'x_diff' and 'y_diff'
+        Returrns: 
+            Displays and saves plot of xdifferences and y differences, prints out mean and stddev
+    '''
     
    # x_mean = np.mean(matched['x_diff'])
     Xdiff = matched['field_x'] - (matched['colibri_X'] + 1)
@@ -248,9 +286,14 @@ def plotAstFieldVSColibriXY_diff(matched):
     plt.close()
 
 def plotAstVSColibriRAdec_diff(matched):
-    '''makes plot of RA difference vs dec differences for Colibri transformed and ast.net index
-    input: dataframe containing columns 'ra_diff' and 'dec_diff'
-    returns: displays and saves plot of xdifferences and y differences, prints out mean and stddev'''
+    '''
+    Makes plot of RA difference vs dec differences for Colibri transformed and ast.net index
+    
+        Parameters: 
+            Dataframe containing columns 'ra_diff' and 'dec_diff'
+        Returns: 
+            Displays and saves plot of xdifferences and y differences, prints out mean and stddev
+    '''
     
     #calculate sigma clipped mean difference for RA and dec
     clip_sigma = 2
@@ -289,9 +332,14 @@ def plotAstVSColibriRAdec_diff(matched):
     plt.close()
     
 def plotAstFieldvsIndexRAdec_diff(corr):
-    '''makes plot of (RA, dec) differences for ast.net transformed measured ('field') and catalog ('index') coords, calculates mean and stddev
-    input: output correlation table from ast.net containing both field and index star columns
-    returns: displays and saves plot of RA differences and dec differences, prints out mean and stddev'''
+    '''
+    Makes plot of (RA, dec) differences for ast.net transformed measured ('field') and catalog ('index') coords, calculates mean and stddev
+    
+        Parameters: 
+            Output correlation table from ast.net containing both field and index star columns
+        Returns: 
+            Displays and saves plot of RA differences and dec differences, prints out mean and stddev
+    '''
     
     #calculate difference ('field' = transformed measured, 'index' = expected from catalog)
     corr_RAdiff = corr['field_ra'] - corr['index_ra']
@@ -331,9 +379,14 @@ def plotAstFieldvsIndexRAdec_diff(corr):
 
 
 def plotXYArrows(matched):
-    '''makes plot of (X, Y) differences between Colibri SEP and ast.net index as arrows on XY plane
-    input: dataframe containing columns of X, Y corrds, X, Y differences
-    returns: displays and saves arrow plot'''
+    '''
+    Makes plot of (X, Y) differences between Colibri SEP and ast.net index as arrows on XY plane
+    
+        Parameters: 
+            Dataframe containing columns of X, Y corrds, X, Y differences
+        Returns: 
+            Displays and saves arrow plot
+    '''
     
     arrow_scale = 0.04
     plt.figure(figsize=(10, 10), dpi=100)
@@ -360,9 +413,14 @@ def plotXYArrows(matched):
     
 
 def plotRAdecArrows(matched):
-    '''makes plot of (RA, dec) differences between Colibri transformed SEP and ast.net index as arrows on celestial plane
-    input: dataframe containing columns of RA, dec coords, RA, dec differences
-    returns: displays and saves arrow plot'''
+    '''
+    Makes plot of (RA, dec) differences between Colibri transformed SEP and ast.net index as arrows on celestial plane
+    
+        Parameters: 
+            Dataframe containing columns of RA, dec coords, RA, dec differences
+        Returns: 
+            Displays and saves arrow plot
+    '''
     
     arrow_scale = 0.04
     plt.figure(figsize=(10, 10), dpi=100)
@@ -387,9 +445,14 @@ def plotRAdecArrows(matched):
     plt.close()
     
 def plotImage(image_data):
-    '''make plot of colibri image data in grayscale with colorbar, including vectors
-    input: filename
-    returns: saves plot to disk'''
+    '''
+    Make plot of colibri image data in grayscale with colorbar, including vectors
+    
+        Parameters: 
+            Filename
+        Returns: 
+            Saves plot to disk
+    '''
         
     arrow_scale = 0.04
         
@@ -443,10 +506,14 @@ def npy2text():
                 #filehandle.write('%f %f\n' %(line[0], line[1]))
 
 def matchColibriAstnet(matched, starTable, SR):
-    '''matches astrometry table with colibri star table
-    input: pandas dataframe of star data with Gaia magnitudes {x, y, RA, dec, 3 magnitudes} 
-    dataframe of star data with SNR {x, y, med, std, snr}
-    returns: original star data frame with SNR data added where a match was found'''
+    '''
+    Matches astrometry table with colibri star table
+    
+        Parameters: 
+            Pandas dataframe of star data with Gaia magnitudes {x, y, RA, dec, 3 magnitudes} dataframe of star data with SNR {x, y, med, std, snr}
+        Returns: 
+            Original star data frame with SNR data added where a match was found
+    '''
     
     match_counter = 0
     
@@ -483,9 +550,14 @@ def matchColibriAstnet(matched, starTable, SR):
     return matched
 
 def plotGaiaVSindexCoords(matched):
-    '''makes plot of Gaia catalog coords vs ast.net catalog coords
-    input: dataframe containing columns of Gaia RA/dec and ast.net index RA/dec
-    returns: displays and saves plot of RA differences and dec differences'''
+    '''
+    Makes plot of Gaia catalog coords vs ast.net catalog coords
+    
+        Parameters: 
+            Dataframe containing columns of Gaia RA/dec and ast.net index RA/dec
+        Returns: 
+            Displays and saves plot of RA differences and dec differences
+    '''
     
     #get RA & dec differences
     RAdiff = (matched['Gaia_RA'] - matched['index_ra'])*np.cos(np.radians(matched['Gaia_dec']))
@@ -523,9 +595,14 @@ def plotGaiaVSindexCoords(matched):
     plt.close()  
     
 def plotAstVSColibriSNR(matched):
-    '''make plot comparing SNR from ast.net and SEP
-    input: dataframe containing columns of Flux, Background from ast.net, and SNR from Colibri
-    returns: saves and displays plot of ast.net SNR vs Colibri SNR'''
+    '''
+    Make plot comparing SNR from ast.net and SEP
+    
+        Parameters: 
+            Dataframe containing columns of Flux, Background from ast.net, and SNR from Colibri
+        Returns: 
+            Saves and displays plot of ast.net SNR vs Colibri SNR
+    '''
     
     #make figure
     plt.figure(figsize = (10,10), dpi = 100)

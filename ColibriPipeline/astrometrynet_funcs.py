@@ -1,12 +1,17 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr  8 15:29:02 2022
-Updated: Thurs. June 23, 2022
-
-@author: Rachel A. Brown
-
-Script to make use of astrometry.net API - see online docs
+Author(s):
+    Rachel A. Brown
+Created:
+    Fri Apr 8 15:29:02 2022
+Updated: 
+    Thu June 23 2022
+    Thu May 23 2024 by Toni C. Almeida
+Usage:
+    Script to make use of astrometry.net API - see online docs
+Updates: 
+    Small changes on comments to improve documentation
 """
 
 import time, subprocess, os
@@ -15,9 +20,14 @@ from astropy.io.fits import Header
 #--------------------------------functions------------------------------------#
 
 def getSolution(image_file, save_file, order):
-    '''send request to solve image from astrometry.net
-    input: path to the image file to submit, filepath to save the WCS solution header to, order of soln
-    returns: WCS solution header'''
+    '''
+    Send request to solve image from astrometry.net
+    
+        Parameters: 
+            Path to the image file to submit, filepath to save the WCS solution header to, order of soln
+        Returns: 
+            WCS solution header
+    '''
     from astroquery.astrometry_net import AstrometryNet
     #astrometry.net API
     ast = AstrometryNet()
@@ -34,12 +44,14 @@ def getSolution(image_file, save_file, order):
 
 def getLocalSolution(image_file, save_file, order):
     """
-    Astrometry.net must be installed locally to use this function. It installs under WSL.
-    To use the local solution, you'll need to modify call to the function somewhat.
-    This function will write the new fits file w/ plate solution to a file with the name save_file in the
-    tmp directory on the d: drive.
-    The function will return wcs_header. Alternatively, you could comment out those lines and read it from
+    Astrometry.net must be installed locally to use this function. It installs under WSL. To use the local solution, you'll need to modify call to the function somewhat. This function will write the new fits file w/ plate solution to a file with the name save_file in the
+    tmp directory on the d: drive. The function will return wcs_header. Alternatively, you could comment out those lines and read it from
     the pipeline.
+    
+        Parameters: 
+            Path to the image file to submit, filepath to save the WCS solution header to, order of soln
+        Returns: 
+            WCS solution header
     """
     try:
         # -D to specify write directory, -o to specify output base name, -N new-fits-filename

@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 20 11:12:59 2021
-Update: Jan. 24, 2022, 11:45
-
-@author: Rachel A. Brown
-
-for looking at Colibri pipeline output files
+Author(s):
+    Rachel A. Brown
+Created:
+    Tue Apr 20 11:12:59 2021
+Updated: 
+    Jan 24 2022 11:45
+    Thu May 23 2024 by Toni C. Almeida
+Usage:
+    For looking at Colibri pipeline output files
+Updates: 
+    Small changes on comments to improve documentation. Toni C. Almeida
 """
 
 
@@ -15,9 +20,14 @@ from glob import glob
 
 
 def read_plot(filename):
-    '''reads .npy file and makes plot of star positions
-    input: path to .npy file (path object)
-    returns: shows (or saves) plot of star positions found in file'''
+    '''
+    Reads .npy file and makes plot of star positions
+    
+        Parameters: 
+            Path to .npy file (path object)
+        Returns: 
+            Shows (or saves) plot of star positions found in file
+    '''
     
 
     star_pos1 = np.load(filename)
@@ -41,9 +51,14 @@ def read_plot(filename):
 
 
 def to_ds9(filename, savefile):
-    '''make .txt file of star coords suitable for plotting in ds9
-    input: filepath containing coords (path object), filepath to save new format to (path object)
-    returns: saved file'''
+    '''
+    Make .txt file of star coords suitable for plotting in ds9
+    
+        Parameters: 
+            Filepath containing coords (path object), filepath to save new format to (path object)
+        Returns: 
+            Saved file
+    '''
     
     star_pos = np.load(filename)
     

@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jun 21 10:18:43 2022
-
-@author: Roman A.
+Author(s):
+    Roman A.
+Created:
+    Tue Jun 21 10:18:43 2022
+Updated:
+    Thu May 23 2024 by Toni C. Almeida
+Usage:
+    Calculate read noise from a given image
+Updates: 
+    Small changes on comments to improve documentation. Toni C. Almeida
 """
 
 

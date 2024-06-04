@@ -1,10 +1,17 @@
 """
-Filename:   colibri_image_reader.pyx
-Author(s):  Peter Quigley
-Contact:    pquigley@uwo.ca
-Created:    Tue Sep 27 10:25:21 2022
-Updated:    Tue Sep 27 10:25:21 2022
-    
+Filename:   
+	colibri_image_reader.pyx
+Author(s):  
+	Peter Quigley
+Contact:    
+	pquigley@uwo.ca
+Created:    
+	Tue Sep 27 10:25:21 2022
+Updated:    
+	Tue Sep 27 10:25:21 2022
+	Thu May 23 2024 by Toni C. Almeida
+Updates:
+	Modified comments to improve documentation. Toni C. Almeida
 Usage: import colibri_image_reader as cir
 """
 
@@ -39,11 +46,11 @@ def getDateTime(folder, obs_date):
     Function to get date and time of folder, then make into python datetime object
     
         Parameters:
-            folder (Path): Filepath object to the folder
+            Folder (Path): Filepath object to the folder
             obs_date (datetime): datetime object of the observing date
             
         Returns:
-            folderDatetime (datetime): datetime object of folder date and time
+            FolderDatetime (datetime): datetime object of folder date and time
     """
 
     # Extract time information from Path object ['hour', 'min', 'sec', 'msec']
@@ -69,11 +76,11 @@ def readRCD(filename):
     Reads .rcd file
     
         Parameters:
-            filename (Path): Path to .rcd file
+            Filename (Path): Path to .rcd file
             
         Returns:
-            table (arr): Table with image pixel data
-            timestamp (str): Timestamp of observation
+            Table (arr): Table with image pixel data
+            Timestamp (str): Timestamp of observation
     """
 
     ## Type definitions
@@ -97,11 +104,11 @@ def readFITS(filename):
     Reads .fits file
     
         Parameters:
-            filename (Path): Path to .fits file
+            Filename (Path): Path to .fits file
             
         Returns:
-            table (arr): Table with image pixel data
-            timestamp (str): Timestamp of observation
+            Table (arr): Table with image pixel data
+            Timestamp (str): Timestamp of observation
     """
     
     ## Type definitions
@@ -126,13 +133,13 @@ def importFramesFITS(list image_paths,
     Assumes that this has already been converted from .rcd files and dark subtracted!
     
         Parameters:
-            imagePaths (list): List of image paths to read in
-            startFrameNum (int): Starting frame number
-            numFrames (int): How many frames to read in
+            ImagePaths (list): List of image paths to read in
+            StartFrameNum (int): Starting frame number
+            NumFrames (int): How many frames to read in
             
         Returns:
-            image_array (arr): Image data
-            image_times (list): Header times of these images
+            Image_array (arr): Image data
+            Image_times (list): Header times of these images
     """
 
     ## Type definitions
@@ -197,14 +204,14 @@ def importFramesRCD(image_paths,
     Reads in frames from .rcd files starting at a specific frame.
     
         Parameters:
-            image_paths (Path): pathlib object of image paths to read in
-            start_frame (int): Starting frame number
-            num_frames (int): How many frames to read in
-            dark (arr): 2D array of fluxes from dark image
+            Image_paths (Path): pathlib object of image paths to read in
+            Start_frame (int): Starting frame number
+            Num_frames (int): How many frames to read in
+            Sark (arr): 2D array of fluxes from dark image
             
         Returns:
-            img_array (arr): Image data
-            img_times (list): Header times of these images
+            Img_array (arr): Image data
+            Img_times (list): Header times of these images
     """
     
     ## Type definitions
@@ -303,12 +310,11 @@ def testGPSLock(filepath):
     """
     Check to see if there was a valid GPS lock established for the given image.
 
-    Args:
-        filepath (str/Path): Full filepath to the RCD image to be checked.
+        Parameters:
+            Filepath (str/Path): Full filepath to the RCD image to be checked.
 
-    Returns:
-        gpsLock (bool): Returns true/false on whether a GPS lock was
-                        established for the given image
+        Returns:
+            GpsLock (bool): Returns true/false on whether a GPS lock was established for the given image
 
     """
     cdef int ControlBlock2
@@ -340,16 +346,16 @@ def split_images(np.ndarray[UI16, ndim=1] data,
     Function to extract either the low- or high-gain image from the data
     
         Parameters:
-            data (arr): 1D array of combined image data
+            Data (arr): 1D array of combined image data
             X_PIX (int): Width of the image in pixels
             Y_PIX (int): Depth of the image in pixels
             
             Keyword Only:
-            gain_high (bool): Gain keyword (where high gain = True)
+            Gain_high (bool): Gain keyword (where high gain = True)
                 
         Returns:
-            highgain_image (arr): Extracted high-gain image
-            lowgain_image (arr): Extracted low-gain image
+            Highgain_image (arr): Extracted high-gain image
+            Lowgain_image (arr): Extracted low-gain image
     """
     
     ## Type definitions
@@ -370,12 +376,12 @@ def getSizeFITS(imagePaths):
     Get number of images in a data directory and image dimensions (.fits only)
     
         Parameters:
-            imagePaths (list): List of all image filepaths in data directory
+            ImagePaths (list): List of all image filepaths in data directory
         
         Returns:
-            width (int): Width of .fits images
-            height (int): Height of .fits images
-            frames (int): Number of images in a data directory
+            Width (int): Width of .fits images
+            Height (int): Height of .fits images
+            Frames (int): Number of images in a data directory
     """
     
     '''get number of images in directory'''
@@ -390,13 +396,13 @@ def getSizeRCD(image_paths): #TODO: consider getting rid of this function
     Optionally get this from the RCD header.
     
         Parameters:
-            image_paths (list/Path): List/pathlib Path object of all image
+            Image_paths (list/Path): List/pathlib Path object of all image
                                      filepaths in data directory
         
         Returns:
-            width (int): Width of .fits images
-            height (int): Height of .fits images
-            frames (int): Number of images in a data directory
+            Width (int): Width of .fits images
+            Height (int): Height of .fits images
+            Frames (int): Number of images in a data directory
     """
 
     cdef int width,height,frames
@@ -420,15 +426,15 @@ def makeMasterDark(dirpath,
     Get median dark image from a set of darks
     
         Parameters:
-            dirpath (Path): pathlib Path object for individual dark image directories
-            num_darks (int): Number of dark images to take median of
+            Dirpath (Path): pathlib Path object for individual dark image directories
+            Num_darks (int): Number of dark images to take median of
             
             Keyword Only:
             RCD_files (bool): Using RCD files (True) or FITS files (False)
-            gain_high (bool): Gain keyword (where high gain = True)
+            Gain_high (bool): Gain keyword (where high gain = True)
             
         Return:
-            darkMed (arr): Median dark image
+            DarkMed (arr): Median dark image
     """
     
     ## Type definitions
@@ -459,14 +465,14 @@ def makeDarkSet(dirpath,
     !Note: Not currently sorting by time
     
         Parameters:
-            dirpath (Path): Filepath to dark image directory
-            base_path (Path): pathlib.Path object to directory containing data
+            Dirpath (Path): Filepath to dark image directory
+            Base_path (Path): pathlib.Path object to directory containing data
                               and archive directories
-            obs_date (datetime/str): The observing date
-            num_darks (int): Number of dark images to combine for master
+            Obs_date (datetime/str): The observing date
+            Num_darks (int): Number of dark images to combine for master
             
         Return:
-            dark_arr (arr): Dark image times and filepaths to saved darks
+            Dark_arr (arr): Dark image times and filepaths to saved darks
     """
 
     ## Type definitions
@@ -520,12 +526,12 @@ def chooseDark(obs_folder,masterdark_list, obs_date):
     Choose correct master dark by comparing time to the observation time
     
         Parameters:
-            obs_folder (Path): Filepath to current minute directory
-            masterdark_list (arr): 2D array of [dark datetimes, dark filepaths]
-            obs_date (datetime): datetime object of current minute directory
+            Obs_folder (Path): Filepath to current minute directory
+            Masterdark_list (arr): 2D array of [dark datetimes, dark filepaths]
+            Obs_date (datetime): datetime object of current minute directory
             
         Returns:
-            best_dark (bit): Bitmap of best master dark image
+            Best_dark (bit): Bitmap of best master dark image
     """
     
     ## Type definitions
@@ -569,18 +575,18 @@ def stackImages(folder,
     Make median combined image of first numImages in a directory
     
         Parameters:
-            folder (str): Directory of images to be stacked
-            save_path (str): Directory to save stacked image in
-            start_frame (int): Image starting index
-            num_frames (int): Number of images to combine
-            dark (arr): 2D flux array from the dark image
+            Folder (str): Directory of images to be stacked
+            Save_path (str): Directory to save stacked image in
+            Start_frame (int): Image starting index
+            Num_frames (int): Number of images to combine
+            Sark (arr): 2D flux array from the dark image
             
             Keyword Only:
             RCDfiles (bool): Reading .rcd files directly, rather than converting
-            gain_high (bool): gain level for .rcd files
+            Gain_high (bool): gain level for .rcd files
             
         Returns:
-            imageMed (arr): Median combined, dark-subtracted image for star
+            ImageMed (arr): Median combined, dark-subtracted image for star
                             detection
     """
 
