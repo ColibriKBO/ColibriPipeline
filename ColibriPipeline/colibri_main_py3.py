@@ -272,10 +272,10 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
         return minuteDir.name, 0, 0
     
     ## Check if there is a valid GPS lock
-    print(datetime.datetime.now(), "Checking GPS lock for ", minuteDir.name)
-    if not cir.testGPSLock(imagePaths[0]):
-        print(datetime.datetime.now(), "No GPS Lock established, skipping...")
-        return minuteDir.name, 0, 0
+    # print(datetime.datetime.now(), "Checking GPS lock for ", minuteDir.name)
+    # if not cir.testGPSLock(imagePaths[0]):
+    #     print(datetime.datetime.now(), "No GPS Lock established, skipping...")
+    #     return minuteDir.name, 0, 0
     
 
 ###########################
