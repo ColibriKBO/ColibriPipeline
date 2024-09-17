@@ -97,7 +97,7 @@ def readRCD(filename):
     # Format the modification time without the 'Z'
     formatted_mod_time = file_mod_time.strftime('%Y-%m-%dT%H:%M:%S.') + f'{file_mod_time.microsecond * 1000:09d}'
 
-    return table, timestamp, formatted_mod_time
+    return table, formatted_mod_time
 
 
 def readFITS(filename):
