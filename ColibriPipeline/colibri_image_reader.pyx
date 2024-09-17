@@ -66,7 +66,7 @@ def getDateTime(folder, obs_date):
 @cython.wraparound(False)
 def readRCD(filename):
     """
-    Reads .rcd file
+    Reads .rcd file and Windows file modification time.
     
         Parameters:
             filename (Path): Path to .rcd file
@@ -74,6 +74,7 @@ def readRCD(filename):
         Returns:
             table (arr): Table with image pixel data
             timestamp (str): Timestamp of observation
+            file_mod_time (str): File modification time from the system in ISO format
     """
 
     ## Type definitions
@@ -81,15 +82,22 @@ def readRCD(filename):
 
     ## Open .rcd file and extract the observation timestamp and data
     with open(filename, 'rb') as fid:
-        # Timestamp
-        fid.seek(152,0)
+        # Timestamp from file
+        fid.seek(152, 0)
         timestamp = fid.read(29).decode('utf-8')
 
         # Load data portion of file
-        fid.seek(384,0)
+        fid.seek(384, 0)
         table = np.fromfile(fid, dtype=np.uint8, count=12582912)
 
-    return table, timestamp
+    # Get the file modification time from the Windows system
+    file_mod_time_epoch = os.path.getmtime(filename)
+    file_mod_time = datetime.utcfromtimestamp(file_mod_time_epoch)
+
+    # Format the modification time without the 'Z'
+    formatted_mod_time = file_mod_time.strftime('%Y-%m-%dT%H:%M:%S.') + f'{file_mod_time.microsecond * 1000:09d}'
+
+    return table, timestamp, formatted_mod_time
 
 
 def readFITS(filename):
