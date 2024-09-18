@@ -83,8 +83,8 @@ def readRCD(filename):
     ## Open .rcd file and extract the observation timestamp and data
     with open(filename, 'rb') as fid:
         # Timestamp from file
-        fid.seek(152, 0)
-        timestamp = fid.read(29).decode('utf-8')
+        # fid.seek(152, 0)
+        # timestamp = fid.read(29).decode('utf-8')
 
         # Load data portion of file
         fid.seek(384, 0)
@@ -92,7 +92,7 @@ def readRCD(filename):
 
     # Get the file modification time from the Windows system
     file_mod_time_epoch = os.path.getmtime(filename)
-    file_mod_time = datetime.utcfromtimestamp(file_mod_time_epoch)
+    file_mod_time = datetime.datetime.fromtimestamp(file_mod_time_epoch, tz=datetime.timezone.utc)
 
     # Format the modification time without the 'Z'
     formatted_mod_time = file_mod_time.strftime('%Y-%m-%dT%H:%M:%S.') + f'{file_mod_time.microsecond * 1000:09d}'
