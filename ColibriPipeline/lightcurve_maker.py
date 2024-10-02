@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import os
 import gc
 import time as timer
+from colibri_image_reader import readRCD
 
 def stackImages(folder, save_path, startIndex, numImages, dark, gain):
     """make median combined image of first numImages in a directory
@@ -447,30 +448,30 @@ def split_images(data,pix_h,pix_v,gain):
 
     return image
  
-# Function to read RCD file data
-def readRCD(filename):
+# # Function to read RCD file data
+# def readRCD(filename):
 
-    hdict = {}
+#     hdict = {}
 
-    with open(filename, 'rb') as fid:
+#     with open(filename, 'rb') as fid:
 
-        # Go to start of file
-        fid.seek(0,0)
+#         # Go to start of file
+#         fid.seek(0,0)
 
-        # Serial number of camera
-        fid.seek(63,0)
-        hdict['serialnum'] = readxbytes(fid, 9)
+#         # Serial number of camera
+#         fid.seek(63,0)
+#         hdict['serialnum'] = readxbytes(fid, 9)
 
-        # Timestamp
-        fid.seek(152,0)
-        hdict['timestamp'] = readxbytes(fid, 29).decode('utf-8')
+#         # Timestamp
+#         fid.seek(152,0)
+#         hdict['timestamp'] = readxbytes(fid, 29).decode('utf-8')
 
-        # Load data portion of file
-        fid.seek(384,0)
+#         # Load data portion of file
+#         fid.seek(384,0)
 
-        table = np.fromfile(fid, dtype=np.uint8, count=12582912)
+#         table = np.fromfile(fid, dtype=np.uint8, count=12582912)
 
-    return table, hdict
+#     return table, hdict
 
 def importFramesRCD(parentdir, filenames, start_frame, num_frames, dark, gain):
     """ reads in frames from .rcd files starting at frame_num
@@ -493,8 +494,8 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, dark, gain):
     for filename in files_to_read:
 
 
-        data, header = readRCD(filename)
-        headerTime = header['timestamp']
+        data, headerTime = readRCD(filename)
+        # headerTime = header['timestamp']
 
         images = nb_read_data(data)
         image = split_images(images, hnumpix, vnumpix, imgain)
