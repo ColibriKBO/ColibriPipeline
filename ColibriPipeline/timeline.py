@@ -1363,7 +1363,7 @@ if __name__ == '__main__':
     ax5.set_ylabel("Number of Events")
     formatter = ScalarFormatter()
     formatter.set_scientific(False)
-    ax5.yaxis.set_ylim(bottom=0)
+    ax5.set_ylim(bottom=0)
     ax5.yaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid(which='both',axis='x')
 
