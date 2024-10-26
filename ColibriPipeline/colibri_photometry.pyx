@@ -20,6 +20,7 @@ from copy import deepcopy
 from astropy.io import fits
 from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
+from scipy.signal import convolve
 
 # Custom Script Imports
 
@@ -510,6 +511,7 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
    
     
     '''perform checks on data before proceeding'''
+
     
     FramesperMin = 2400      #ideal number of frames in a directory (1 minute)
     minSNR = 5               #median/stddev limit to look for detections
@@ -530,89 +532,39 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     if len(light_curve) < minLightcurveLen:
         print(f"Light curve too short: star {num}")
         return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  
-    
-    
-    # reject tracking failures
-    # Depreciated: this doesn't actually do anything... Consider revising to compare only first and last frame
-    #if abs(np.mean(light_curve[:FramesperMin]) - np.mean(light_curve[-FramesperMin:])) > np.std(light_curve[:FramesperMin]):
-    #    print(f"Tracking failure: star {num}")
-    #    return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan 
-    
 
-    #uncomment to save light curve of each star (doesn't look for dips)
-    #return num, light_curve
 
 
     '''convolve light curve with ricker wavelet kernel'''
-    
     #will throw error if try to normalize (sum of kernel too close to 0)
-    conv = convolve_fft(light_curve, kernel, normalize_kernel=False)    #convolution of light curve with Ricker wavelet
+    conv = convolve(light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet
     minLoc = np.argmin(conv)    #index of minimum value of convolution
     minVal = np.min(conv)          #minimum of convolution
-    #TODO: The problems with Rocker wavelet smoothing, as currently implemented, are that:
-    #1.The wavelet-smoothed light curve has correlated data points, so the original statistics are lost. 
-    #In reality, the scatter has been diminished by about the square root of the number  of data points in the width of the wavelet 
-    #(which is 6 or 7 data points, if I recall correctly)
-    #2.The mean level has been scaled and/or shifted in a way that we (I, at least) don’t currently understand.
-    
-    #Sep 2022 we don't look for geometric dips any more - Roman A.
-    
-    # '''geometric dip detection (greater than 40%)'''
-    # geoDip = 0.6    #threshold for geometric dip
-    # norm_trunc_profile = light_curve/np.median(light_curve)  #normalize light curve
- 
-    # #if normalized profile at min value of convolution is less than the geometric dip threshold
-    # if norm_trunc_profile[minLoc] < geoDip:
-        
-    #     #get frame number of dip
-    #     critFrame = np.where(fluxProfile == light_curve[minLoc])[0]
-    #     print (datetime.datetime.now(), "Detected >40% dip: frame", str(critFrame) + ", star", num)
-        
-    #     return critFrame[0], light_curve, 'geometric'
 
 
-    '''look for diffraction dip'''
-    KernelLength = len(kernel.array)    #number of elements in kernel array
-    
-    #check if dip is at least one kernel length from edge
-    if KernelLength <= minLoc < len(light_curve) - KernelLength:
-        
-        edgeBuffer = 10     #how many elements from beginning/end of the convolution to exclude
-        bkgZone = conv[edgeBuffer: -edgeBuffer]        #background
-    
-        #dipdetection = 3.75  #dip detection threshold ; Sep 2022 now it's an input parameter - Roman A.
-        
-    else:
-        print(f"Event cutoff star: {num}")
-        return -2, [], [], np.nan, np.nan, np.nan, np.nan, -2, np.nan  # reject events that are cut off at the start/end of time series
 
-    #if minimum < background - 3.75*sigma
-    # if minVal < np.mean(bkgZone) - dipdetection * np.std(bkgZone):  
+    #bkgZone is the convolution without the area where the dip is. 
+    # Define the number of frames to exclude around the dip
+    exclusion_zone = 5
 
-    #     #get frame number of dip
-    #     critFrame = np.where(fluxProfile == light_curve[minLoc])[0]
-    #     print('found significant dip in star: ', num, ' at frame: ', critFrame[0])
-        
-    #     return critFrame[0], light_curve, 'diffraction'
-        
-    # else:
-    #     return -1, [], ''  # reject events that do not pass dip detection
+    # Create the background zone by excluding the dip region
+    start_exclusion = max(0, minLoc - exclusion_zone)
+    end_exclusion = min(len(conv), minLoc + exclusion_zone + 1)
+    bkgZone = np.concatenate((conv[:start_exclusion], conv[end_exclusion:]))
     
     lightcurve_std=np.std(light_curve)
     
-    # event_std=np.std(conv)
     conv_bkg_mean=np.mean(bkgZone)
-    #event_mean=np.mean(conv)
     
     significance=(conv_bkg_mean-minVal)/np.std(bkgZone) #significance of the event x*sigma
     
     
     if significance>=sigma_threshold:
         #get frame number of dip
-        critFrame = np.where(fluxProfile == light_curve[minLoc])[0]
-        print(f"Found significant dip in star: {num} at frame: {critFrame[0]}")
+        critFrame = minLoc + (len(kernel.array) // 2)  #frame number of dip
+        print(f"Found significant dip in star: {num} at frame: {critFrame}")
         
-        return critFrame[0], light_curve, conv, lightcurve_std, np.mean(light_curve), np.std(bkgZone),conv_bkg_mean,minVal,significance
+        return critFrame, light_curve, conv, lightcurve_std, np.mean(light_curve), np.std(bkgZone),conv_bkg_mean,minVal,significance
         
     else:
         return -1, light_curve, conv, np.nan, np.nan, np.nan, np.nan, np.nan, significance  # reject events that do not pass dip detection
