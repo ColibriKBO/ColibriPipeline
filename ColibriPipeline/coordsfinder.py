@@ -338,25 +338,30 @@ if __name__ == '__main__':
 
     for filepath in detect_files:
         
-        #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
-        eventData = readFile(filepath)
+        try:
+        
+            #read in file data as tuple containing (star lightcurve, event frame #, star x coord, star y coord, event time, event type, star med, star std)
+            eventData = readFile(filepath)
 
-        #get corresponding WCS transformation
-        timestamp = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
+            #get corresponding WCS transformation
+            timestamp = Path(eventData[0]['filename'][0]).parent.name.split('_')[1]
 
-    
-        transform,transformations = getTransform(timestamp, median_combos, 
-                                                 transformations, return_transformations=True)
         
-        
-        #get star coords in RA/dec
-        star_wcs = getRAdecSingle(transform, (eventData[2], eventData[3]))
-        star_RA = star_wcs[0]
-        star_DEC = star_wcs[1]
-        
-        #write a line with RA dec in each file
-        with open(filepath, 'r') as filehandle:
-            lines = filehandle.readlines()
-            lines[6] = '#    RA Dec Coords: %f %f\n' %(star_RA, star_DEC)
-        with open(filepath, 'w') as filehandle:
-            filehandle.writelines( lines )
+            transform,transformations = getTransform(timestamp, median_combos, 
+                                                    transformations, return_transformations=True)
+            
+            
+            #get star coords in RA/dec
+            star_wcs = getRAdecSingle(transform, (eventData[2], eventData[3]))
+            star_RA = star_wcs[0]
+            star_DEC = star_wcs[1]
+            
+            #write a line with RA dec in each file
+            with open(filepath, 'r') as filehandle:
+                lines = filehandle.readlines()
+                lines[6] = '#    RA Dec Coords: %f %f\n' %(star_RA, star_DEC)
+            with open(filepath, 'w') as filehandle:
+                filehandle.writelines( lines )
+                
+        except:
+            print("WCS Transformation failed, moving to the next one. Will be handled by future exception")
