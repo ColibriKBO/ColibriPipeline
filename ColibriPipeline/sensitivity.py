@@ -314,6 +314,7 @@ if __name__ == '__main__':
 
     # If no minute is specified, read the other telescopes' primary_done.txt to find best minute
     if cml_args.minute is None:
+        print("matching minutes...")
 
         # Substitute current telescope basedir with D:
         TELESCOPE_BASE_DIR[telescope] = pathlib.Path('D:')
