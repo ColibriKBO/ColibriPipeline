@@ -558,14 +558,23 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     
     significance=(conv_bkg_mean-minVal)/np.std(bkgZone) #significance of the event x*sigma
     
-    
-    if significance>=sigma_threshold:
-        #get frame number of dip
-        critFrame = minLoc + (len(kernel.array) // 2)  #frame number of dip
-        print(f"Found a matched significant dip in star: {num} at frame: {critFrame}")
-        
-        return critFrame, light_curve, conv, lightcurve_std, np.mean(light_curve), np.std(bkgZone),conv_bkg_mean,minVal,significance
-        
-    else:
-        return -1, light_curve, conv, np.nan, np.nan, np.nan, np.nan, np.nan, significance  # reject events that do not pass dip detection
+    # Calculate the number of zeros to add on each side
+    padding_length = (len(light_curve) - len(conv)) // 2
 
+    # Create arrays of for padding
+    padding = np.ones(padding_length) * conv_bkg_mean
+
+    # Concatenate zeros to the beginning and end of the convolution result
+    conv_padded = np.concatenate((padding, conv, padding))
+
+    # Ensure the length of the convolution matches the length of the light curve
+    if len(conv_padded) < len(light_curve):
+        conv_padded = np.concatenate((conv_padded, [0]))
+
+    # Update the return statements to use conv_padded
+    if significance >= sigma_threshold:
+        critFrame = minLoc + (len(kernel.array) // 2)
+        print(f"Found significant dip in star: {num} at frame: {critFrame}")
+        return critFrame, light_curve, conv_padded, lightcurve_std, np.mean(light_curve), np.std(bkgZone), conv_bkg_mean, minVal, significance
+    else:
+        return -1, light_curve, conv_padded, np.nan, np.nan, np.nan, np.nan, np.nan, significance
