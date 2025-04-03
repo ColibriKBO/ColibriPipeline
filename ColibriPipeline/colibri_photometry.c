@@ -2149,6 +2149,7 @@ static const char __pyx_k_NotImplementedError[] = "NotImplementedError";
 static const char __pyx_k_astropy_convolution[] = "astropy.convolution";
 static const char __pyx_k_smoothed_light_curve[] = "smoothed_light_curve";
 static const char __pyx_k_RickerWavelet1DKernel[] = "RickerWavelet1DKernel";
+static const char __pyx_k_detrended_light_curve[] = "detrended_light_curve";
 static const char __pyx_k_colibri_photometry_pyx[] = "colibri_photometry.pyx";
 static const char __pyx_k_Light_curve_too_short_star[] = "Light curve too short: star ";
 static const char __pyx_k_Found_significant_dip_in_star[] = "Found significant dip in star: ";
@@ -2198,6 +2199,7 @@ static PyObject *__pyx_n_s_curr_time;
 static PyObject *__pyx_n_s_datetime;
 static PyObject *__pyx_n_s_deepcopy;
 static PyObject *__pyx_n_s_detect_thresh;
+static PyObject *__pyx_n_s_detrended_light_curve;
 static PyObject *__pyx_n_s_dipDetection;
 static PyObject *__pyx_n_s_drift_time;
 static PyObject *__pyx_n_s_edge_stars;
@@ -6694,6 +6696,7 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   PyObject *__pyx_v_minLightcurveLen = NULL;
   long __pyx_v_window_size;
   PyObject *__pyx_v_smoothed_light_curve = NULL;
+  PyObject *__pyx_v_detrended_light_curve = NULL;
   PyObject *__pyx_v_conv = NULL;
   PyObject *__pyx_v_minLoc = NULL;
   PyObject *__pyx_v_minVal = NULL;
@@ -7136,7 +7139,7 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
  *     # Detrend the light curve for better dip detection
  *     window_size = 40*5 # 5 second window for smoothing             # <<<<<<<<<<<<<<
  *     smoothed_light_curve = uniform_filter1d(light_curve, size=window_size, mode='reflect')
- * 
+ *     detrended_light_curve = light_curve - smoothed_light_curve
  */
   __pyx_v_window_size = 0xC8;
 
@@ -7144,7 +7147,7 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
  *     # Detrend the light curve for better dip detection
  *     window_size = 40*5 # 5 second window for smoothing
  *     smoothed_light_curve = uniform_filter1d(light_curve, size=window_size, mode='reflect')             # <<<<<<<<<<<<<<
- * 
+ *     detrended_light_curve = light_curve - smoothed_light_curve
  * 
  */
   __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_uniform_filter1d); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 541, __pyx_L1_error)
@@ -7169,27 +7172,39 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __pyx_v_smoothed_light_curve = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "colibri_photometry.pyx":548
+  /* "colibri_photometry.pyx":542
+ *     window_size = 40*5 # 5 second window for smoothing
+ *     smoothed_light_curve = uniform_filter1d(light_curve, size=window_size, mode='reflect')
+ *     detrended_light_curve = light_curve - smoothed_light_curve             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_t_8 = PyNumber_Subtract(__pyx_v_light_curve, __pyx_v_smoothed_light_curve); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 542, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_8);
+  __pyx_v_detrended_light_curve = __pyx_t_8;
+  __pyx_t_8 = 0;
+
+  /* "colibri_photometry.pyx":549
  *     '''convolve light curve with ricker wavelet kernel'''
  *     #will throw error if try to normalize (sum of kernel too close to 0)
- *     conv = convolve(smoothed_light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet             # <<<<<<<<<<<<<<
+ *     conv = convolve(detrended_light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet             # <<<<<<<<<<<<<<
  *     minLoc = np.argmin(conv)    #index of minimum value of convolution
  *     minVal = np.min(conv)          #minimum of convolution
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_convolve); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 548, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_convolve); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 549, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_9 = PyTuple_New(2); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 548, __pyx_L1_error)
+  __pyx_t_9 = PyTuple_New(2); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 549, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __Pyx_INCREF(__pyx_v_smoothed_light_curve);
-  __Pyx_GIVEREF(__pyx_v_smoothed_light_curve);
-  PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_v_smoothed_light_curve);
+  __Pyx_INCREF(__pyx_v_detrended_light_curve);
+  __Pyx_GIVEREF(__pyx_v_detrended_light_curve);
+  PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_v_detrended_light_curve);
   __Pyx_INCREF(__pyx_v_kernel);
   __Pyx_GIVEREF(__pyx_v_kernel);
   PyTuple_SET_ITEM(__pyx_t_9, 1, __pyx_v_kernel);
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 548, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 549, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_mode, __pyx_n_s_valid) < 0) __PYX_ERR(0, 548, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_9, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 548, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_mode, __pyx_n_s_valid) < 0) __PYX_ERR(0, 549, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_9, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 549, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
@@ -7197,16 +7212,16 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __pyx_v_conv = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "colibri_photometry.pyx":549
+  /* "colibri_photometry.pyx":550
  *     #will throw error if try to normalize (sum of kernel too close to 0)
- *     conv = convolve(smoothed_light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet
+ *     conv = convolve(detrended_light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet
  *     minLoc = np.argmin(conv)    #index of minimum value of convolution             # <<<<<<<<<<<<<<
  *     minVal = np.min(conv)          #minimum of convolution
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 549, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 550, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_argmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 549, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_argmin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 550, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -7221,22 +7236,22 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   }
   __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_2, __pyx_v_conv) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_v_conv);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 549, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 550, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_minLoc = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "colibri_photometry.pyx":550
- *     conv = convolve(smoothed_light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet
+  /* "colibri_photometry.pyx":551
+ *     conv = convolve(detrended_light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet
  *     minLoc = np.argmin(conv)    #index of minimum value of convolution
  *     minVal = np.min(conv)          #minimum of convolution             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 550, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 551, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_min); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 550, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_min); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 551, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_t_9 = NULL;
@@ -7251,13 +7266,13 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   }
   __pyx_t_1 = (__pyx_t_9) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_9, __pyx_v_conv) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_conv);
   __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 550, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 551, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_minVal = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "colibri_photometry.pyx":556
+  /* "colibri_photometry.pyx":557
  *     #bkgZone is the convolution without the area where the dip is.
  *     # Define the number of frames to exclude around the dip
  *     exclusion_zone = 5             # <<<<<<<<<<<<<<
@@ -7267,27 +7282,27 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __Pyx_INCREF(__pyx_int_5);
   __pyx_v_exclusion_zone = __pyx_int_5;
 
-  /* "colibri_photometry.pyx":559
+  /* "colibri_photometry.pyx":560
  * 
  *     # Create the background zone by excluding the dip region
  *     start_exclusion = max(0, minLoc - exclusion_zone)             # <<<<<<<<<<<<<<
  *     end_exclusion = min(len(conv), minLoc + exclusion_zone + 1)
  *     bkgZone = np.concatenate((conv[:start_exclusion], conv[end_exclusion:]))
  */
-  __pyx_t_1 = PyNumber_Subtract(__pyx_v_minLoc, __pyx_v_exclusion_zone); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 559, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Subtract(__pyx_v_minLoc, __pyx_v_exclusion_zone); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 560, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_11 = 0;
-  __pyx_t_9 = __Pyx_PyInt_From_long(__pyx_t_11); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 559, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyInt_From_long(__pyx_t_11); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 560, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_8 = PyObject_RichCompare(__pyx_t_1, __pyx_t_9, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 559, __pyx_L1_error)
+  __pyx_t_8 = PyObject_RichCompare(__pyx_t_1, __pyx_t_9, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 560, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 559, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 560, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   if (__pyx_t_5) {
     __Pyx_INCREF(__pyx_t_1);
     __pyx_t_2 = __pyx_t_1;
   } else {
-    __pyx_t_8 = __Pyx_PyInt_From_long(__pyx_t_11); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 559, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyInt_From_long(__pyx_t_11); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 560, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __pyx_t_2 = __pyx_t_8;
     __pyx_t_8 = 0;
@@ -7299,30 +7314,30 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __pyx_v_start_exclusion = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "colibri_photometry.pyx":560
+  /* "colibri_photometry.pyx":561
  *     # Create the background zone by excluding the dip region
  *     start_exclusion = max(0, minLoc - exclusion_zone)
  *     end_exclusion = min(len(conv), minLoc + exclusion_zone + 1)             # <<<<<<<<<<<<<<
  *     bkgZone = np.concatenate((conv[:start_exclusion], conv[end_exclusion:]))
  * 
  */
-  __pyx_t_1 = PyNumber_Add(__pyx_v_minLoc, __pyx_v_exclusion_zone); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 560, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Add(__pyx_v_minLoc, __pyx_v_exclusion_zone); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 561, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_t_1, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 560, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_t_1, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 561, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_4 = PyObject_Length(__pyx_v_conv); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 560, __pyx_L1_error)
-  __pyx_t_8 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 560, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_conv); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 561, __pyx_L1_error)
+  __pyx_t_8 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 561, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_9 = PyObject_RichCompare(__pyx_t_2, __pyx_t_8, Py_LT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 560, __pyx_L1_error)
+  __pyx_t_9 = PyObject_RichCompare(__pyx_t_2, __pyx_t_8, Py_LT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 561, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 560, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 561, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   if (__pyx_t_5) {
     __Pyx_INCREF(__pyx_t_2);
     __pyx_t_1 = __pyx_t_2;
   } else {
-    __pyx_t_9 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 560, __pyx_L1_error)
+    __pyx_t_9 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 561, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __pyx_t_1 = __pyx_t_9;
     __pyx_t_9 = 0;
@@ -7334,23 +7349,23 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __pyx_v_end_exclusion = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "colibri_photometry.pyx":561
+  /* "colibri_photometry.pyx":562
  *     start_exclusion = max(0, minLoc - exclusion_zone)
  *     end_exclusion = min(len(conv), minLoc + exclusion_zone + 1)
  *     bkgZone = np.concatenate((conv[:start_exclusion], conv[end_exclusion:]))             # <<<<<<<<<<<<<<
  * 
  *     lightcurve_std=np.std(light_curve)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 561, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 562, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_concatenate); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 561, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_concatenate); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 562, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_GetSlice(__pyx_v_conv, 0, 0, NULL, &__pyx_v_start_exclusion, NULL, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 561, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetSlice(__pyx_v_conv, 0, 0, NULL, &__pyx_v_start_exclusion, NULL, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 562, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_8 = __Pyx_PyObject_GetSlice(__pyx_v_conv, 0, 0, &__pyx_v_end_exclusion, NULL, NULL, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 561, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetSlice(__pyx_v_conv, 0, 0, &__pyx_v_end_exclusion, NULL, NULL, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 562, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 561, __pyx_L1_error)
+  __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 562, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_1);
@@ -7371,22 +7386,22 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __pyx_t_2 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_8, __pyx_t_7) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_7);
   __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 561, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 562, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_bkgZone = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "colibri_photometry.pyx":563
+  /* "colibri_photometry.pyx":564
  *     bkgZone = np.concatenate((conv[:start_exclusion], conv[end_exclusion:]))
  * 
  *     lightcurve_std=np.std(light_curve)             # <<<<<<<<<<<<<<
  * 
  *     conv_bkg_mean=np.mean(bkgZone)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 563, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 564, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_std); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 563, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_std); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 564, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_t_9 = NULL;
@@ -7401,22 +7416,22 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   }
   __pyx_t_2 = (__pyx_t_9) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_9, __pyx_v_light_curve) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_v_light_curve);
   __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 563, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 564, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_v_lightcurve_std = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "colibri_photometry.pyx":565
+  /* "colibri_photometry.pyx":566
  *     lightcurve_std=np.std(light_curve)
  * 
  *     conv_bkg_mean=np.mean(bkgZone)             # <<<<<<<<<<<<<<
  * 
  *     significance=(conv_bkg_mean-minVal)/np.std(bkgZone) #significance of the event x*sigma
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 565, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 566, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_mean); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 565, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_mean); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 566, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_7 = NULL;
@@ -7431,24 +7446,24 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   }
   __pyx_t_2 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_7, __pyx_v_bkgZone) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_v_bkgZone);
   __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 565, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 566, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_conv_bkg_mean = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "colibri_photometry.pyx":567
+  /* "colibri_photometry.pyx":568
  *     conv_bkg_mean=np.mean(bkgZone)
  * 
  *     significance=(conv_bkg_mean-minVal)/np.std(bkgZone) #significance of the event x*sigma             # <<<<<<<<<<<<<<
  * 
  *     # Calculate the number of zeros to add on each side
  */
-  __pyx_t_2 = PyNumber_Subtract(__pyx_v_conv_bkg_mean, __pyx_v_minVal); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 567, __pyx_L1_error)
+  __pyx_t_2 = PyNumber_Subtract(__pyx_v_conv_bkg_mean, __pyx_v_minVal); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 568, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 567, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 568, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_std); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 567, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_std); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 568, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_7 = NULL;
@@ -7463,40 +7478,40 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   }
   __pyx_t_9 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_8, __pyx_t_7, __pyx_v_bkgZone) : __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_v_bkgZone);
   __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-  if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 567, __pyx_L1_error)
+  if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 568, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 567, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 568, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_significance = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "colibri_photometry.pyx":570
+  /* "colibri_photometry.pyx":571
  * 
  *     # Calculate the number of zeros to add on each side
  *     padding_length = (len(light_curve) - len(conv)) // 2             # <<<<<<<<<<<<<<
  * 
  *     # Create arrays of for padding
  */
-  __pyx_t_4 = PyObject_Length(__pyx_v_light_curve); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 570, __pyx_L1_error)
-  __pyx_t_12 = PyObject_Length(__pyx_v_conv); if (unlikely(__pyx_t_12 == ((Py_ssize_t)-1))) __PYX_ERR(0, 570, __pyx_L1_error)
-  __pyx_t_8 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t((__pyx_t_4 - __pyx_t_12), 2)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 570, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_light_curve); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 571, __pyx_L1_error)
+  __pyx_t_12 = PyObject_Length(__pyx_v_conv); if (unlikely(__pyx_t_12 == ((Py_ssize_t)-1))) __PYX_ERR(0, 571, __pyx_L1_error)
+  __pyx_t_8 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t((__pyx_t_4 - __pyx_t_12), 2)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 571, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_v_padding_length = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "colibri_photometry.pyx":573
+  /* "colibri_photometry.pyx":574
  * 
  *     # Create arrays of for padding
  *     padding = np.ones(padding_length) * conv_bkg_mean             # <<<<<<<<<<<<<<
  * 
  *     # Concatenate zeros to the beginning and end of the convolution result
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 573, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 574, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_ones); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 573, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_ones); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 574, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_t_9 = NULL;
@@ -7511,28 +7526,28 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   }
   __pyx_t_8 = (__pyx_t_9) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_9, __pyx_v_padding_length) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_padding_length);
   __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-  if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 573, __pyx_L1_error)
+  if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 574, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = PyNumber_Multiply(__pyx_t_8, __pyx_v_conv_bkg_mean); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 573, __pyx_L1_error)
+  __pyx_t_2 = PyNumber_Multiply(__pyx_t_8, __pyx_v_conv_bkg_mean); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 574, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_padding = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "colibri_photometry.pyx":576
+  /* "colibri_photometry.pyx":577
  * 
  *     # Concatenate zeros to the beginning and end of the convolution result
  *     conv_padded = np.concatenate((padding, conv, padding))             # <<<<<<<<<<<<<<
  * 
  *     # Ensure the length of the convolution matches the length of the light curve
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 576, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 577, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_concatenate); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 576, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_concatenate); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 577, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = PyTuple_New(3); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 576, __pyx_L1_error)
+  __pyx_t_8 = PyTuple_New(3); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 577, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_INCREF(__pyx_v_padding);
   __Pyx_GIVEREF(__pyx_v_padding);
@@ -7556,42 +7571,42 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __pyx_t_2 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_7, __pyx_t_8) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_8);
   __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 576, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 577, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_v_conv_padded = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "colibri_photometry.pyx":579
+  /* "colibri_photometry.pyx":580
  * 
  *     # Ensure the length of the convolution matches the length of the light curve
  *     if len(conv_padded) < len(light_curve):             # <<<<<<<<<<<<<<
  *         conv_padded = np.concatenate((conv_padded, [0]))
  * 
  */
-  __pyx_t_12 = PyObject_Length(__pyx_v_conv_padded); if (unlikely(__pyx_t_12 == ((Py_ssize_t)-1))) __PYX_ERR(0, 579, __pyx_L1_error)
-  __pyx_t_4 = PyObject_Length(__pyx_v_light_curve); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 579, __pyx_L1_error)
+  __pyx_t_12 = PyObject_Length(__pyx_v_conv_padded); if (unlikely(__pyx_t_12 == ((Py_ssize_t)-1))) __PYX_ERR(0, 580, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_light_curve); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 580, __pyx_L1_error)
   __pyx_t_5 = ((__pyx_t_12 < __pyx_t_4) != 0);
   if (__pyx_t_5) {
 
-    /* "colibri_photometry.pyx":580
+    /* "colibri_photometry.pyx":581
  *     # Ensure the length of the convolution matches the length of the light curve
  *     if len(conv_padded) < len(light_curve):
  *         conv_padded = np.concatenate((conv_padded, [0]))             # <<<<<<<<<<<<<<
  * 
  *     # Update the return statements to use conv_padded
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 580, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 581, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_concatenate); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 580, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_concatenate); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 581, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = PyList_New(1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 580, __pyx_L1_error)
+    __pyx_t_9 = PyList_New(1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 581, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_INCREF(__pyx_int_0);
     __Pyx_GIVEREF(__pyx_int_0);
     PyList_SET_ITEM(__pyx_t_9, 0, __pyx_int_0);
-    __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 580, __pyx_L1_error)
+    __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 581, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_INCREF(__pyx_v_conv_padded);
     __Pyx_GIVEREF(__pyx_v_conv_padded);
@@ -7612,13 +7627,13 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
     __pyx_t_2 = (__pyx_t_9) ? __Pyx_PyObject_Call2Args(__pyx_t_8, __pyx_t_9, __pyx_t_7) : __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_t_7);
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 580, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 581, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF_SET(__pyx_v_conv_padded, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "colibri_photometry.pyx":579
+    /* "colibri_photometry.pyx":580
  * 
  *     # Ensure the length of the convolution matches the length of the light curve
  *     if len(conv_padded) < len(light_curve):             # <<<<<<<<<<<<<<
@@ -7627,45 +7642,45 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
  */
   }
 
-  /* "colibri_photometry.pyx":583
+  /* "colibri_photometry.pyx":584
  * 
  *     # Update the return statements to use conv_padded
  *     if significance >= sigma_threshold:             # <<<<<<<<<<<<<<
  *         critFrame = minLoc + (len(kernel.array) // 2)
  *         print(f"Found significant dip in star: {num} at frame: {critFrame}")
  */
-  __pyx_t_2 = PyObject_RichCompare(__pyx_v_significance, __pyx_v_sigma_threshold, Py_GE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 583, __pyx_L1_error)
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 583, __pyx_L1_error)
+  __pyx_t_2 = PyObject_RichCompare(__pyx_v_significance, __pyx_v_sigma_threshold, Py_GE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 584, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 584, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   if (__pyx_t_5) {
 
-    /* "colibri_photometry.pyx":584
+    /* "colibri_photometry.pyx":585
  *     # Update the return statements to use conv_padded
  *     if significance >= sigma_threshold:
  *         critFrame = minLoc + (len(kernel.array) // 2)             # <<<<<<<<<<<<<<
  *         print(f"Found significant dip in star: {num} at frame: {critFrame}")
  *         return critFrame, light_curve, conv_padded, lightcurve_std, np.mean(light_curve), np.std(bkgZone), conv_bkg_mean, minVal, significance
  */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_kernel, __pyx_n_s_array); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 584, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_kernel, __pyx_n_s_array); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 585, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_4 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 584, __pyx_L1_error)
+    __pyx_t_4 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 585, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_4, 2)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 584, __pyx_L1_error)
+    __pyx_t_2 = PyInt_FromSsize_t(__Pyx_div_Py_ssize_t(__pyx_t_4, 2)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 585, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_8 = PyNumber_Add(__pyx_v_minLoc, __pyx_t_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 584, __pyx_L1_error)
+    __pyx_t_8 = PyNumber_Add(__pyx_v_minLoc, __pyx_t_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 585, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_v_critFrame = __pyx_t_8;
     __pyx_t_8 = 0;
 
-    /* "colibri_photometry.pyx":585
+    /* "colibri_photometry.pyx":586
  *     if significance >= sigma_threshold:
  *         critFrame = minLoc + (len(kernel.array) // 2)
  *         print(f"Found significant dip in star: {num} at frame: {critFrame}")             # <<<<<<<<<<<<<<
  *         return critFrame, light_curve, conv_padded, lightcurve_std, np.mean(light_curve), np.std(bkgZone), conv_bkg_mean, minVal, significance
  *     else:
  */
-    __pyx_t_8 = PyTuple_New(4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 585, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 586, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __pyx_t_4 = 0;
     __pyx_t_13 = 127;
@@ -7673,7 +7688,7 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
     __pyx_t_4 += 31;
     __Pyx_GIVEREF(__pyx_kp_u_Found_significant_dip_in_star);
     PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_kp_u_Found_significant_dip_in_star);
-    __pyx_t_2 = __Pyx_PyObject_FormatSimple(__pyx_v_num, __pyx_empty_unicode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 585, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_FormatSimple(__pyx_v_num, __pyx_empty_unicode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 586, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_13 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) > __pyx_t_13) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) : __pyx_t_13;
     __pyx_t_4 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_2);
@@ -7684,20 +7699,20 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
     __pyx_t_4 += 11;
     __Pyx_GIVEREF(__pyx_kp_u_at_frame);
     PyTuple_SET_ITEM(__pyx_t_8, 2, __pyx_kp_u_at_frame);
-    __pyx_t_2 = __Pyx_PyObject_FormatSimple(__pyx_v_critFrame, __pyx_empty_unicode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 585, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_FormatSimple(__pyx_v_critFrame, __pyx_empty_unicode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 586, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_13 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) > __pyx_t_13) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) : __pyx_t_13;
     __pyx_t_4 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_2);
     __Pyx_GIVEREF(__pyx_t_2);
     PyTuple_SET_ITEM(__pyx_t_8, 3, __pyx_t_2);
     __pyx_t_2 = 0;
-    __pyx_t_2 = __Pyx_PyUnicode_Join(__pyx_t_8, 4, __pyx_t_4, __pyx_t_13); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 585, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyUnicode_Join(__pyx_t_8, 4, __pyx_t_4, __pyx_t_13); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 586, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 585, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 586, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-    /* "colibri_photometry.pyx":586
+    /* "colibri_photometry.pyx":587
  *         critFrame = minLoc + (len(kernel.array) // 2)
  *         print(f"Found significant dip in star: {num} at frame: {critFrame}")
  *         return critFrame, light_curve, conv_padded, lightcurve_std, np.mean(light_curve), np.std(bkgZone), conv_bkg_mean, minVal, significance             # <<<<<<<<<<<<<<
@@ -7705,9 +7720,9 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
  *         return -1, light_curve, conv_padded, np.nan, np.nan, np.nan, np.nan, np.nan, significance
  */
     __Pyx_XDECREF(__pyx_r);
-    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 586, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 587, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_mean); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 586, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_mean); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 587, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __pyx_t_8 = NULL;
@@ -7722,12 +7737,12 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
     }
     __pyx_t_2 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_8, __pyx_v_light_curve) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_v_light_curve);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 586, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 587, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 586, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 587, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_std); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 586, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_std); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 587, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __pyx_t_8 = NULL;
@@ -7742,10 +7757,10 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
     }
     __pyx_t_7 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_8, __pyx_v_bkgZone) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_v_bkgZone);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 586, __pyx_L1_error)
+    if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 587, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = PyTuple_New(9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 586, __pyx_L1_error)
+    __pyx_t_9 = PyTuple_New(9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 587, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_INCREF(__pyx_v_critFrame);
     __Pyx_GIVEREF(__pyx_v_critFrame);
@@ -7778,7 +7793,7 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
     __pyx_t_9 = 0;
     goto __pyx_L0;
 
-    /* "colibri_photometry.pyx":583
+    /* "colibri_photometry.pyx":584
  * 
  *     # Update the return statements to use conv_padded
  *     if significance >= sigma_threshold:             # <<<<<<<<<<<<<<
@@ -7787,39 +7802,39 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
  */
   }
 
-  /* "colibri_photometry.pyx":588
+  /* "colibri_photometry.pyx":589
  *         return critFrame, light_curve, conv_padded, lightcurve_std, np.mean(light_curve), np.std(bkgZone), conv_bkg_mean, minVal, significance
  *     else:
  *         return -1, light_curve, conv_padded, np.nan, np.nan, np.nan, np.nan, np.nan, significance             # <<<<<<<<<<<<<<
  */
   /*else*/ {
     __Pyx_XDECREF(__pyx_r);
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_nan); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = PyTuple_New(9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 588, __pyx_L1_error)
+    __pyx_t_9 = PyTuple_New(9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 589, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_INCREF(__pyx_int_neg_1);
     __Pyx_GIVEREF(__pyx_int_neg_1);
@@ -7878,6 +7893,7 @@ static PyObject *__pyx_pf_18colibri_photometry_18dipDetection(CYTHON_UNUSED PyOb
   __Pyx_XDECREF(__pyx_v_FramesperMin);
   __Pyx_XDECREF(__pyx_v_minLightcurveLen);
   __Pyx_XDECREF(__pyx_v_smoothed_light_curve);
+  __Pyx_XDECREF(__pyx_v_detrended_light_curve);
   __Pyx_XDECREF(__pyx_v_conv);
   __Pyx_XDECREF(__pyx_v_minLoc);
   __Pyx_XDECREF(__pyx_v_minVal);
@@ -9002,6 +9018,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_datetime, __pyx_k_datetime, sizeof(__pyx_k_datetime), 0, 0, 1, 1},
   {&__pyx_n_s_deepcopy, __pyx_k_deepcopy, sizeof(__pyx_k_deepcopy), 0, 0, 1, 1},
   {&__pyx_n_s_detect_thresh, __pyx_k_detect_thresh, sizeof(__pyx_k_detect_thresh), 0, 0, 1, 1},
+  {&__pyx_n_s_detrended_light_curve, __pyx_k_detrended_light_curve, sizeof(__pyx_k_detrended_light_curve), 0, 0, 1, 1},
   {&__pyx_n_s_dipDetection, __pyx_k_dipDetection, sizeof(__pyx_k_dipDetection), 0, 0, 1, 1},
   {&__pyx_n_s_drift_time, __pyx_k_drift_time, sizeof(__pyx_k_drift_time), 0, 0, 1, 1},
   {&__pyx_n_s_edge_stars, __pyx_k_edge_stars, sizeof(__pyx_k_edge_stars), 0, 0, 1, 1},
@@ -9349,10 +9366,10 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *     """
  *     Checks for geometric dip, and detects dimming using Ricker Wavelet kernel
  */
-  __pyx_tuple__29 = PyTuple_Pack(24, __pyx_n_s_fluxProfile, __pyx_n_s_kernel, __pyx_n_s_num, __pyx_n_s_sigma_threshold, __pyx_n_s_light_curve, __pyx_n_s_FramesperMin, __pyx_n_s_minSNR, __pyx_n_s_minLightcurveLen, __pyx_n_s_window_size, __pyx_n_s_smoothed_light_curve, __pyx_n_s_conv, __pyx_n_s_minLoc, __pyx_n_s_minVal, __pyx_n_s_exclusion_zone, __pyx_n_s_start_exclusion, __pyx_n_s_end_exclusion, __pyx_n_s_bkgZone, __pyx_n_s_lightcurve_std, __pyx_n_s_conv_bkg_mean, __pyx_n_s_significance, __pyx_n_s_padding_length, __pyx_n_s_padding, __pyx_n_s_conv_padded, __pyx_n_s_critFrame); if (unlikely(!__pyx_tuple__29)) __PYX_ERR(0, 485, __pyx_L1_error)
+  __pyx_tuple__29 = PyTuple_Pack(25, __pyx_n_s_fluxProfile, __pyx_n_s_kernel, __pyx_n_s_num, __pyx_n_s_sigma_threshold, __pyx_n_s_light_curve, __pyx_n_s_FramesperMin, __pyx_n_s_minSNR, __pyx_n_s_minLightcurveLen, __pyx_n_s_window_size, __pyx_n_s_smoothed_light_curve, __pyx_n_s_detrended_light_curve, __pyx_n_s_conv, __pyx_n_s_minLoc, __pyx_n_s_minVal, __pyx_n_s_exclusion_zone, __pyx_n_s_start_exclusion, __pyx_n_s_end_exclusion, __pyx_n_s_bkgZone, __pyx_n_s_lightcurve_std, __pyx_n_s_conv_bkg_mean, __pyx_n_s_significance, __pyx_n_s_padding_length, __pyx_n_s_padding, __pyx_n_s_conv_padded, __pyx_n_s_critFrame); if (unlikely(!__pyx_tuple__29)) __PYX_ERR(0, 485, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__29);
   __Pyx_GIVEREF(__pyx_tuple__29);
-  __pyx_codeobj__30 = (PyObject*)__Pyx_PyCode_New(4, 0, 24, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__29, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_colibri_photometry_pyx, __pyx_n_s_dipDetection, 485, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__30)) __PYX_ERR(0, 485, __pyx_L1_error)
+  __pyx_codeobj__30 = (PyObject*)__Pyx_PyCode_New(4, 0, 25, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__29, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_colibri_photometry_pyx, __pyx_n_s_dipDetection, 485, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__30)) __PYX_ERR(0, 485, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
