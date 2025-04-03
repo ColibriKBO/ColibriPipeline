@@ -310,8 +310,7 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     #                          bkgann = (r + 6., r + 11.))[0]).tolist()
     fluxes = (sep.sum_circle(curr_img, 
                              x, y, 
-                             r, 
-                             bkgann = (inner_annulus, outer_annulus))[0]).tolist()
+                             r)[0]).tolist()
     # for i in edge_stars:
     #     fluxes.insert(i,0)
         
@@ -463,8 +462,7 @@ def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
     
     fluxes = np.array([sep.sum_circle(img_stack[frame],
                                       x,y,
-                                      r, 
-                                      bkgann=(inner_annulus, outer_annulus))[0]
+                                      r)[0]
                        for frame in range(len(img_stack))])
 
     # for bad_ind in edge_stars:
