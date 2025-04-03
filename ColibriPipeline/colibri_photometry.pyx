@@ -21,6 +21,8 @@ from astropy.io import fits
 from astropy.convolution import convolve_fft, RickerWavelet1DKernel
 from astropy.time import Time
 from scipy.signal import convolve
+from scipy.ndimage import uniform_filter1d
+
 
 # Custom Script Imports
 
@@ -533,9 +535,17 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
 
 
 
+
+    # Detrend the light curve for better dip detection
+    window_size = 40*5 # 5 second window for smoothing
+    smoothed_light_curve = uniform_filter1d(light_curve, size=window_size, mode='reflect')
+
+
+
+
     '''convolve light curve with ricker wavelet kernel'''
     #will throw error if try to normalize (sum of kernel too close to 0)
-    conv = convolve(light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet
+    conv = convolve(smoothed_light_curve, kernel, mode='valid')    #convolution of light curve with Ricker wavelet
     minLoc = np.argmin(conv)    #index of minimum value of convolution
     minVal = np.min(conv)          #minimum of convolution
 
