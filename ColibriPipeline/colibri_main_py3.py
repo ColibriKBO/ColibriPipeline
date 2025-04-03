@@ -465,6 +465,16 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                 
         gc.collect()
     
+    # Save the starData array to a .npy file in the archive directory
+    starDataFile = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + 'stars.npy')
+    if starDataFile.exists():
+        starDataFile.unlink()
+    np.save(starDataFile, starData)
+
+
+
+
+
 
     """
     # Roman's photometry plotting section
