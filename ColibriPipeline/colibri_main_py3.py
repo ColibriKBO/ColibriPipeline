@@ -715,7 +715,15 @@ if __name__ == '__main__':
         reprocess = cml_args.reprocess
 
         # Target data
-        base_path = pathlib.Path(cml_args.path) # path to data directory
+        if pathlib.Path(cml_args.path).exists():
+            base_path = pathlib.Path(cml_args.path)
+    
+
+            BASE_PATH = base_path
+            DATA_PATH = BASE_PATH / 'ColibriData'
+            IMGE_PATH = BASE_PATH / 'ColibriImages'
+            ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
         obsYYYYMMDD = cml_args.date # date to be analyzed formatted as "YYYY/MM/DD"
         obsdatesplit = obsYYYYMMDD.split('/')
         obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
