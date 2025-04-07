@@ -295,7 +295,10 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
 
     ## Make list of star coords and half light radii using a conservative
     ## threshold scaled to the number of images stacked
-    star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH*NUM_TO_STACK**0.5))
+    # star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH*NUM_TO_STACK**0.5))
+
+    # removing scaling as I think it is unnecessary 
+    star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH))
 
     ## Remove stars where centre is too close to edge of frame
     edge_buffer = 10     #number of pixels between edge of star aperture and edge of image
