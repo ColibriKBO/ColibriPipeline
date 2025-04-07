@@ -297,7 +297,7 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
     ## threshold scaled to the number of images stacked
     # star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH*NUM_TO_STACK**0.5))
 
-    # removing scaling as I think it is unnecessary 
+    # removing scaling as I think it too conservative
     star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH))
 
     ## Remove stars where centre is too close to edge of frame
