@@ -65,7 +65,7 @@ NUM_TO_STACK = 9  # number of images to stack for star detection
 BIASES_TO_STACK = 9       #number of dark images to combine in median dark images
 EDGE_BUFFER  = 10  # px from edge of image to ignore
 NPY_STARS = 10  # number of stars to save in .npy file
-MIN_STARS = 30  # minimum number of stars to analyze minute
+MIN_STARS = 10  # minimum number of stars to analyze minute
 
 # Drift parameters
 DRIFT_MULT = 1.0  # multiplier for detection radius after drift
@@ -681,7 +681,7 @@ if __name__ == '__main__':
     ## Add argument functionality
     arg_parser.add_argument('path', help='Path to base directory')
     arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed')
-    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=6.0,type=float)
+    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=5.0,type=float)
     arg_parser.add_argument('-R','--RCD', help='Read RCD files directly (otherwise convert to .fits)', action='store_false')
     arg_parser.add_argument('-p', '--noparallel', help='Disable parallelism, run in sequence instead', action='store_false')
     arg_parser.add_argument('-g', '--lowgain', help='Analyze low-gain images', action='store_false')
