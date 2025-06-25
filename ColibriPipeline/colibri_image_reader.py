@@ -19,16 +19,6 @@ from time import time
 # Custom Script Imports
 from bitconverter import conv_12to16
 
-# Cython-Numpy Interface
-cimport numpy as np
-np.import_array()
-
-# Compile Typing Definitions 
-ctypedef np.uint8_t UI8
-ctypedef np.uint16_t UI16
-ctypedef np.float64_t F64
-
-
 ##############################
 ## DateTime Information
 ##############################
@@ -61,8 +51,7 @@ def getDateTime(folder, obs_date):
 ## Retreive Data
 ##############################
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 def readRCD(filename):
     """
     Reads .rcd file and Windows file modification time.
@@ -75,9 +64,6 @@ def readRCD(filename):
             timestamp (str): Timestamp of observation
             file_mod_time (str): File modification time from the system in ISO format
     """
-
-    ## Type definitions
-    cdef np.ndarray table
 
     ## Open .rcd file and extract the observation timestamp and data
     with open(filename, 'rb') as fid:
@@ -111,8 +97,6 @@ def readFITS(filename):
             timestamp (str): Timestamp of observation
     """
     
-    ## Type definitions
-    cdef np.ndarray table
     
     ## Open .fits file and extract the observation timestamp and data
     with fits.open(filename) as hdul:
@@ -125,9 +109,9 @@ def readFITS(filename):
     return table, timestamp
 
 
-def importFramesFITS(list image_paths,
-                    int  start_frame=0, 
-                    int  num_frames=1,):
+def importFramesFITS(image_paths,
+                    start_frame=0, 
+                    num_frames=1,):
     """
     Reads in frames from .fits files starting at a specific frame.
     Assumes that this has already been converted from .rcd files and dark subtracted!
@@ -142,12 +126,8 @@ def importFramesFITS(list image_paths,
             image_times (list): Header times of these images
     """
 
-    ## Type definitions
-    cdef int IMG_DIM,frame,end_frame
-    cdef np.ndarray[UI8, ndim=1] data
-    cdef np.ndarray[F64, ndim=3] img_array
-    cdef list img_times = []
-    cdef list images_to_read
+
+    img_times = []
 
     
     ## Define end frame. Then evaluate if this is larger than the array
@@ -194,12 +174,10 @@ def importFramesFITS(list image_paths,
 
 
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
 def importFramesRCD(image_paths,
-                    int  start_frame=0, 
-                    int  num_frames=1,
-                    np.ndarray[F64, ndim=2] dark=np.zeros((1,1),dtype=np.float64)):
+                    start_frame=0, 
+                    num_frames=1,
+                    dark=np.zeros((1,1),dtype=np.float64)):
     """
     Reads in frames from .rcd files starting at a specific frame.
     
@@ -213,14 +191,6 @@ def importFramesRCD(image_paths,
             img_array (arr): Image data
             img_times (list): Header times of these images
     """
-    
-    ## Type definitions
-    cdef int IMG_DIM,frame,end_frame, hour
-    cdef np.ndarray[UI8, ndim=1] data
-    cdef np.ndarray[UI16, ndim=2] image
-    cdef np.ndarray[F64, ndim=3] img_array
-    cdef list img_times
-    cdef str timestamp
     
     
     ## Define pixel dimension of the square image and the memory array and list
@@ -271,8 +241,6 @@ def testGPSLock(filepath):
                         established for the given image
 
     """
-    cdef int ControlBlock2
-    cdef bint gpsLock
     
     ## Open .rcd file and extract the ControlBlock2 variable which represents
     ## the 8 boolean values following in the metadata (specifically the GPS
@@ -290,12 +258,10 @@ def testGPSLock(filepath):
     return gpsLock
     
 
-@cython.wraparound(False)
-def split_images(np.ndarray[UI16, ndim=1] data,
-                 int X_PIX,
-                 int Y_PIX,
-                 *, 
-                 bint gain_high=True):
+def split_images(data,
+                 X_PIX,
+                 Y_PIX,
+                 gain_high=True):
     """
     Function to extract either the low- or high-gain image from the data
     
@@ -312,8 +278,6 @@ def split_images(np.ndarray[UI16, ndim=1] data,
             lowgain_image (arr): Extracted low-gain image
     """
     
-    ## Type definitions
-    cdef np.ndarray data_2D,extracted_image
     
     data_2D = np.reshape(data, [2*Y_PIX,X_PIX])
 
@@ -359,7 +323,6 @@ def getSizeRCD(image_paths): #TODO: consider getting rid of this function
             frames (int): Number of images in a data directory
     """
 
-    cdef int width,height,frames
     width,height = (2048,2048)
     frames = len(image_paths)
     
@@ -372,10 +335,9 @@ def getSizeRCD(image_paths): #TODO: consider getting rid of this function
 
 #TODO: modify usage in FirstOcc fxn to only pass the master dark directory
 def makeMasterDark(dirpath,
-                   int  num_darks=9,
-                   *, 
-                   bint RCD_files=True, 
-                   bint gain_high=True): 
+                   num_darks=9,
+                   RCD_files=True, 
+                   gain_high=True): 
     """
     Get median dark image from a set of darks
     
@@ -391,8 +353,6 @@ def makeMasterDark(dirpath,
             darkMed (arr): Median dark image
     """
     
-    ## Type definitions
-    cdef np.ndarray RCD_darks,dark_median
     
     ## Read in num_darks frames from the directory and median combine them
     if RCD_files:
@@ -411,7 +371,7 @@ def makeMasterDark(dirpath,
 def makeDarkSet(dirpath,
                 base_path, 
                 obs_date,
-                int num_darks=9):
+                num_darks=9):
     """
     Get set of median-combined darks for entire night that are sorted and
     indexed by time, these are saved to disk and loaded in when needed
@@ -429,9 +389,6 @@ def makeDarkSet(dirpath,
             dark_arr (arr): Dark image times and filepaths to saved darks
     """
 
-    ## Type definitions
-    cdef list dark_dirs,dark_list
-    cdef np.ndarray masterdark_img,dark_arr
 
     ## Make list of dark folders
     dark_dirs = [d for d in dirpath.iterdir() if d.is_dir()]
@@ -488,9 +445,6 @@ def chooseDark(obs_folder,masterdark_list, obs_date):
             best_dark (bit): Bitmap of best master dark image
     """
     
-    ## Type definitions
-    cdef np.ndarray diff_time
-    cdef int best_dark_indx
     
     ## Get current datetime of observations
     dir_datetime = getDateTime(obs_folder, obs_date)
@@ -519,12 +473,11 @@ def chooseDark(obs_folder,masterdark_list, obs_date):
 #TODO: combine this function with makeMasterDark
 def stackImages(folder,
                 save_path, 
-                int  start_frame, 
-                int  num_frames, 
-                np.ndarray[F64, ndim=2] dark,
-                *, 
-                bint RCDfiles=True,
-                bint gain_high=True):
+                start_frame, 
+                num_frames, 
+                dark,
+                RCDfiles=True,
+                gain_high=True):
     """
     Make median combined image of first numImages in a directory
     
@@ -544,9 +497,6 @@ def stackImages(folder,
                             detection
     """
 
-    ## Type definitions
-    cdef list RCD_file_list
-    cdef np.ndarray RCD_imgs,median_img
     
     ## Read in stack of .rcd images and median combine them
     if RCDfiles:
