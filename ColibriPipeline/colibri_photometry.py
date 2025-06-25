@@ -24,25 +24,11 @@ from scipy.signal import convolve
 from scipy.ndimage import uniform_filter1d
 
 
-# Custom Script Imports
-
-
-# Cython-Numpy Interface
-cimport numpy as np
-np.import_array()
-
-# Compile Typing Definitions
-ctypedef np.uint16_t UI16
-ctypedef np.float64_t F64
-
-
 ##############################
 ## Star Depection and Location
 ##############################
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
+def initialFind(img_data, detect_thresh):
     """
     Locates the stars in an image using the sep module and completes
     preliminary photometry on the image.
@@ -54,11 +40,6 @@ def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     Returns:
         star_chars (arr): [x, y, half light radius] of all stars in pixels
     """
-
-    ## Type definitions
-    cdef float thresh
-    cdef np.ndarray img_copy,stars,stars_profile
-    cdef tuple star_chars
 
     ## Extract the background from the initial time slice and subtract it
     img_copy = deepcopy(img_data)
@@ -78,11 +59,10 @@ def initialFind(np.ndarray[F64, ndim=2] img_data, float detect_thresh):
     return star_chars
 
 
-@cython.wraparound(False)
-def refineCentroid(np.ndarray[F64, ndim=2] img_data,
-                   str time, #TODO: remove this
-                   np.ndarray[F64, ndim=2] star_coords,
-                   float sigma):
+def refineCentroid(img_data,
+                   time, #TODO: remove this
+                   star_coords,
+                   sigma):
     """
     Refines the centroid for each star for an image based on previous coords
     
@@ -96,10 +76,7 @@ def refineCentroid(np.ndarray[F64, ndim=2] img_data,
         coords (arr): 2D array of star coordinates (column1=x,column2=y)
         time (str): Header time of image
     """
-    
-    ## Type definitions
-    cdef list x_initial,y_initial
-    cdef np.ndarray new_pos
+
 
     ## Generate initial (x,y) coordinates from star_coords
     x_initial = [pos[0] for pos in star_coords]
@@ -113,16 +90,16 @@ def refineCentroid(np.ndarray[F64, ndim=2] img_data,
     #y = new_pos[:][1].tolist()
     #return tuple(zip(x,y)), time
     
-    return new_pos.transpose(),time
+    return new_pos.transpose(), time
 
 
 ##############################
 ## Image Manipulation Tools
 ##############################
 
-def sumFlux(np.ndarray[F64, ndim=2] img_data,
-            np.ndarray[F64, ndim=2] star_coords,
-            int l):
+def sumFlux(img_data,
+            star_coords,
+            l):
     '''
     Function to sum up flux in square aperture of size.
     Depreciated for sep.sum_circle.
@@ -137,8 +114,6 @@ def sumFlux(np.ndarray[F64, ndim=2] img_data,
         star_fluxes (list): Fluxes of each star
     '''
     
-    ## Type definitions
-    cdef list star_flux_list,star_fluxes
     
     ## Extract flux data for each detected star flagged by star_coords
     star_flux_list = [[img_data[y][x]
@@ -154,11 +129,11 @@ def sumFlux(np.ndarray[F64, ndim=2] img_data,
     return star_fluxes
 
 
-@cython.wraparound(False)
-def clipCutStars(np.ndarray[F64, ndim=1] x, 
-                 np.ndarray[F64, ndim=1] y,
-                 int x_length,
-                 int y_length):
+
+def clipCutStars(x, 
+                 y,
+                 x_length,
+                 y_length):
     """
     Sets flux measurements too close to the field of view boundary to zero in
     order to prevent fadeout. To be used for a single image.
@@ -174,8 +149,8 @@ def clipCutStars(np.ndarray[F64, ndim=1] x,
     """
     
     ## Get list of indices where the stars are too near to the edge
-    cdef int pixel_buffer = 20
-    cdef np.ndarray bad_ind = np.append(np.where((x < pixel_buffer) | \
+    pixel_buffer = 20
+    bad_ind = np.append(np.where((x < pixel_buffer) | \
                                                  (x > x_length - pixel_buffer))[0], \
                                         np.where((y < pixel_buffer) | \
                                                  (y > y_length - pixel_buffer))[0])
@@ -183,11 +158,11 @@ def clipCutStars(np.ndarray[F64, ndim=1] x,
     return bad_ind
 
 
-@cython.wraparound(False)
-def clipCutStars3D(np.ndarray[F64, ndim=2] x, 
-                   np.ndarray[F64, ndim=2] y,
-                   int x_length,
-                   int y_length):
+
+def clipCutStars3D(x, 
+                   y,
+                   x_length,
+                   y_length):
     """
     Sets flux measurements too close to the field of view boundary to zero in
     order to prevent fadeout. To be used with stacked arrays.
@@ -203,8 +178,8 @@ def clipCutStars3D(np.ndarray[F64, ndim=2] x,
     """
     
     ## Get list of indices where the stars are too near to the edge
-    cdef int pixel_buffer = 20
-    cdef np.ndarray bad_ind = np.append(np.where((x < pixel_buffer) | \
+    pixel_buffer = 20
+    bad_ind = np.append(np.where((x < pixel_buffer) | \
                                                  (x > x_length - pixel_buffer))[0], \
                                         np.where((y < pixel_buffer) | \
                                                  (y > y_length - pixel_buffer))[0])
@@ -216,11 +191,10 @@ def clipCutStars3D(np.ndarray[F64, ndim=2] x,
 ## Correct Star Drift
 ##############################
 
-@cython.wraparound(False)
-def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
-                 np.ndarray[F64, ndim=2] star_coords2,
-                 F64 time1,
-                 F64 time2):
+def averageDrift(star_coords1,
+                 star_coords2,
+                 time1,
+                 time2):
     """
     Determines the median x/y drift rates of all stars in a minute (first to
     last image)
@@ -235,9 +209,7 @@ def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
             y_drift_rate (arr): Median y drift rate [px/star]
     """
     
-    ## Type definitions
-    cdef float time_interval,x_drift_rate,y_drift_rate
-    cdef np.ndarray x_drifts,y_drifts
+
     
     ## Find the time difference between the two frames
     time_interval = np.subtract(time2,time1)
@@ -253,14 +225,14 @@ def averageDrift(np.ndarray[F64, ndim=2] star_coords1,
     return x_drift_rate,y_drift_rate
 
 
-@cython.wraparound(False)
-def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
-               np.ndarray[F64, ndim=2] prev_img,
-               str img_time,
-               int r,
-               int num_stars,
-               tuple pix_length,
-               tuple pix_drift=(0,0)):
+
+def timeEvolve(curr_img,
+               prev_img,
+               img_time,
+               r,
+               num_stars,
+               pix_length,
+               pix_drift=(0,0)):
     """
     Adjusts aperture based on star drift and calculates flux in aperture
     
@@ -276,16 +248,7 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
         Returns:
             star_data (tuple): New star coordinates, image flux, time as tuple
      """
-    
-    ## Type definitions
-    cdef float drift_time
-    cdef double curr_time
-    cdef list fluxes
-    cdef tuple star_data
-    cdef np.ndarray x,y,stars,x_clipped,y_clipped
-    cdef int inner_annulus = 5
-    cdef int outer_annulus = 8
-    cdef int Edge_buffer = 10
+
     
     ## Calculate time between prev_img and curr_img
     curr_time  = Time(img_time,scale='utc',precision=9).unix
@@ -321,14 +284,14 @@ def timeEvolve(np.ndarray[F64, ndim=2] curr_img,
     return star_data
 
 
-@cython.wraparound(False)
-def timeEvolve3D(np.ndarray[F64, ndim=3] img_stack,
-                 np.ndarray[F64, ndim=2] first_img,
-                 list img_times,
-                 int r,
-                 int num_stars,
-                 tuple pix_length,
-                 tuple pix_drift=(0,0)):
+
+def timeEvolve3D(img_stack,
+                 first_img,
+                 img_times,
+                 r,
+                 num_stars,
+                 pix_length,
+                 pix_drift=(0,0)):
     """
     Adjusts aperture based on star drift and calculates flux in aperture.
     !!!Currently does not work!!!
@@ -405,14 +368,13 @@ def timeEvolve3D(np.ndarray[F64, ndim=3] img_stack,
     pass
     
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
-                      np.ndarray[F64, ndim=2] prev_img,
-                      list img_times,
-                      int r,
-                      int num_stars,
-                      tuple pix_length):
+
+def getStationaryFlux(img_stack,
+                    prev_img,
+                      img_times,
+                      r,
+                      num_stars,
+                      pix_length):
     """
     Gets the position of each star and finds the star flux at each frame,
     assuming no drift of the centroid.
@@ -429,13 +391,7 @@ def getStationaryFlux(np.ndarray[F64, ndim=3] img_stack,
             star_data (tuple): New star coordinates, image flux, time as tuple
      """
     
-    ## Type definitions
-    cdef np.ndarray unix_time,x,y,
-    cdef np.ndarray edge_stars,x_clipped,y_clipped
-    cdef np.ndarray fluxes,star_data
-    cdef int inner_annulus = 5
-    cdef int outer_annulus = 8
-    cdef int Edge_buffer = 10
+
     
     ## Calculate time between prev_img and curr_img
     unix_time  = Time(img_times,precision=9).unix
