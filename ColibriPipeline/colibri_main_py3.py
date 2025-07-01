@@ -839,5 +839,3 @@ if __name__ == '__main__':
         end_time = timer.time()
         writePrimarySummary(obs_date, processing_time=(end_time - start_time))
         print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
-
-
