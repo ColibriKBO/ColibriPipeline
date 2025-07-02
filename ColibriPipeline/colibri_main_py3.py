@@ -777,7 +777,7 @@ if __name__ == '__main__':
         start_time = timer.time()
         finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), 'primary_summary.txt')
         
-        pool_size = multiprocessing.cpu_count() - 2
+        pool_size = 1
         pool = Pool(pool_size)
         args = ((minute_dirs[f], MasterDarkList, ricker_kernel, exposure_time, sigma_threshold,
                  base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(len(minute_dirs)))
