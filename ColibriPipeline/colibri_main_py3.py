@@ -681,7 +681,7 @@ if __name__ == '__main__':
     ## Add argument functionality
     arg_parser.add_argument('path', help='Path to base directory')
     arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed')
-    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=5.0,type=float)
+    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=3.0,type=float)
     arg_parser.add_argument('-R','--RCD', help='Read RCD files directly (otherwise convert to .fits)', action='store_false')
     arg_parser.add_argument('-p', '--noparallel', help='Disable parallelism, run in sequence instead', action='store_false')
     arg_parser.add_argument('-g', '--lowgain', help='Analyze low-gain images', action='store_false')
