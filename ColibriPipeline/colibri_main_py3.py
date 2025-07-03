@@ -799,6 +799,11 @@ if __name__ == '__main__':
             
         pool.close()
         pool.join()
+        try:
+            writePrimarySummary(obs_date, processing_time=(end_time - start_time)) # try again in case it failed
+        except:
+            pass
+        print('##      Finished running in parallel      ##')
 
 
 ###########################
