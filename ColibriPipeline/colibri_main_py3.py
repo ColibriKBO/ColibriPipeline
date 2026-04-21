@@ -65,7 +65,7 @@ NUM_TO_STACK = 9  # number of images to stack for star detection
 BIASES_TO_STACK = 9       #number of dark images to combine in median dark images
 EDGE_BUFFER  = 10  # px from edge of image to ignore
 NPY_STARS = 10  # number of stars to save in .npy file
-MIN_STARS = 30  # minimum number of stars to analyze minute
+MIN_STARS = 10  # minimum number of stars to analyze minute
 
 # Drift parameters
 DRIFT_MULT = 1.0  # multiplier for detection radius after drift
@@ -295,7 +295,10 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
 
     ## Make list of star coords and half light radii using a conservative
     ## threshold scaled to the number of images stacked
-    star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH*NUM_TO_STACK**0.5))
+    # star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH*NUM_TO_STACK**0.5))
+
+    # removing scaling as I think it too conservative
+    star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH))
 
     ## Remove stars where centre is too close to edge of frame
     edge_buffer = 10     #number of pixels between edge of star aperture and edge of image
@@ -465,6 +468,16 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                 
         gc.collect()
     
+    # Save the starData array to a .npy file in the archive directory
+    starDataFile = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + 'stars.npy')
+    if starDataFile.exists():
+        starDataFile.unlink()
+    np.save(starDataFile, starData)
+
+
+
+
+
 
     """
     # Roman's photometry plotting section
@@ -668,7 +681,7 @@ if __name__ == '__main__':
     ## Add argument functionality
     arg_parser.add_argument('path', help='Path to base directory')
     arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed')
-    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=6.0,type=float)
+    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=5.0,type=float)
     arg_parser.add_argument('-R','--RCD', help='Read RCD files directly (otherwise convert to .fits)', action='store_false')
     arg_parser.add_argument('-p', '--noparallel', help='Disable parallelism, run in sequence instead', action='store_false')
     arg_parser.add_argument('-g', '--lowgain', help='Analyze low-gain images', action='store_false')
@@ -705,7 +718,15 @@ if __name__ == '__main__':
         reprocess = cml_args.reprocess
 
         # Target data
-        base_path = pathlib.Path(cml_args.path) # path to data directory
+        if pathlib.Path(cml_args.path).exists():
+            base_path = pathlib.Path(cml_args.path)
+    
+
+            BASE_PATH = base_path
+            DATA_PATH = BASE_PATH / 'ColibriData'
+            IMGE_PATH = BASE_PATH / 'ColibriImages'
+            ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
         obsYYYYMMDD = cml_args.date # date to be analyzed formatted as "YYYY/MM/DD"
         obsdatesplit = obsYYYYMMDD.split('/')
         obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
