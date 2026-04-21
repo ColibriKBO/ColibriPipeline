@@ -25,7 +25,6 @@ import time as timer
 from astropy.convolution import RickerWavelet1DKernel
 from astropy.time import Time
 from copy import deepcopy
-from multiprocessing import Pool
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -269,7 +268,6 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
     
     ## Check if there are enough images in the current directory 
     minNumImages = len(kernel.array)*3        #3x kernel length
-    minNumImages = 1
     print(minNumImages, "images are required for analysis")
     if num_images < minNumImages:
         print(datetime.datetime.now(), "Insufficient number of images, skipping...")
@@ -781,13 +779,14 @@ if __name__ == '__main__':
         start_time = timer.time()
         finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), 'primary_summary.txt')
         
-        pool_size = multiprocessing.cpu_count() - 2
-        pool = Pool(pool_size)
+        pool_size = max(1, multiprocessing.cpu_count() - 2)
+        mp_ctx = multiprocessing.get_context('spawn')
         args = ((minute_dirs[f], MasterDarkList, ricker_kernel, exposure_time, sigma_threshold,
                  base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(len(minute_dirs)))
         
         try:
-            star_counts = pool.starmap(firstOccSearch,args)
+            with mp_ctx.Pool(pool_size) as pool:
+                star_counts = pool.starmap(firstOccSearch,args)
             end_time = timer.time()
             #starhours = sum(star_minutes)/(2399*60.0)
             #print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
@@ -800,9 +799,6 @@ if __name__ == '__main__':
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
                 f.write('failed')
-            
-        pool.close()
-        pool.join()
 
 
 ###########################

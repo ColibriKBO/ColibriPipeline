@@ -471,7 +471,8 @@ def dipDetection(fluxProfile, kernel, num, sigma_threshold):
     
     FramesperMin = 2400      #ideal number of frames in a directory (1 minute)
     minSNR = 0               #median/stddev limit to look for detections
-    minLightcurveLen = FramesperMin/4    #minimum length of lightcurve
+    # minLightcurveLen = FramesperMin/4    #minimum length of lightcurve
+    minLightcurveLen = 100
     
     # reject lightcurves that dip below 500
     # Designed to remove bright satellites; no longer needed since we don't do aperture background sub anymore
