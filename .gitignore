@@ -22,3 +22,6 @@ colibri_photometry.html
 
 # ignore any .vscode files
 **/.vscode/
+
+# ignore claude instructions
+CLAUDE.md
