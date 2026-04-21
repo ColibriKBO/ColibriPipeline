@@ -268,7 +268,9 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
     print(datetime.datetime.now(), "Imported", num_images, "frames")
     
     ## Check if there are enough images in the current directory 
-    minNumImages = len(kernel.array)*3         #3x kernel length
+    minNumImages = len(kernel.array)*3        #3x kernel length
+    minNumImages = 1
+    print(minNumImages, "images are required for analysis")
     if num_images < minNumImages:
         print(datetime.datetime.now(), "Insufficient number of images, skipping...")
         return minuteDir.name, 0, 0
