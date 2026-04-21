@@ -23,3 +23,6 @@ Testing.ipynb
 
 # ignore any .vscode files
 **/.vscode/
+
+# ignore claude instructions
+CLAUDE.md

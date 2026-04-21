@@ -41,11 +41,13 @@ import logging
 
 #-------------------------------global vars-----------------------------------#
 
-# Path variables
-BASE_PATH = pathlib.Path('D:/')
+# # Path variables
+# BASE_PATH = pathlib.Path('D:/')
+BASE_PATH = pathlib.Path('/home/agirmen/research_data/ColibriPipelineSimulatedDirs/Red/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
 
 # Timestamp format
 OBSDATE_FORMAT = '%Y%m%d'
