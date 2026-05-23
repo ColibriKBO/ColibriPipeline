@@ -124,8 +124,13 @@ class Telescope:
     
     def getStarHours(self, summarytxt):
 
+        # numpy >=1.23 passes str (not bytes) to converters; tolerate both.
+        def _to_dt(timestamp):
+            if isinstance(timestamp, bytes):
+                timestamp = timestamp.decode('ascii')
+            return datetime.strptime(timestamp + '000', MINUTEDIR_STRP)
         parse_summary = {
-                    0: lambda timestamp: datetime.strptime(timestamp.decode('ascii')+'000', MINUTEDIR_STRP),
+                    0: _to_dt,
                     1: lambda stars: int(stars),
                     2: lambda detec: int(detec)
                          }

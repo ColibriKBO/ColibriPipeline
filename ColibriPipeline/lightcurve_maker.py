@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import os
 import gc
 import time as timer
-from .colibri_image_reader import readRCD
+from colibri_image_reader import readRCD
 
 def stackImages(folder, save_path, startIndex, numImages, dark, gain):
     """make median combined image of first numImages in a directory

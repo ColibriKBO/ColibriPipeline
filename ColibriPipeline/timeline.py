@@ -1256,6 +1256,10 @@ if __name__ == '__main__':
     # Initialize sensitivity plot
     starhours_fig, axs = plt.subplots()
 
+    # Default so the post-loop check at line ~1304 doesn't NameError when
+    # no telescope's primary_summary could be read.
+    total_starhours = 0
+
     # Plot star-hours for all cameras
     for machine in (Red,Green,Blue):
 
