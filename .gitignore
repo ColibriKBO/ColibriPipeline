@@ -25,3 +25,4 @@ colibri_photometry.html
 
 # ignore claude instructions
 CLAUDE.md
+/notebooks/*

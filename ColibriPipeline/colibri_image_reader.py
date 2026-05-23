@@ -17,7 +17,7 @@ from astropy.io import fits
 from time import time
 
 # Custom Script Imports
-from bitconverter import conv_12to16
+from .bitconverter import conv_12to16
 
 ##############################
 ## DateTime Information
