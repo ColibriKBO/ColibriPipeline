@@ -58,8 +58,23 @@ ACPLOG_STRP    = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S.%f'
 TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 
-# Directory structure
-BASE_PATH  = Path('/', 'D:')
+# Directory structure - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                    '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
+    RED_BASE   = _sim_root / 'Red'
+    GREEN_BASE = _sim_root / 'Green'
+    BLUE_BASE  = _sim_root / 'Blue'
+else:
+    BASE_PATH  = Path('/', 'D:')
+    RED_BASE   = Path('R:')
+    GREEN_BASE = Path('D:')
+    BLUE_BASE  = Path('B:')
 CLOUD_PATH = BASE_PATH / 'Logs' / 'Weather' / 'Weather'
 STATS_PATH = BASE_PATH / 'CentralRepo' / 'CumulativeStats'
 
@@ -974,9 +989,9 @@ if __name__ == '__main__':
     ## Setup telescope classes ##
 
     # Initialize telescopes
-    Red = Telescope("RED", "r", "R:", obs_date)
-    Green = Telescope("GREEN", "#66ff66", "D:", obs_date)
-    Blue  = Telescope("BLUE", "b", "B:", obs_date)
+    Red = Telescope("RED", "r", RED_BASE, obs_date)
+    Green = Telescope("GREEN", "#66ff66", GREEN_BASE, obs_date)
+    Blue  = Telescope("BLUE", "b", BLUE_BASE, obs_date)
     
     # Check that at least one log file exists
     if not (Red.log_exists | Green.log_exists | Blue.log_exists):

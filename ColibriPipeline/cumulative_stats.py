@@ -27,8 +27,23 @@ from matplotlib.ticker import MaxNLocator
 
 #-------------------------------global vars-----------------------------------#
 
-# Path variables
-BASE_PATH = Path('D:/')
+# Path variables - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                    '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
+    RED_BASE   = _sim_root / 'Red'
+    GREEN_BASE = _sim_root / 'Green'
+    BLUE_BASE  = _sim_root / 'Blue'
+else:
+    BASE_PATH = Path('D:/')
+    RED_BASE   = Path('R:/')
+    GREEN_BASE = Path('D:/')
+    BLUE_BASE  = Path('B:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
@@ -442,9 +457,9 @@ if __name__ == '__main__':
 ###########################
 
     # Initialize telescope classes
-    Red   = Telescope("RED", "R:", obsdate)
-    Green = Telescope("GREEN", "D:", obsdate)
-    Blue  = Telescope("BLUE", "B:", obsdate)
+    Red   = Telescope("RED", RED_BASE, obsdate)
+    Green = Telescope("GREEN", GREEN_BASE, obsdate)
+    Blue  = Telescope("BLUE", BLUE_BASE, obsdate)
 
     ## Count matched detections
     # Tier 1: matched to the second (candidates for satellite)
