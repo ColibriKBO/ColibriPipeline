@@ -301,7 +301,7 @@ if __name__ == '__main__':
         """,
         formatter_class=argparse.RawTextHelpFormatter)
 
-    arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+    arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:/)', default='d:/')
     arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', required=True)
     arg_parser.add_argument('-t', '--threshold', help='Star detection threshold.', default='4')
     arg_parser.add_argument('-m', '--minute', help='hh.mm.ss to process.')
@@ -495,8 +495,10 @@ if __name__ == '__main__':
         wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, int(polynom_order[0]))
 
         if wcs_header is None:
-            print("WARNING: WCS solution unavailable. Skipping RA/Dec conversion and star table generation.")
-            sys.exit(1)
+            print("WARNING: WCS solution unavailable for this minute. "
+                  "Skipping RA/Dec conversion, star table, and SNR plots. "
+                  "Check WSL solve-field on Windows or astrometry.net web fallback.")
+            sys.exit(0)
 
         #calculate coordinate transformation
         transform = wcs.WCS(wcs_header)

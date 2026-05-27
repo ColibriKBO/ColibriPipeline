@@ -262,7 +262,7 @@ if __name__ == '__main__':
 
     		""",formatter_class=argparse.RawTextHelpFormatter)
 
-        arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+        arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:/)', default='d:/')
         arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
 
         cml_args = arg_parser.parse_args()
