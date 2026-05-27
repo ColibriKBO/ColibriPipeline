@@ -44,11 +44,19 @@ global telescope
 telescope = os.environ['COMPUTERNAME']       #telescope identifier
 #field_name = 'field1'                           #name of field observed
 
-# Telescope Code Dictionary
-TELESCOPE_BASE_DIR = {'REDBIRD':pathlib.Path('R:'),
-                      'GREENBIRD':pathlib.Path('G:'),
-                      'BLUEBIRD':pathlib.Path('B:')}
-SELF_BASE_DIR = pathlib.Path('D:')
+# Telescope Code Dictionary - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = pathlib.Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                            '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    SELF_BASE_DIR = _sim_root / _telescope_colors.get(telescope, 'Green')
+    TELESCOPE_BASE_DIR = {name: _sim_root / color for name, color in _telescope_colors.items()}
+else:
+    TELESCOPE_BASE_DIR = {'REDBIRD':pathlib.Path('R:'),
+                          'GREENBIRD':pathlib.Path('G:'),
+                          'BLUEBIRD':pathlib.Path('B:')}
+    SELF_BASE_DIR = pathlib.Path('D:')
 TELESCOPE_ORDER = ['REDBIRD', 'GREENBIRD', 'BLUEBIRD']
 
 # Datetime Formats
@@ -305,8 +313,8 @@ if __name__ == '__main__':
 
     detect_thresh = int(cml_args.threshold)
 
-    base_path = pathlib.Path(cml_args.basedir)
-    data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''))    #path to data
+    base_path = SELF_BASE_DIR if _env == 'sim' else pathlib.Path(cml_args.basedir)
+    data_path = base_path / 'ColibriData' / str(obs_date).replace('-', '')    #path to data
 
 
     minute_dirs=[f.name for f in data_path.iterdir() if ('Dark' not in f.name and '.txt' not in f.name)]
@@ -316,8 +324,8 @@ if __name__ == '__main__':
     if cml_args.minute is None:
         print("matching minutes...")
 
-        # Substitute current telescope basedir with D:
-        TELESCOPE_BASE_DIR[telescope] = pathlib.Path('D:')
+        # Substitute current telescope basedir with this machine's local base
+        TELESCOPE_BASE_DIR[telescope] = SELF_BASE_DIR
 
         # Check to see if each telescope has data for this date
         # If not, remove it from the dictionary
@@ -444,7 +452,7 @@ if __name__ == '__main__':
     '''-------------------------------------------------------------------------------------'''
 
     #path to output files
-    save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+    save_path = base_path / 'ColibriArchive' / (str(obs_date).replace('-', '') + '_diagnostics') / 'Sensitivity' / minute_dir       #path to save outputs in
     #save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
 
 
@@ -466,14 +474,18 @@ if __name__ == '__main__':
 
     '''--------upload image to astrometry.net for plate solution------'''
     median_image = save_path.joinpath('high_medstacked.fits')     #path to median combined file for astrometry solution
-    median_str="/mnt/d/"+str(median_image).replace('d:', '').replace('\\', '/') #10-12 Roman A.
-    median_str=median_str.lower()
+    import platform
+    if platform.system() == 'Windows':
+        median_str = "/mnt/d/" + str(median_image).replace('d:', '').replace('\\', '/')
+        median_str = median_str.lower()
+    else:
+        median_str = str(median_image)
     transform_file = save_path.joinpath(minute_dir + '_' + polynom_order + '_wcs.fits') #path to save WCS header file in
-    transform_str=str(transform_file).split('\\')[-1]
+    transform_str = transform_file.name  # basename only, platform-independent
 
     #check if the tranformation has already been calculated and saved
     if transform_file.exists():
-                
+
         #open file and get transformation
         wcs_header = fits.open(transform_file)
         transform = wcs.WCS(wcs_header[0])
@@ -481,7 +493,11 @@ if __name__ == '__main__':
     else:
         #get solution from astrometry.net
         wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, int(polynom_order[0]))
-            
+
+        if wcs_header is None:
+            print("WARNING: WCS solution unavailable. Skipping RA/Dec conversion and star table generation.")
+            sys.exit(1)
+
         #calculate coordinate transformation
         transform = wcs.WCS(wcs_header)
 

@@ -14,6 +14,7 @@ Description: writes Ra Dec coordinates into dip detection txt file by performing
 # Module Imports
 
 import argparse
+import os
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -24,6 +25,19 @@ from datetime import date
 # Custom Script Imports
 import astrometrynet_funcs
 #import getRAdec
+
+
+# Directory structure - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                    '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
+else:
+    BASE_PATH = Path('/', 'D:')
 
 
 
@@ -326,7 +340,7 @@ if __name__ == '__main__':
     obs_date = date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
         
     print(obs_date)
-    data_path=Path('/','D:/','ColibriArchive',str(obs_date)) #path to archive with dip detection txts
+    data_path = BASE_PATH / 'ColibriArchive' / str(obs_date) #path to archive with dip detection txts
 
     detect_files = [f for f in data_path.iterdir() if 'det' in f.name] #list of txts
 

@@ -28,6 +28,19 @@ import math
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
+
+
+# Directory structure - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = pathlib.Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                            '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
+else:
+    BASE_PATH = pathlib.Path('/', 'D:')
 import argparse
 
 #Mike's rcd section ---------------------------------------------------------
@@ -254,16 +267,14 @@ if __name__ == '__main__':
 
         cml_args = arg_parser.parse_args()
 
-        base_path = pathlib.Path(cml_args.basedir)
+        base_path = BASE_PATH if _env == 'sim' else pathlib.Path(cml_args.basedir)
         obsYYYYMMDD = cml_args.date
         obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-        
+
         '''------------set up paths to directories------------------'''
 
-        #base_path = pathlib.Path('/', 'D:')
-
-        data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''), 'Dark')    #path to dark directories
-        save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Dark_Stats')  #path to save results to
+        data_path = base_path / 'ColibriData' / str(obs_date).replace('-', '') / 'Dark'    #path to dark directories
+        save_path = base_path / 'ColibriArchive' / (str(obs_date).replace('-','') + '_diagnostics') / 'Dark_Stats'  #path to save results to
         
         save_path.mkdir(parents=True, exist_ok=True)        #make save directory if it doesn't already exist
 

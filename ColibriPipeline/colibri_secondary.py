@@ -516,7 +516,7 @@ def readFile(filepath):
 
 ''' set up parameters for running the code '''
 global telescope
-telescope = os.environ['COMPUTERNAME']       #identifier for telescope
+telescope = os.environ.get('COMPUTERNAME', os.environ.get('COLIBRI_TELESCOPE', 'GREENBIRD'))  #identifier for telescope
 gain = 'high'           #gain level for .rcd files ('low' or 'high')
 #soln_order = 4      #tweak order for astrometry.net solution
 # obs_date = datetime.date(2021, 8, 4)    #date observations 
