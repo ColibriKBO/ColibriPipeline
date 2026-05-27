@@ -71,10 +71,10 @@ if _env == 'sim':
     GREEN_BASE = _sim_root / 'Green'
     BLUE_BASE  = _sim_root / 'Blue'
 else:
-    BASE_PATH  = Path('/', 'D:')
-    RED_BASE   = Path('R:')
-    GREEN_BASE = Path('D:')
-    BLUE_BASE  = Path('B:')
+    BASE_PATH  = Path('D:/')
+    RED_BASE   = Path('R:/')
+    GREEN_BASE = Path('D:/')
+    BLUE_BASE  = Path('B:/')
 CLOUD_PATH = BASE_PATH / 'Logs' / 'Weather' / 'Weather'
 STATS_PATH = BASE_PATH / 'CentralRepo' / 'CumulativeStats'
 

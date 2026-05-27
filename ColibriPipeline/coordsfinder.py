@@ -37,7 +37,7 @@ if _env == 'sim':
                                 os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
     BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
 else:
-    BASE_PATH = Path('/', 'D:')
+    BASE_PATH = Path('D:/')
 
 
 

@@ -40,9 +40,17 @@ import logging
 
 #-------------------------------global vars-----------------------------------#
 
-# # Path variables
-# BASE_PATH = pathlib.Path('D:/')
-BASE_PATH = pathlib.Path('/home/agirmen/research_data/ColibriPipelineSimulatedDirs/Red/')
+# Directory structure - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = pathlib.Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                            '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Red')
+else:
+    BASE_PATH = pathlib.Path('D:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
