@@ -163,7 +163,7 @@ def readDetTimestamp(det_file):
     return minute_dir
 
 
-def writePrimarySummary(obsdate, processing_time='None'):
+def writePrimarySummary(obsdate, processing_time=None):
     """
     Write a summary file for the given observation date. The summary file
     contains the number of stars detected in each minute directory, as well as
@@ -790,7 +790,7 @@ if __name__ == '__main__':
             print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
             
             # Write summary file
-            writePrimarySummary(obs_date, processing_time=(end_time - start_time))
+            writePrimarySummary(obs_date)
 
         except:
             logging.exception("failed to parallelize")
@@ -800,7 +800,8 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         try:
-            writePrimarySummary(obs_date, processing_time=(end_time - start_time)) # try again in case it failed
+            endtime = timer.time()
+            writePrimarySummary(obs_date) # try again in case it failed
         except:
             pass
         print('##      Finished running in parallel      ##')
@@ -824,7 +825,7 @@ if __name__ == '__main__':
 
         # Write summary file
         end_time = timer.time()
-        writePrimarySummary(obs_date, processing_time=(end_time - start_time))
+        writePrimarySummary(obs_date)
         print(f"Ran for {end_time - start_time} seconds", file=sys.stderr)
 
     else:
