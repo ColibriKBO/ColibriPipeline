@@ -494,8 +494,9 @@ if __name__ == '__main__':
     median_image = save_path.joinpath('high_medstacked.fits')     #path to median combined file for astrometry solution
     import platform
     if platform.system() == 'Windows':
-        median_str = "/mnt/d/" + str(median_image).replace('d:', '').replace('\\', '/')
-        median_str = median_str.lower()
+        # Lowercase first so the drive-letter strip catches both 'D:' and 'd:'.
+        # Without this, an uppercase 'D:' from BASE_PATH leaks through and produces '/mnt/d/d:/...'.
+        median_str = "/mnt/d/" + str(median_image).lower().replace('d:', '').replace('\\', '/')
     else:
         median_str = str(median_image)
     transform_file = save_path.joinpath(minute_dir + '_' + polynom_order + '_wcs.fits') #path to save WCS header file in
