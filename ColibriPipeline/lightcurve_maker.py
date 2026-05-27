@@ -148,7 +148,7 @@ def timeEvolveFITS(data, t, coords, x_drift, y_drift, r, stars, x_length, y_leng
 
     '''get proper frame times to apply drift'''
     frame_time = Time(t, precision=9).unix   #current frame time from file header (unix)
-    drift_time = frame_time - coords[1,3]    #time since previous frame [s]
+    drift_time = frame_time - coords[0,3]    #time since previous frame [s] (any star row works; all share header timestamp)
     
     '''add drift to each star's coordinates based on time since last frame'''
     x = [coords[ind, 0] + x_drift*drift_time for ind in range(0, stars)]

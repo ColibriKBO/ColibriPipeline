@@ -451,22 +451,40 @@ if __name__ == '__main__':
 
     '''-------------------------------------------------------------------------------------'''
 
-    #path to output files
-    save_path = base_path / 'ColibriArchive' / (str(obs_date).replace('-', '') + '_diagnostics') / 'Sensitivity' / minute_dir       #path to save outputs in
-    #save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+    # Try the originally chosen minute first; if getLightcurves fails (e.g. too few
+    # stars detected on a cloudy minute), walk outward through the remaining minutes
+    # until one succeeds or we exhaust the night.
+    try:
+        chosen_idx = minute_dirs.index(minute_dir)
+    except ValueError:
+        chosen_idx = int(len(minute_dirs) / 2)
+    candidate_order = sorted(range(len(minute_dirs)), key=lambda i: abs(i - chosen_idx))
 
+    save_path = None
+    lightcurve_path = None
+    for cand_idx in candidate_order:
+        cand_minute = minute_dirs[cand_idx]
+        cand_save_path = base_path / 'ColibriArchive' / (str(obs_date).replace('-', '') + '_diagnostics') / 'Sensitivity' / cand_minute
+        cand_lightcurve_path = cand_save_path.joinpath(gain + '_' + str(detect_thresh) + 'sig_lightcurves')
+        cand_save_path.mkdir(parents=True, exist_ok=True)
 
-    lightcurve_path = save_path.joinpath(gain + '_' + str(detect_thresh) +  'sig_lightcurves')          #path that light curves are saved to
+        if cml_args.lightcurve == True:
+            print('making light curve .txt files')
+            print("DATA PATH: ", data_path.joinpath(cand_minute))
+            try:
+                lightcurve_maker.getLightcurves(data_path.joinpath(cand_minute), cand_save_path, ap_r, gain, telescope, detect_thresh)
+            except Exception as lc_err:
+                print(f"WARNING: getLightcurves failed on minute {cand_minute}: {lc_err}. Trying next candidate.")
+                continue
 
-    #make directory to hold results in if doesn't already exist
-    save_path.mkdir(parents=True, exist_ok=True)
-
-
-    '''-------------make light curves of data----------------------'''
-    if cml_args.lightcurve==True:
-        print('making light curve .txt files')
-        print("DATA PATH: ", data_path.joinpath(minute_dir))
-        lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
+        minute_dir = cand_minute
+        obs_time = cand_minute.split('_')[1][:-4]
+        save_path = cand_save_path
+        lightcurve_path = cand_lightcurve_path
+        break
+    else:
+        print("WARNING: no minute could be processed for sensitivity analysis. Skipping the rest of this stage.")
+        sys.exit(0)
 
     #save .png plots of lightcurves
     print('saving plots of light curves')
