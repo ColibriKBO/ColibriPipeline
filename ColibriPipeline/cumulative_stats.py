@@ -124,24 +124,27 @@ class Telescope:
     
     def getStarHours(self, summarytxt):
 
-        # numpy >=1.23 passes str (not bytes) to converters; tolerate both.
-        def _to_dt(timestamp):
-            if isinstance(timestamp, bytes):
-                timestamp = timestamp.decode('ascii')
-            return datetime.strptime(timestamp + '000', MINUTEDIR_STRP)
-        parse_summary = {
-                    0: _to_dt,
-                    1: lambda stars: int(stars),
-                    2: lambda detec: int(detec)
-                         }
-
-        # Load primary_summary.txt
+        # Hand-roll the parse: numpy's C-based loader aborts the whole file if
+        # any single line is short (e.g. a blank trailing line, a partial write
+        # from an interrupted run). We only need the star-count column anyway.
         try:
-            primary_summary = np.loadtxt(summarytxt, delimiter=',', converters=parse_summary, 
-                                         ndmin=2, dtype=object)
-            star_mins = np.sum(primary_summary[:,1])
-            return star_mins/60.
-        except IndexError:
+            star_counts = []
+            with open(summarytxt, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    parts = [p.strip() for p in line.split(',')]
+                    if len(parts) < 2:
+                        continue
+                    try:
+                        star_counts.append(int(parts[1]))
+                    except ValueError:
+                        continue
+            if not star_counts:
+                raise IndexError("no data rows")
+            return sum(star_counts) / 60.
+        except (OSError, IndexError):
             self.addError(f"ERROR: Could not read primary summary on {self.name}!")
             return np.nan
 

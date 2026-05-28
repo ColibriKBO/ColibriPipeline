@@ -247,17 +247,18 @@ def primarysummaryReader(summary_path):
     
     """
 
-    # Load primary_summary.txt as a pandas dataframe
+    # Load primary_summary.txt as a pandas dataframe. Modern pandas (>=2.0)
+    # silently ignores `date_parser`, so we parse the index after the read.
     try:
-        star_hours = pd.read_csv(summary_path, header=None, 
-                                    names=['timestamp','stars','detec'],
-                                    comment='#', index_col=0,
-                                    parse_dates=['timestamp'], date_parser=lambda x: datetime.strptime(x+'000', MINUTEDIR_STRP))
+        star_hours = pd.read_csv(summary_path, header=None,
+                                 names=['timestamp', 'stars', 'detec'],
+                                 comment='#', index_col=0,
+                                 skipinitialspace=True)
+        star_hours.index = pd.to_datetime(star_hours.index + '000',
+                                          format=MINUTEDIR_STRP)
         return star_hours
-    
-    # If primary pipeline failed, return None (to be ignored)
-    except:
-        print(f"ERROR: Could not read primary summary on {summary_path.anchor}!")
+    except (FileNotFoundError, pd.errors.ParserError, ValueError) as e:
+        print(f"ERROR: Could not read primary summary on {summary_path.anchor}! ({e})")
         return None
 
 
@@ -359,11 +360,24 @@ if __name__ == '__main__':
             time.sleep(300)
         
         # Read the primary_summary.txt file for each telescope into a dictionary
-        primary_summary_dfs = {instrument: primarysummaryReader(primary_summary_file) 
-                               for instrument, primary_summary_file 
+        primary_summary_dfs = {instrument: primarysummaryReader(primary_summary_file)
+                               for instrument, primary_summary_file
                                in zip(TELESCOPE_BASE_DIR.keys(), primary_summary_files)}
-        
-        
+
+        # Drop telescopes whose primary_summary could not be read so the
+        # downstream sort_values doesn't crash on None.
+        unreadable = [k for k, v in primary_summary_dfs.items()
+                      if v is None or v.empty]
+        for k in unreadable:
+            print(f"WARNING: dropping {k} from minute matching (no readable primary_summary).")
+            primary_summary_dfs.pop(k)
+            if k in TELESCOPE_ORDER:
+                TELESCOPE_ORDER.remove(k)
+        if not primary_summary_dfs:
+            print("WARNING: no peer primary_summary.txt readable; skipping minute matching.")
+            sys.exit(0)
+
+
         # Try each telescope to find the one with the most stars detected
         matched_minute = {}
         for i in range(len(TELESCOPE_ORDER)):

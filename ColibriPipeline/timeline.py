@@ -1270,14 +1270,17 @@ if __name__ == '__main__':
             continue
         else:
 
-            # Load primary_summary.txt as a pandas dataframe
+            # Load primary_summary.txt as a pandas dataframe. Modern pandas
+            # silently ignores the deprecated `date_parser=`; parse afterwards.
             try:
-                star_hours = pd.read_csv(summarytxt, header=None, 
-                                         names=['timestamp','stars','detec'],
+                star_hours = pd.read_csv(summarytxt, header=None,
+                                         names=['timestamp', 'stars', 'detec'],
                                          comment='#', index_col=0,
-                                         parse_dates=['timestamp'], date_parser=lambda x: datetime.strptime(x+'000', MINUTEDIR_STRP))
-            except:
-                machine.addError(f"ERROR: Could not read primary summary on {machine.name}!")
+                                         skipinitialspace=True)
+                star_hours.index = pd.to_datetime(star_hours.index + '000',
+                                                  format=MINUTEDIR_STRP)
+            except (FileNotFoundError, pd.errors.ParserError, ValueError) as e:
+                machine.addError(f"ERROR: Could not read primary summary on {machine.name}! ({e})")
                 continue
 
             # Parse data to mark detections and calculate total star-hours

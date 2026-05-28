@@ -199,10 +199,14 @@ if __name__ == '__main__':
     
     # Available argument functionality
     arg_parser.add_argument('date', help='Observation date (YYYYMMDD) of data to be processed.')
+    arg_parser.add_argument('--coord-tolerance', type=float, default=COORD_TOLERANCE,
+                            help=f'Match cone radius in degrees (default {COORD_TOLERANCE} = 7 arcsec). '
+                                 'Raise (e.g. 0.05) to recover nights from before a pointing correction.')
 
     # Process argparse list as useful variables
     cml_args  = arg_parser.parse_args()
     obsdate   = cml_args.date
+    coord_tolerance = cml_args.coord_tolerance
 
     # Initialize telescope classes
     Red   = Telescope("RED", RED_BASE, obsdate)
@@ -359,8 +363,15 @@ if __name__ == '__main__':
         # Check if the match coordinates are within tolerance of each other
         # Delete the match directory if not
         for tel1,tel2 in itertools.combinations(matched_det_coords, 2):
-            if (np.hypot((tel1[0] - tel2[0])/np.cos(tel1[1]*np.pi/180), tel1[1] - tel2[1]) <= COORD_TOLERANCE):
-                
+            # readRAdec returns (inf, inf) when the RA/Dec line couldn't be
+            # parsed. Skip those pairs explicitly so we don't silently fail
+            # the tolerance test via NaN arithmetic.
+            if not (np.isfinite(tel1[0]) and np.isfinite(tel1[1])
+                    and np.isfinite(tel2[0]) and np.isfinite(tel2[1])):
+                print(f"{match_dir.name} pair skipped: missing RA/Dec on one side.")
+                continue
+            if (np.hypot((tel1[0] - tel2[0])/np.cos(tel1[1]*np.pi/180), tel1[1] - tel2[1]) <= coord_tolerance):
+
                 # Log the match and break out of the loop
                 # NOTE: This requires only that one pair of coordinates is within tolerance
                 print(f"{match_dir.name} matched stars.")

@@ -571,10 +571,13 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
     j=0
     for f in save_frames:
         
-        date = headerTimes[f].split('T')[0]                                 #date of event
-        time = headerTimes[f].split('T')[1].split('.')[0].replace(':','')   #time of event
-        star_coords = initial_positions[np.where(event_frames == f)[0][0]]     #coords of occulted star
-        mstime = headerTimes[f].split('T')[1].split('.')[1]                 # micros time of event
+        ts_f = headerTimes[f]
+        if isinstance(ts_f, (list, tuple)):
+            ts_f = ts_f[0]
+        date = ts_f.split('T')[0]                                          #date of event
+        time = ts_f.split('T')[1].split('.')[0].replace(':','')            #time of event
+        star_coords = initial_positions[np.where(event_frames == f)[0][0]] #coords of occulted star
+        mstime = ts_f.split('T')[1].split('.')[1]                          # micros time of event
        # print(datetime.datetime.now(), ' saving event in frame', f)
         
         star_all_flux = save_curves[np.where(save_frames == f)][0]  #total light curve for current occulted star
@@ -608,7 +611,7 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
             filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
             filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
             filehandle.write('#\n')
-            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f]))
+            filehandle.write('#    DATE-OBS: %s\n' %(ts_f))
             filehandle.write('#    Telescope: %s\n' %(telescope))
             filehandle.write('#    Field: %s\n' %(field_name))
             filehandle.write('#    significance: %.3f\n' %(save_sigma[j]))
@@ -630,8 +633,12 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                 star_save_conv= star_all_conv[np.where(np.in1d(imagePaths, files_to_save))[0]]
                 
                 #loop through each frame to be saved
-                for i in range(0, len(files_to_save)):  
-                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(headerTimes[:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                save_times = headerTimes[:f + save_chunk]
+                for i in range(0, len(files_to_save)):
+                    ts = save_times[i]
+                    if isinstance(ts, (list, tuple)):
+                        ts = ts[0]
+                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(ts.split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
             
             #if portion of light curve to save is not at the beginning
             else:
@@ -644,8 +651,12 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                     star_save_conv= star_all_conv[np.where(np.in1d(imagePaths, files_to_save))[0]]
                     
                     #loop through each frame to save
-                    for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                    save_times = headerTimes[f - save_chunk:]
+                    for i in range(0, len(files_to_save)):
+                        ts = save_times[i]
+                        if isinstance(ts, (list, tuple)):
+                            ts = ts[0]
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(ts.split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
                 #if the portion of the light curve to save is not at beginning or end of the minute, save the whole portion around the event
                 else:  
@@ -655,8 +666,12 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                     star_save_conv= star_all_conv[np.where(np.in1d(imagePaths, files_to_save))[0]]
                     
                     #loop through each frame to save
-                    for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                    save_times = headerTimes[f - save_chunk:f + save_chunk]
+                    for i in range(0, len(files_to_save)):
+                        ts = save_times[i]
+                        if isinstance(ts, (list, tuple)):
+                            ts = ts[0]
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(ts.split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
 
 
