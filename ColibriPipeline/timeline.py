@@ -1278,7 +1278,9 @@ if __name__ == '__main__':
                                          comment='#', index_col=0,
                                          skipinitialspace=True)
                 star_hours.index = pd.to_datetime(star_hours.index + '000',
-                                                  format=MINUTEDIR_STRP)
+                                                  format=MINUTEDIR_STRP,
+                                                  errors='coerce')
+                star_hours = star_hours[star_hours.index.notna()]
             except (FileNotFoundError, pd.errors.ParserError, ValueError) as e:
                 machine.addError(f"ERROR: Could not read primary summary on {machine.name}! ({e})")
                 continue
@@ -1408,8 +1410,11 @@ if __name__ == '__main__':
         print(f"ERROR: Detections have not been matched yet!")
     else:
 
-        # Get names and descriptions of matched events form "matched" subdirectories
+        # Get names and descriptions of matched events from "matched" subdirectories.
+        # Strangeness-flagged Tier1 events are satellite/cosmic-ray artefacts; include
+        # only Tier2 (clean 3-telescope) and Tier3 events in the PDF to keep it small.
         hhmmss_dirs = [item for item in matched_dir.iterdir() if item.is_dir()]
+        PDF_TIER_INCLUDE = {'Tier2', 'Tier3'}
         for hhmmss_dir in hhmmss_dirs:
             print(f"Analyzing detection at {hhmmss_dir.name}...")
             
@@ -1448,7 +1453,9 @@ if __name__ == '__main__':
 
                 plt.savefig(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')),
                             dpi=800,bbox_inches='tight')
-                img_list.append(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')))
+                tier_tag = next((t for t in PDF_TIER_INCLUDE if hhmmss_dir.name.endswith(t)), None)
+                if tier_tag is not None:
+                    img_list.append(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')))
                 plt.close()
 
 ###########################
@@ -1462,7 +1469,9 @@ if __name__ == '__main__':
     img_list.append(str(STATS_PATH / '2telescope_matches.jpg'))
     img_list.append(str(STATS_PATH / '3telescope_matches.jpg'))
 
-    # Get list of all plot images
+    # Get list of all plot images.
+    # Disable PIL's decompression-bomb guard for our own trusted scientific images.
+    Image.MAX_IMAGE_PIXELS = None
     images = [Image.open(img_path) for img_path in img_list]
 
     # Append all images to 0th image

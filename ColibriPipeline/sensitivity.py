@@ -255,7 +255,9 @@ def primarysummaryReader(summary_path):
                                  comment='#', index_col=0,
                                  skipinitialspace=True)
         star_hours.index = pd.to_datetime(star_hours.index + '000',
-                                          format=MINUTEDIR_STRP)
+                                          format=MINUTEDIR_STRP,
+                                          errors='coerce')
+        star_hours = star_hours[star_hours.index.notna()]
         return star_hours
     except (FileNotFoundError, pd.errors.ParserError, ValueError) as e:
         print(f"ERROR: Could not read primary summary on {summary_path.anchor}! ({e})")
