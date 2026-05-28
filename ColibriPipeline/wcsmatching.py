@@ -135,15 +135,19 @@ def npyFileWCSUpdate(npy_file_list, medstack_file_list):
         timestamp,_ = regexNPYName(npy_file.name)
         verboseprint(f"  -> Associated timestamp: {timestamp}")
 
-        # Generate WCS transformation and the RA/Dec
-        transform  = getTransform(timestamp, medstack_file_list, {})
-        star_radec = updateNPY_RAdec(transform, npy_file)
-        verboseprint("  Successfully generated RA/DEC.")
+        try:
+            # Generate WCS transformation and the RA/Dec
+            transform  = getTransform(timestamp, medstack_file_list, {})
+            star_radec = updateNPY_RAdec(transform, npy_file)
+            verboseprint("  Successfully generated RA/DEC.")
 
-        # Save the array of star positions as an .npy file again
-        # Format: x  |  y  |  r  |  ra  |  dec
-        npy_file.unlink()
-        np.save(npy_file, star_radec)
+            # Save the array of star positions as an .npy file again
+            # Format: x  |  y  |  r  |  ra  |  dec
+            npy_file.unlink()
+            np.save(npy_file, star_radec)
+        except Exception as e:
+            print(f"  WARNING: Could not update WCS for {npy_file.name}: {e}")
+            continue
 
 
 def matchNight(obsdate):
@@ -164,7 +168,7 @@ def matchNight(obsdate):
     # Initialize telescope classes
     Red   = Telescope("RED", RED_BASE, obsdate)
     Green = Telescope("GREEN", GREEN_BASE, obsdate)
-    Blue  = Telescope("BLUE", BLUE_BASE, obsdate)
+    Blue  = Telescope("BLUE", BASE_PATH, obsdate)  # B:/ is not self-mounted; use local D:/
 
 
     ## Minute matching ## 
