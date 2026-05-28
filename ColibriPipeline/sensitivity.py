@@ -44,11 +44,19 @@ global telescope
 telescope = os.environ['COMPUTERNAME']       #telescope identifier
 #field_name = 'field1'                           #name of field observed
 
-# Telescope Code Dictionary
-TELESCOPE_BASE_DIR = {'REDBIRD':pathlib.Path('R:'),
-                      'GREENBIRD':pathlib.Path('G:'),
-                      'BLUEBIRD':pathlib.Path('B:')}
-SELF_BASE_DIR = pathlib.Path('D:')
+# Telescope Code Dictionary - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = pathlib.Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                            '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    SELF_BASE_DIR = _sim_root / _telescope_colors.get(telescope, 'Green')
+    TELESCOPE_BASE_DIR = {name: _sim_root / color for name, color in _telescope_colors.items()}
+else:
+    TELESCOPE_BASE_DIR = {'REDBIRD':pathlib.Path('R:'),
+                          'GREENBIRD':pathlib.Path('G:'),
+                          'BLUEBIRD':pathlib.Path('B:')}
+    SELF_BASE_DIR = pathlib.Path('D:')
 TELESCOPE_ORDER = ['REDBIRD', 'GREENBIRD', 'BLUEBIRD']
 
 # Datetime Formats
@@ -239,17 +247,20 @@ def primarysummaryReader(summary_path):
     
     """
 
-    # Load primary_summary.txt as a pandas dataframe
+    # Load primary_summary.txt as a pandas dataframe. Modern pandas (>=2.0)
+    # silently ignores `date_parser`, so we parse the index after the read.
     try:
-        star_hours = pd.read_csv(summary_path, header=None, 
-                                    names=['timestamp','stars','detec'],
-                                    comment='#', index_col=0,
-                                    parse_dates=['timestamp'], date_parser=lambda x: datetime.strptime(x+'000', MINUTEDIR_STRP))
+        star_hours = pd.read_csv(summary_path, header=None,
+                                 names=['timestamp', 'stars', 'detec'],
+                                 comment='#', index_col=0,
+                                 skipinitialspace=True)
+        star_hours.index = pd.to_datetime(star_hours.index + '000',
+                                          format=MINUTEDIR_STRP,
+                                          errors='coerce')
+        star_hours = star_hours[star_hours.index.notna()]
         return star_hours
-    
-    # If primary pipeline failed, return None (to be ignored)
-    except:
-        print(f"ERROR: Could not read primary summary on {summary_path.anchor}!")
+    except (FileNotFoundError, pd.errors.ParserError, ValueError) as e:
+        print(f"ERROR: Could not read primary summary on {summary_path.anchor}! ({e})")
         return None
 
 
@@ -293,7 +304,7 @@ if __name__ == '__main__':
         """,
         formatter_class=argparse.RawTextHelpFormatter)
 
-    arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+    arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:/)', default='d:/')
     arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.', required=True)
     arg_parser.add_argument('-t', '--threshold', help='Star detection threshold.', default='4')
     arg_parser.add_argument('-m', '--minute', help='hh.mm.ss to process.')
@@ -305,8 +316,8 @@ if __name__ == '__main__':
 
     detect_thresh = int(cml_args.threshold)
 
-    base_path = pathlib.Path(cml_args.basedir)
-    data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''))    #path to data
+    base_path = SELF_BASE_DIR if _env == 'sim' else pathlib.Path(cml_args.basedir)
+    data_path = base_path / 'ColibriData' / str(obs_date).replace('-', '')    #path to data
 
 
     minute_dirs=[f.name for f in data_path.iterdir() if ('Dark' not in f.name and '.txt' not in f.name)]
@@ -316,8 +327,8 @@ if __name__ == '__main__':
     if cml_args.minute is None:
         print("matching minutes...")
 
-        # Substitute current telescope basedir with D:
-        TELESCOPE_BASE_DIR[telescope] = pathlib.Path('D:')
+        # Substitute current telescope basedir with this machine's local base
+        TELESCOPE_BASE_DIR[telescope] = SELF_BASE_DIR
 
         # Check to see if each telescope has data for this date
         # If not, remove it from the dictionary
@@ -351,11 +362,24 @@ if __name__ == '__main__':
             time.sleep(300)
         
         # Read the primary_summary.txt file for each telescope into a dictionary
-        primary_summary_dfs = {instrument: primarysummaryReader(primary_summary_file) 
-                               for instrument, primary_summary_file 
+        primary_summary_dfs = {instrument: primarysummaryReader(primary_summary_file)
+                               for instrument, primary_summary_file
                                in zip(TELESCOPE_BASE_DIR.keys(), primary_summary_files)}
-        
-        
+
+        # Drop telescopes whose primary_summary could not be read so the
+        # downstream sort_values doesn't crash on None.
+        unreadable = [k for k, v in primary_summary_dfs.items()
+                      if v is None or v.empty]
+        for k in unreadable:
+            print(f"WARNING: dropping {k} from minute matching (no readable primary_summary).")
+            primary_summary_dfs.pop(k)
+            if k in TELESCOPE_ORDER:
+                TELESCOPE_ORDER.remove(k)
+        if not primary_summary_dfs:
+            print("WARNING: no peer primary_summary.txt readable; skipping minute matching.")
+            sys.exit(0)
+
+
         # Try each telescope to find the one with the most stars detected
         matched_minute = {}
         for i in range(len(TELESCOPE_ORDER)):
@@ -443,22 +467,40 @@ if __name__ == '__main__':
 
     '''-------------------------------------------------------------------------------------'''
 
-    #path to output files
-    save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
-    #save_path = base_path.joinpath('Elginfield' + telescope, str(obs_date).replace('-', '') + '_diagnostics', 'Sensitivity', minute_dir)       #path to save outputs in
+    # Try the originally chosen minute first; if getLightcurves fails (e.g. too few
+    # stars detected on a cloudy minute), walk outward through the remaining minutes
+    # until one succeeds or we exhaust the night.
+    try:
+        chosen_idx = minute_dirs.index(minute_dir)
+    except ValueError:
+        chosen_idx = int(len(minute_dirs) / 2)
+    candidate_order = sorted(range(len(minute_dirs)), key=lambda i: abs(i - chosen_idx))
 
+    save_path = None
+    lightcurve_path = None
+    for cand_idx in candidate_order:
+        cand_minute = minute_dirs[cand_idx]
+        cand_save_path = base_path / 'ColibriArchive' / (str(obs_date).replace('-', '') + '_diagnostics') / 'Sensitivity' / cand_minute
+        cand_lightcurve_path = cand_save_path.joinpath(gain + '_' + str(detect_thresh) + 'sig_lightcurves')
+        cand_save_path.mkdir(parents=True, exist_ok=True)
 
-    lightcurve_path = save_path.joinpath(gain + '_' + str(detect_thresh) +  'sig_lightcurves')          #path that light curves are saved to
+        if cml_args.lightcurve == True:
+            print('making light curve .txt files')
+            print("DATA PATH: ", data_path.joinpath(cand_minute))
+            try:
+                lightcurve_maker.getLightcurves(data_path.joinpath(cand_minute), cand_save_path, ap_r, gain, telescope, detect_thresh)
+            except Exception as lc_err:
+                print(f"WARNING: getLightcurves failed on minute {cand_minute}: {lc_err}. Trying next candidate.")
+                continue
 
-    #make directory to hold results in if doesn't already exist
-    save_path.mkdir(parents=True, exist_ok=True)
-
-
-    '''-------------make light curves of data----------------------'''
-    if cml_args.lightcurve==True:
-        print('making light curve .txt files')
-        print("DATA PATH: ", data_path.joinpath(minute_dir))
-        lightcurve_maker.getLightcurves(data_path.joinpath(minute_dir), save_path, ap_r, gain, telescope, detect_thresh)   #save .txt files with times|fluxes
+        minute_dir = cand_minute
+        obs_time = cand_minute.split('_')[1][:-4]
+        save_path = cand_save_path
+        lightcurve_path = cand_lightcurve_path
+        break
+    else:
+        print("WARNING: no minute could be processed for sensitivity analysis. Skipping the rest of this stage.")
+        sys.exit(0)
 
     #save .png plots of lightcurves
     print('saving plots of light curves')
@@ -466,14 +508,19 @@ if __name__ == '__main__':
 
     '''--------upload image to astrometry.net for plate solution------'''
     median_image = save_path.joinpath('high_medstacked.fits')     #path to median combined file for astrometry solution
-    median_str="/mnt/d/"+str(median_image).replace('d:', '').replace('\\', '/') #10-12 Roman A.
-    median_str=median_str.lower()
+    import platform
+    if platform.system() == 'Windows':
+        # Lowercase first so the drive-letter strip catches both 'D:' and 'd:'.
+        # Without this, an uppercase 'D:' from BASE_PATH leaks through and produces '/mnt/d/d:/...'.
+        median_str = "/mnt/d/" + str(median_image).lower().replace('d:', '').replace('\\', '/')
+    else:
+        median_str = str(median_image)
     transform_file = save_path.joinpath(minute_dir + '_' + polynom_order + '_wcs.fits') #path to save WCS header file in
-    transform_str=str(transform_file).split('\\')[-1]
+    transform_str = transform_file.name  # basename only, platform-independent
 
     #check if the tranformation has already been calculated and saved
     if transform_file.exists():
-                
+
         #open file and get transformation
         wcs_header = fits.open(transform_file)
         transform = wcs.WCS(wcs_header[0])
@@ -481,7 +528,13 @@ if __name__ == '__main__':
     else:
         #get solution from astrometry.net
         wcs_header = astrometrynet_funcs.getLocalSolution(median_str, transform_str, int(polynom_order[0]))
-            
+
+        if wcs_header is None:
+            print("WARNING: WCS solution unavailable for this minute. "
+                  "Skipping RA/Dec conversion, star table, and SNR plots. "
+                  "Check WSL solve-field on Windows or astrometry.net web fallback.")
+            sys.exit(0)
+
         #calculate coordinate transformation
         transform = wcs.WCS(wcs_header)
 

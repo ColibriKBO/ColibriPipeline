@@ -1,0 +1,116 @@
+##############################
+20250830 [phase=post]
+##############################
+
+
+## Processing GREENONLY1 for 20250830... ##
+
+Proceeding with GREEN 20250830 processing.
+Initializing subprocess simultaneous_occults.py...
+ERROR: simultaneous_occults.py exited with code 1! Stop file not written.
+Initializing subprocess colibri_secondary.py...
+ERROR: colibri_secondary.py exited with code 1! Stop file not written.
+
+## All secondary processes are complete for 20250830!
+
+
+## Artificial lightcurves for 20250830... ##
+
+Waiting for the gat_file for 20250830...
+Waiting for /home/agirmen/research_data/ColibriPipelineSimulatedDirs/Green/ColibriArchive/2025-08-30/generate_artificial.txt (0.0h remaining)...
+WARNING: generate_artificial.txt not found for 20250830 within timeout. Skipping artificial lightcurves.
+
+## Processing endgame for 20250830... ##
+
+Proceeding with GREEN 20250830 endgame processing.
+Initializing subprocess cumulative_stats.py...
+ERROR: cumulative_stats.py exited with code 1! Stop file not written.
+Initializing subprocess timeline.py...
+ERROR: timeline.py exited with code 1! Stop file not written.
+
+## All secondary processes are complete for 20250830!
+
+Sending daily status email...
+Error: No raw data found in BASE_PATH.
+Error: No raw data found in BLUE_PATH.
+Error: No star-hour file found in Blue archive.
+Error: No log file found in RED_PATH.
+Error: No log file found in BASE_PATH.
+Error: No log file found in BLUE_PATH.
+Error: No timeline file found in LOG_PATH.
+
+--------------------------------------------------
+From: colibri@uwo.ca
+To: ['pquigle@uwo.ca', 'colibri@groups.uwo.ca']
+Subject: Colibri Status Update: 2025-08-30
+--------------------------------------------------
+
+Text: Summary of the nightly observations for 2025-08-30:
+
+-------------------------
+Telescope Minutes
+-------------------------
++ Red:   2
++ Green: 0
++ Blue:  0
+
+* Matched: nan star-hours
+
+
+-------------------------
+Pipeline Errors (Green-only)
+-------------------------
++ ERROR: simultaneous_occults.py exited with code 1! Stop file not written.
++ ERROR: colibri_secondary.py exited with code 1! Stop file not written.
++ ERROR: cumulative_stats.py exited with code 1! Stop file not written.
++ ERROR: timeline.py exited with code 1! Stop file not written.
++ Error: No raw data found in BASE_PATH.
++ Error: No raw data found in BLUE_PATH.
++ Error: No star-hour file found in Blue archive.
++ Error: No log file found in RED_PATH.
++ Error: No log file found in BASE_PATH.
++ Error: No log file found in BLUE_PATH.
++ Error: No timeline file found in LOG_PATH.
+
+
+-------------------------
+Notes
+-------------------------
++ Redbird disk space:   0.182456414208 TB
++ Greenbird disk space: 0.182456414208 TB
++ Bluebird disk space:  0.182456414208 TB
+
+None
+
+--------------------------------------------------
+
+
+
+Dry run. Email not sent.
+Errors: 7
+----------------
+Error: No raw data found in BASE_PATH.
+Error: No raw data found in BLUE_PATH.
+Error: No star-hour file found in Blue archive.
+Error: No log file found in RED_PATH.
+Error: No log file found in BASE_PATH.
+Error: No log file found in BLUE_PATH.
+Error: No timeline file found in LOG_PATH.
+Writing stop file for email_timeline.py...
+
+#--------------------------------------------------#
+
+Total time to process was 0 seconds
+The following errors were encountered:
+ERROR: simultaneous_occults.py exited with code 1! Stop file not written.
+ERROR: colibri_secondary.py exited with code 1! Stop file not written.
+ERROR: cumulative_stats.py exited with code 1! Stop file not written.
+ERROR: timeline.py exited with code 1! Stop file not written.
+WARNING: generate_artificial.txt not found for 20250830 within timeout. Skipping artificial lightcurves.
+Cleaning /home/agirmen/research_data/ColibriPipelineSimulatedDirs/Green and /home/agirmen/research_data/ColibriPipelineSimulatedDirs/Green/tmp of pipeline files...
+[POST] GREENBIRD exit=0
+
+============================================================
+Expected PDF: /home/agirmen/research_data/ColibriPipelineSimulatedDirs/pipeline_output/20250830/20250830_observation_summary.pdf
+Exists: False
+============================================================

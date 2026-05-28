@@ -58,8 +58,23 @@ ACPLOG_STRP    = '%a %b %d %H:%M:%S %Z %Y'
 MINUTEDIR_STRP = '%Y%m%d_%H.%M.%S.%f'
 TIMESTAMP_STRP = '%Y-%m-%dT%H:%M:%S.%f'
 
-# Directory structure
-BASE_PATH  = Path('/', 'D:')
+# Directory structure - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                    '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
+    RED_BASE   = _sim_root / 'Red'
+    GREEN_BASE = _sim_root / 'Green'
+    BLUE_BASE  = _sim_root / 'Blue'
+else:
+    BASE_PATH  = Path('D:/')
+    RED_BASE   = Path('R:/')
+    GREEN_BASE = Path('D:/')
+    BLUE_BASE  = Path('B:/')
 CLOUD_PATH = BASE_PATH / 'Logs' / 'Weather' / 'Weather'
 STATS_PATH = BASE_PATH / 'CentralRepo' / 'CumulativeStats'
 
@@ -974,9 +989,9 @@ if __name__ == '__main__':
     ## Setup telescope classes ##
 
     # Initialize telescopes
-    Red = Telescope("RED", "r", "R:", obs_date)
-    Green = Telescope("GREEN", "#66ff66", "D:", obs_date)
-    Blue  = Telescope("BLUE", "b", "B:", obs_date)
+    Red = Telescope("RED", "r", RED_BASE, obs_date)
+    Green = Telescope("GREEN", "#66ff66", GREEN_BASE, obs_date)
+    Blue  = Telescope("BLUE", "b", BLUE_BASE, obs_date)
     
     # Check that at least one log file exists
     if not (Red.log_exists | Green.log_exists | Blue.log_exists):
@@ -1241,6 +1256,10 @@ if __name__ == '__main__':
     # Initialize sensitivity plot
     starhours_fig, axs = plt.subplots()
 
+    # Default so the post-loop check at line ~1304 doesn't NameError when
+    # no telescope's primary_summary could be read.
+    total_starhours = 0
+
     # Plot star-hours for all cameras
     for machine in (Red,Green,Blue):
 
@@ -1251,14 +1270,19 @@ if __name__ == '__main__':
             continue
         else:
 
-            # Load primary_summary.txt as a pandas dataframe
+            # Load primary_summary.txt as a pandas dataframe. Modern pandas
+            # silently ignores the deprecated `date_parser=`; parse afterwards.
             try:
-                star_hours = pd.read_csv(summarytxt, header=None, 
-                                         names=['timestamp','stars','detec'],
+                star_hours = pd.read_csv(summarytxt, header=None,
+                                         names=['timestamp', 'stars', 'detec'],
                                          comment='#', index_col=0,
-                                         parse_dates=['timestamp'], date_parser=lambda x: datetime.strptime(x+'000', MINUTEDIR_STRP))
-            except:
-                machine.addError(f"ERROR: Could not read primary summary on {machine.name}!")
+                                         skipinitialspace=True)
+                star_hours.index = pd.to_datetime(star_hours.index + '000',
+                                                  format=MINUTEDIR_STRP,
+                                                  errors='coerce')
+                star_hours = star_hours[star_hours.index.notna()]
+            except (FileNotFoundError, pd.errors.ParserError, ValueError) as e:
+                machine.addError(f"ERROR: Could not read primary summary on {machine.name}! ({e})")
                 continue
 
             # Parse data to mark detections and calculate total star-hours
@@ -1386,8 +1410,11 @@ if __name__ == '__main__':
         print(f"ERROR: Detections have not been matched yet!")
     else:
 
-        # Get names and descriptions of matched events form "matched" subdirectories
+        # Get names and descriptions of matched events from "matched" subdirectories.
+        # Strangeness-flagged Tier1 events are satellite/cosmic-ray artefacts; include
+        # only Tier2 (clean 3-telescope) and Tier3 events in the PDF to keep it small.
         hhmmss_dirs = [item for item in matched_dir.iterdir() if item.is_dir()]
+        PDF_TIER_INCLUDE = {'Tier2', 'Tier3'}
         for hhmmss_dir in hhmmss_dirs:
             print(f"Analyzing detection at {hhmmss_dir.name}...")
             
@@ -1426,7 +1453,9 @@ if __name__ == '__main__':
 
                 plt.savefig(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')),
                             dpi=800,bbox_inches='tight')
-                img_list.append(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')))
+                tier_tag = next((t for t in PDF_TIER_INCLUDE if hhmmss_dir.name.endswith(t)), None)
+                if tier_tag is not None:
+                    img_list.append(str(lightcurves_dir / (hhmmss_dir.name + '.jpg')))
                 plt.close()
 
 ###########################
@@ -1440,7 +1469,9 @@ if __name__ == '__main__':
     img_list.append(str(STATS_PATH / '2telescope_matches.jpg'))
     img_list.append(str(STATS_PATH / '3telescope_matches.jpg'))
 
-    # Get list of all plot images
+    # Get list of all plot images.
+    # Disable PIL's decompression-bomb guard for our own trusted scientific images.
+    Image.MAX_IMAGE_PIXELS = None
     images = [Image.open(img_path) for img_path in img_list]
 
     # Append all images to 0th image

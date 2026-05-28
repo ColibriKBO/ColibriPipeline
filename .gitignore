@@ -18,8 +18,11 @@ colibri_photometry.html
 **/logs
 
 # ignore jupyter notebook used for testing
-Testing.ipynb
 **/.ipynb_checkpoints
 
 # ignore any .vscode files
 **/.vscode/
+
+# ignore claude instructions
+CLAUDE.md
+/notebooks/*

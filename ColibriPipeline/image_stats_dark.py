@@ -28,6 +28,20 @@ import math
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
+import sys
+
+
+# Directory structure - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = pathlib.Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                            '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
+else:
+    BASE_PATH = pathlib.Path('D:/')
 import argparse
 
 #Mike's rcd section ---------------------------------------------------------
@@ -249,21 +263,19 @@ if __name__ == '__main__':
 
     		""",formatter_class=argparse.RawTextHelpFormatter)
 
-        arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:)', default='d:')
+        arg_parser.add_argument('-b', '--basedir', help='Base directory for data (typically d:/)', default='d:/')
         arg_parser.add_argument('-d', '--date', help='Observation date (YYYY/MM/DD) of data to be processed.')
 
         cml_args = arg_parser.parse_args()
 
-        base_path = pathlib.Path(cml_args.basedir)
+        base_path = BASE_PATH if _env == 'sim' else pathlib.Path(cml_args.basedir)
         obsYYYYMMDD = cml_args.date
         obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
-        
+
         '''------------set up paths to directories------------------'''
 
-        #base_path = pathlib.Path('/', 'D:')
-
-        data_path = base_path.joinpath('/ColibriData', str(obs_date).replace('-', ''), 'Dark')    #path to dark directories
-        save_path = base_path.joinpath('/ColibriArchive', str(obs_date).replace('-','') + '_diagnostics', 'Dark_Stats')  #path to save results to
+        data_path = base_path / 'ColibriData' / str(obs_date).replace('-', '') / 'Dark'    #path to dark directories
+        save_path = base_path / 'ColibriArchive' / (str(obs_date).replace('-','') + '_diagnostics') / 'Dark_Stats'  #path to save results to
         
         save_path.mkdir(parents=True, exist_ok=True)        #make save directory if it doesn't already exist
 
@@ -283,85 +295,102 @@ if __name__ == '__main__':
         
         '''----------loop through each minute and each image, calculate stats------------------'''
         Average_readnoises=[]
+        skipped_minutes = 0
+        skipped_frames = 0
         for minute in minutedirs:
             print('------------------------------------')
             print('working on: ', minute.name)
-            images = sorted(minute.glob('*.rcd'))   #list of images
-            darkFileList=images
-            pairs=0 #number of pairs that will be iterrated
-            ReadNoise=[] 
-            
-             
-            Average_stds=[]
+            try:
+                images = sorted(minute.glob('*.rcd'))   #list of images
+                darkFileList=images
+                pairs=0 #number of pairs that will be iterrated
+                ReadNoise=[]
 
-            '''----------------------------READ OUT NOISE SECTION------------------------------------'''    
-            #17-07-2022 Roman A.
-            
-            if len(darkFileList)% 2 == 0: #check for even or odd number of images in the directory
-            
-                for i in range(0,len(darkFileList),2): #iterrate through all pairs of subsequent dark images without dublicates
-        
-            
-           
-                #getting images for .rcd files - RAB 06212022:
-                    FirstDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i, 1, np.zeros((2048,2048)), gain)[0]
-                    SecondDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
-        
-                #get list of readnoises 
-                    ReadNoise.append(get_ReadNoise(FirstDark,SecondDark,gain))
-                    pairs+=1
-                print(pairs," pairs iterrated")
-                AverageRN=np.average(ReadNoise) 
-                StdRn=np.std(ReadNoise)         #standard deviation of read noise
-                
-                Average_readnoises.append(AverageRN)
-                Average_stds.append(StdRn)
-                
-            else:
-                
-                for i in range(0,len(darkFileList)-1,2):
-        
-            
-                    FirstDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i, 1, np.zeros((2048,2048)), gain)[0]
-                    SecondDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
-        
-            
-                    ReadNoise.append(get_ReadNoise(FirstDark,SecondDark,gain))
-                    pairs+=1
-                print(pairs," pairs iterrated")
-                AverageRN=np.average(ReadNoise)
-                StdRn=np.std(ReadNoise) 
-                
-                Average_readnoises.append(AverageRN)
-                Average_stds.append(StdRn)
-            
-            with open(readnoise_filepath, 'a') as filehandle:
-                    filehandle.write('%s %f\n' %(minute, AverageRN))
-            print("READ NOISE: ",'{:.4}'.format(AverageRN)+'+/-'+'{:.2}'.format(StdRn))
-            
-            
-            '''----------------------------READ OUT NOISE SECTION END------------------------------------'''
-            
-            #loop through each image in minute directory
-            for image in images:
-                
-                #import image
-                data, time, temps = importFramesRCD(minute, [image], 0, 1, np.zeros((2048,2048)), gain)
-                
-                #flatten 2D array into 1D array for easier computation
-                data_flat = data.flatten()
-                
-                #image statistics
-                med = np.median(data_flat)                              #median pixel value of image
-                mean = np.mean(data_flat)                               #mean pixel value of image
-                mode = float(scipy.stats.mode(data_flat, axis = None).mode)   #mode pixel value of image
-                
-                RMS = np.sqrt(np.mean(np.square(data_flat)))            #RMS of entire image
-                            
-                #append image stats to file
-                with open(save_filepath, 'a') as filehandle:
-                    filehandle.write('%s %s %f %f %f %f %f %f %f\n' %(image, time[0], med, mean, mode, RMS, temps[0], temps[1], temps[2]))
-            
+
+                Average_stds=[]
+
+                '''----------------------------READ OUT NOISE SECTION------------------------------------'''
+                #17-07-2022 Roman A.
+
+                if len(darkFileList)% 2 == 0: #check for even or odd number of images in the directory
+
+                    for i in range(0,len(darkFileList),2): #iterrate through all pairs of subsequent dark images without dublicates
+
+
+
+                    #getting images for .rcd files - RAB 06212022:
+                        FirstDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                        SecondDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+
+                    #get list of readnoises
+                        ReadNoise.append(get_ReadNoise(FirstDark,SecondDark,gain))
+                        pairs+=1
+                    print(pairs," pairs iterrated")
+                    AverageRN=np.average(ReadNoise)
+                    StdRn=np.std(ReadNoise)         #standard deviation of read noise
+
+                    Average_readnoises.append(AverageRN)
+                    Average_stds.append(StdRn)
+
+                else:
+
+                    for i in range(0,len(darkFileList)-1,2):
+
+
+                        FirstDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i, 1, np.zeros((2048,2048)), gain)[0]
+                        SecondDark = lightcurve_maker.importFramesRCD(minute, darkFileList, i+1, 1, np.zeros((2048,2048)), gain)[0]
+
+
+                        ReadNoise.append(get_ReadNoise(FirstDark,SecondDark,gain))
+                        pairs+=1
+                    print(pairs," pairs iterrated")
+                    AverageRN=np.average(ReadNoise)
+                    StdRn=np.std(ReadNoise)
+
+                    Average_readnoises.append(AverageRN)
+                    Average_stds.append(StdRn)
+
+                with open(readnoise_filepath, 'a') as filehandle:
+                        filehandle.write('%s %f\n' %(minute, AverageRN))
+                print("READ NOISE: ",'{:.4}'.format(AverageRN)+'+/-'+'{:.2}'.format(StdRn))
+
+
+                '''----------------------------READ OUT NOISE SECTION END------------------------------------'''
+
+                #loop through each image in minute directory
+                for image in images:
+                    try:
+                        #import image
+                        data, time, temps = importFramesRCD(minute, [image], 0, 1, np.zeros((2048,2048)), gain)
+                    except (UnicodeDecodeError, OSError, ValueError) as frame_err:
+                        skipped_frames += 1
+                        print(f"WARNING: skipping frame {image.name} in {minute.name}: {frame_err}")
+                        continue
+
+                    #flatten 2D array into 1D array for easier computation
+                    data_flat = data.flatten()
+
+                    #image statistics
+                    med = np.median(data_flat)                              #median pixel value of image
+                    mean = np.mean(data_flat)                               #mean pixel value of image
+                    mode = float(scipy.stats.mode(data_flat, axis = None).mode)   #mode pixel value of image
+
+                    RMS = np.sqrt(np.mean(np.square(data_flat)))            #RMS of entire image
+
+                    #append image stats to file
+                    with open(save_filepath, 'a') as filehandle:
+                        filehandle.write('%s %s %f %f %f %f %f %f %f\n' %(image, time[0], med, mean, mode, RMS, temps[0], temps[1], temps[2]))
+
+            except Exception as minute_err:
+                skipped_minutes += 1
+                print(f"WARNING: skipping minute {minute.name}: {minute_err}")
+                continue
+
+        print(f"Skipped {skipped_minutes} minute(s) and {skipped_frames} additional frame(s) due to read errors.")
+        if not Average_readnoises:
+            print("ERROR: no minutes processed successfully; aborting before graph stage.")
+            sys.exit(0)
+
         with open(readnoise_filepath, 'a') as filehandle: #write read noise data in txt file
                     filehandle.write('Total average Read Noise: %f\n' %(np.average(Average_readnoises)))
         print(" Total READ NOISE: ",'{:.4}'.format(np.average(Average_readnoises))+'+/-'+'{:.2}'.format(np.average(Average_stds)))

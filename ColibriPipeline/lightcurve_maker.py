@@ -148,7 +148,7 @@ def timeEvolveFITS(data, t, coords, x_drift, y_drift, r, stars, x_length, y_leng
 
     '''get proper frame times to apply drift'''
     frame_time = Time(t, precision=9).unix   #current frame time from file header (unix)
-    drift_time = frame_time - coords[1,3]    #time since previous frame [s]
+    drift_time = frame_time - coords[0,3]    #time since previous frame [s] (any star row works; all share header timestamp)
     
     '''add drift to each star's coordinates based on time since last frame'''
     x = [coords[ind, 0] + x_drift*drift_time for ind in range(0, stars)]
@@ -504,7 +504,7 @@ def importFramesRCD(parentdir, filenames, start_frame, num_frames, dark, gain):
         #change time if time is wrong (29 hours)
         hour = str(headerTime).split('T')[1].split(':')[0]
         fileMinute = str(headerTime).split(':')[1]
-        dirMinute = str(parentdir).split('_')[1].split('.')[1]
+        dirMinute = parentdir.name.split('_')[1].split('.')[1]
       #  dirMinute = '30'
         
         #check if hour is bad, if so take hour from directory name and change header

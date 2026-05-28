@@ -27,8 +27,23 @@ from matplotlib.ticker import MaxNLocator
 
 #-------------------------------global vars-----------------------------------#
 
-# Path variables
-BASE_PATH = Path('D:/')
+# Path variables - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                    '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Green')
+    RED_BASE   = _sim_root / 'Red'
+    GREEN_BASE = _sim_root / 'Green'
+    BLUE_BASE  = _sim_root / 'Blue'
+else:
+    BASE_PATH = Path('D:/')
+    RED_BASE   = Path('R:/')
+    GREEN_BASE = Path('D:/')
+    BLUE_BASE  = Path('B:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
@@ -109,19 +124,27 @@ class Telescope:
     
     def getStarHours(self, summarytxt):
 
-        parse_summary = {
-                    0: lambda timestamp: datetime.strptime(timestamp.decode('ascii')+'000', MINUTEDIR_STRP),
-                    1: lambda stars: int(stars),
-                    2: lambda detec: int(detec)
-                         }
-
-        # Load primary_summary.txt
+        # Hand-roll the parse: numpy's C-based loader aborts the whole file if
+        # any single line is short (e.g. a blank trailing line, a partial write
+        # from an interrupted run). We only need the star-count column anyway.
         try:
-            primary_summary = np.loadtxt(summarytxt, delimiter=',', converters=parse_summary, 
-                                         ndmin=2, dtype=object)
-            star_mins = np.sum(primary_summary[:,1])
-            return star_mins/60.
-        except IndexError:
+            star_counts = []
+            with open(summarytxt, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    parts = [p.strip() for p in line.split(',')]
+                    if len(parts) < 2:
+                        continue
+                    try:
+                        star_counts.append(int(parts[1]))
+                    except ValueError:
+                        continue
+            if not star_counts:
+                raise IndexError("no data rows")
+            return sum(star_counts) / 60.
+        except (OSError, IndexError):
             self.addError(f"ERROR: Could not read primary summary on {self.name}!")
             return np.nan
 
@@ -442,9 +465,9 @@ if __name__ == '__main__':
 ###########################
 
     # Initialize telescope classes
-    Red   = Telescope("RED", "R:", obsdate)
-    Green = Telescope("GREEN", "D:", obsdate)
-    Blue  = Telescope("BLUE", "B:", obsdate)
+    Red   = Telescope("RED", RED_BASE, obsdate)
+    Green = Telescope("GREEN", GREEN_BASE, obsdate)
+    Blue  = Telescope("BLUE", BLUE_BASE, obsdate)
 
     ## Count matched detections
     # Tier 1: matched to the second (candidates for satellite)

@@ -25,7 +25,6 @@ import time as timer
 from astropy.convolution import RickerWavelet1DKernel
 from astropy.time import Time
 from copy import deepcopy
-from multiprocessing import Pool
 
 # Custom Script Imports
 import colibri_image_reader as cir
@@ -41,11 +40,21 @@ import logging
 
 #-------------------------------global vars-----------------------------------#
 
-# Path variables
-BASE_PATH = pathlib.Path('D:/')
+# Directory structure - environment-aware (sim vs real)
+_env = os.environ.get('COLIBRI_ENV', 'real').lower()
+_telescope_colors = {'REDBIRD': 'Red', 'GREENBIRD': 'Green', 'BLUEBIRD': 'Blue'}
+if _env == 'sim':
+    _sim_root = pathlib.Path(os.environ.get('COLIBRI_SIM_ROOT',
+                                            '/home/agirmen/research_data/ColibriPipelineSimulatedDirs'))
+    _telescope = os.environ.get('COLIBRI_TELESCOPE',
+                                os.environ.get('COMPUTERNAME', 'GREENBIRD')).upper()
+    BASE_PATH = _sim_root / _telescope_colors.get(_telescope, 'Red')
+else:
+    BASE_PATH = pathlib.Path('D:/')
 DATA_PATH = BASE_PATH / 'ColibriData'
 IMGE_PATH = BASE_PATH / 'ColibriImages'
 ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
 
 # Timestamp format
 OBSDATE_FORMAT = '%Y%m%d'
@@ -65,7 +74,7 @@ NUM_TO_STACK = 9  # number of images to stack for star detection
 BIASES_TO_STACK = 9       #number of dark images to combine in median dark images
 EDGE_BUFFER  = 10  # px from edge of image to ignore
 NPY_STARS = 10  # number of stars to save in .npy file
-MIN_STARS = 30  # minimum number of stars to analyze minute
+MIN_STARS = 10  # minimum number of stars to analyze minute
 
 # Drift parameters
 DRIFT_MULT = 1.0  # multiplier for detection radius after drift
@@ -266,7 +275,8 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
     print(datetime.datetime.now(), "Imported", num_images, "frames")
     
     ## Check if there are enough images in the current directory 
-    minNumImages = len(kernel.array)*3         #3x kernel length
+    minNumImages = len(kernel.array)*3        #3x kernel length
+    print(minNumImages, "images are required for analysis")
     if num_images < minNumImages:
         print(datetime.datetime.now(), "Insufficient number of images, skipping...")
         return minuteDir.name, 0, 0
@@ -295,7 +305,10 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
 
     ## Make list of star coords and half light radii using a conservative
     ## threshold scaled to the number of images stacked
-    star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH*NUM_TO_STACK**0.5))
+    # star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH*NUM_TO_STACK**0.5))
+
+    # removing scaling as I think it too conservative
+    star_find_results = tuple(cp.initialFind(stacked, DETECT_THRESH))
 
     ## Remove stars where centre is too close to edge of frame
     edge_buffer = 10     #number of pixels between edge of star aperture and edge of image
@@ -465,6 +478,16 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                 
         gc.collect()
     
+    # Save the starData array to a .npy file in the archive directory
+    starDataFile = base_path.joinpath('ColibriArchive', str(obs_date), minuteDir.name + '_' + 'stars.npy')
+    if starDataFile.exists():
+        starDataFile.unlink()
+    np.save(starDataFile, starData)
+
+
+
+
+
 
     """
     # Roman's photometry plotting section
@@ -548,10 +571,13 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
     j=0
     for f in save_frames:
         
-        date = headerTimes[f].split('T')[0]                                 #date of event
-        time = headerTimes[f].split('T')[1].split('.')[0].replace(':','')   #time of event
-        star_coords = initial_positions[np.where(event_frames == f)[0][0]]     #coords of occulted star
-        mstime = headerTimes[f].split('T')[1].split('.')[1]                 # micros time of event
+        ts_f = headerTimes[f]
+        if isinstance(ts_f, (list, tuple)):
+            ts_f = ts_f[0]
+        date = ts_f.split('T')[0]                                          #date of event
+        time = ts_f.split('T')[1].split('.')[0].replace(':','')            #time of event
+        star_coords = initial_positions[np.where(event_frames == f)[0][0]] #coords of occulted star
+        mstime = ts_f.split('T')[1].split('.')[1]                          # micros time of event
        # print(datetime.datetime.now(), ' saving event in frame', f)
         
         star_all_flux = save_curves[np.where(save_frames == f)][0]  #total light curve for current occulted star
@@ -585,7 +611,7 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
             filehandle.write('#    Event File: %s\n' %(imagePaths[f]))
             filehandle.write('#    Star Coords: %f %f\n' %(star_coords[0], star_coords[1]))
             filehandle.write('#\n')
-            filehandle.write('#    DATE-OBS: %s\n' %(headerTimes[f]))
+            filehandle.write('#    DATE-OBS: %s\n' %(ts_f))
             filehandle.write('#    Telescope: %s\n' %(telescope))
             filehandle.write('#    Field: %s\n' %(field_name))
             filehandle.write('#    significance: %.3f\n' %(save_sigma[j]))
@@ -607,8 +633,12 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                 star_save_conv= star_all_conv[np.where(np.in1d(imagePaths, files_to_save))[0]]
                 
                 #loop through each frame to be saved
-                for i in range(0, len(files_to_save)):  
-                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(headerTimes[:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                save_times = headerTimes[:f + save_chunk]
+                for i in range(0, len(files_to_save)):
+                    ts = save_times[i]
+                    if isinstance(ts, (list, tuple)):
+                        ts = ts[0]
+                    filehandle.write('%s %f  %f  %f\n' % (files_to_save[i], float(ts.split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
             
             #if portion of light curve to save is not at the beginning
             else:
@@ -621,8 +651,12 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                     star_save_conv= star_all_conv[np.where(np.in1d(imagePaths, files_to_save))[0]]
                     
                     #loop through each frame to save
-                    for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                    save_times = headerTimes[f - save_chunk:]
+                    for i in range(0, len(files_to_save)):
+                        ts = save_times[i]
+                        if isinstance(ts, (list, tuple)):
+                            ts = ts[0]
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(ts.split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
                 #if the portion of the light curve to save is not at beginning or end of the minute, save the whole portion around the event
                 else:  
@@ -632,8 +666,12 @@ def firstOccSearch(minuteDir, MasterDarkList, kernel, exposure_time, sigma_thres
                     star_save_conv= star_all_conv[np.where(np.in1d(imagePaths, files_to_save))[0]]
                     
                     #loop through each frame to save
-                    for i in range(0, len(files_to_save)): 
-                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(headerTimes[f - save_chunk:f + save_chunk][i].split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
+                    save_times = headerTimes[f - save_chunk:f + save_chunk]
+                    for i in range(0, len(files_to_save)):
+                        ts = save_times[i]
+                        if isinstance(ts, (list, tuple)):
+                            ts = ts[0]
+                        filehandle.write('%s %f %f  %f\n' % (files_to_save[i], float(ts.split(':')[2].split('Z')[0]), star_save_flux[i], star_save_conv[i]))
 
 
 
@@ -668,7 +706,7 @@ if __name__ == '__main__':
     ## Add argument functionality
     arg_parser.add_argument('path', help='Path to base directory')
     arg_parser.add_argument('date', help='Observation date (YYYY/MM/DD) of data to be processed')
-    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=6.0,type=float)
+    arg_parser.add_argument('-s', '--sigma', help='Sigma threshold', default=5.0,type=float)
     arg_parser.add_argument('-R','--RCD', help='Read RCD files directly (otherwise convert to .fits)', action='store_false')
     arg_parser.add_argument('-p', '--noparallel', help='Disable parallelism, run in sequence instead', action='store_false')
     arg_parser.add_argument('-g', '--lowgain', help='Analyze low-gain images', action='store_false')
@@ -705,7 +743,15 @@ if __name__ == '__main__':
         reprocess = cml_args.reprocess
 
         # Target data
-        base_path = pathlib.Path(cml_args.path) # path to data directory
+        if pathlib.Path(cml_args.path).exists():
+            base_path = pathlib.Path(cml_args.path)
+    
+
+            BASE_PATH = base_path
+            DATA_PATH = BASE_PATH / 'ColibriData'
+            IMGE_PATH = BASE_PATH / 'ColibriImages'
+            ARCHIVE_PATH = BASE_PATH / 'ColibriArchive'
+
         obsYYYYMMDD = cml_args.date # date to be analyzed formatted as "YYYY/MM/DD"
         obsdatesplit = obsYYYYMMDD.split('/')
         obs_date = datetime.date(int(obsYYYYMMDD.split('/')[0]), int(obsYYYYMMDD.split('/')[1]), int(obsYYYYMMDD.split('/')[2]))
@@ -756,13 +802,14 @@ if __name__ == '__main__':
         start_time = timer.time()
         finish_txt=base_path.joinpath('ColibriArchive', str(obs_date), 'primary_summary.txt')
         
-        pool_size = multiprocessing.cpu_count() - 2
-        pool = Pool(pool_size)
+        pool_size = max(1, multiprocessing.cpu_count() - 2)
+        mp_ctx = multiprocessing.get_context('spawn')
         args = ((minute_dirs[f], MasterDarkList, ricker_kernel, exposure_time, sigma_threshold,
                  base_path,obs_date,telescope,RCDfiles,gain_high) for f in range(len(minute_dirs)))
         
         try:
-            star_counts = pool.starmap(firstOccSearch,args)
+            with mp_ctx.Pool(pool_size) as pool:
+                star_counts = pool.starmap(firstOccSearch,args)
             end_time = timer.time()
             #starhours = sum(star_minutes)/(2399*60.0)
             #print(f"Calculated {starhours} star-hours\n", file=sys.stderr)
@@ -775,9 +822,6 @@ if __name__ == '__main__':
             logging.exception("failed to parallelize")
             with open(finish_txt, 'w') as f:
                 f.write('failed')
-            
-        pool.close()
-        pool.join()
 
 
 ###########################
