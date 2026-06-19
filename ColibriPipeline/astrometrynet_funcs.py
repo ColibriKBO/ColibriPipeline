@@ -106,12 +106,17 @@ def getLocalSolution(image_file, save_file, order):
 
     # --- attempt 2: web API fallback ---
     if wcs_header is None:
+        # astroquery runs in this (possibly Windows) Python process and cannot
+        # open a WSL mount path; translate /mnt/d/foo/bar -> D:\foo\bar.
+        web_path = image_file
+        if isinstance(web_path, str) and web_path.startswith("/mnt/") and len(web_path) > 6:
+            web_path = web_path[5].upper() + ":\\" + web_path[7:].replace("/", "\\")
         try:
             from astroquery.astrometry_net import AstrometryNet
             ast = AstrometryNet()
             ast.api_key = 'vbeenheneoixdbpb'
             wcs_header = ast.solve_from_image(
-                image_file,
+                web_path,
                 crpix_center=True,
                 tweak_order=order,
                 force_image_upload=True,
